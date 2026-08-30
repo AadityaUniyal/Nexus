@@ -1,12 +1,12 @@
 # NEXUS — Enterprise Autonomous Logistics & Spatial Intelligence Platform
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Backend Tests](https://img.shields.io/badge/tests-30%2F30%20passed-success.svg)]()
-[![Next.js](https://img.shields.io/badge/frontend-78%20routes%20compiled-blue.svg)]()
-[![AI Engine](https://img.shields.io/badge/groq-llama--3.3--70b-purple.svg)]()
-[![Voice Copilot](https://img.shields.io/badge/voice-pipecat--ai%201.8-orange.svg)]()
-[![Weather Engine](https://img.shields.io/badge/weather-open--meteo%20free-cyan.svg)]()
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+![Backend Tests](https://img.shields.io/badge/tests-30%2F30%20passed-success.svg)
+![Next.js](https://img.shields.io/badge/frontend-78%20routes%20compiled-blue.svg)
+![AI Engine](https://img.shields.io/badge/groq-llama--3.3--70b-purple.svg)
+![Voice Copilot](https://img.shields.io/badge/voice-pipecat--ai%201.8-orange.svg)
+![Weather Engine](https://img.shields.io/badge/weather-open--meteo%20free-cyan.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **NEXUS** is a mission-critical, enterprise-grade Autonomous Logistics Command, Spatial Intelligence, and What-If Simulation platform. It provides freight forwarders, fleet dispatchers, and operations directors with real-time situational awareness, predictive detour modeling, aerodynamic energy calculations, automated incident Root Cause Analysis (RCA), and a hands-free tactical voice copilot.
 
@@ -60,14 +60,14 @@ NEXUS operates as a continuous closed-loop operational cycle:
 
 ```mermaid
 flowchart TD
-    A[1. Operator Onboarding & Workspace Setup] -->|Selects Base Hub & Freight Modality| B[2. Dynamic Spatial GIS Initialized]
-    B -->|Ingests Real-Time IoT GPS & Battery Telemetry| C[3. Continuous Anomaly Monitoring]
-    C -->|Detects Corridor Impasse / High Wind Hazard| D[4. Incident Flagged & 3D Avatar Shifts to CRITICAL]
-    D -->|Operator Speaks: 'Simulate I-70 detour on NX-104'| E[5. Pipecat Voice Agent & Groq Tool Calling]
-    E -->|Executes Mathematical Simulation Engine| F[6. Pareto Trade-Off Optimization]
-    F -->|Time Saved: +135m | Cost: +$45 | SLA Risk: 4.2%| G[7. Executive Rationale & RCA Generated]
-    G -->|Operator Approves Spoken / Button Decision| H[8. Atomic Decision Lock & Immutable Audit Log]
-    H -->|Broadcasts Real-Time State Mutation| B
+    A["1. Operator Onboarding & Workspace Setup"] -->|"Selects Base Hub & Modality"| B["2. Dynamic Spatial GIS Initialized"]
+    B -->|"Ingests Real-Time IoT GPS & Telemetry"| C["3. Continuous Anomaly Monitoring"]
+    C -->|"Detects Blizzard Impasse / Crosswind Hazard"| D["4. Incident Flagged & 3D Avatar Shifts to CRITICAL"]
+    D -->|"Operator: 'Simulate I-70 detour on NX-104'"| E["5. Pipecat Voice Agent & Groq Tool Calling"]
+    E -->|"Executes Mathematical Simulation Engine"| F["6. Pareto Trade-Off Optimization"]
+    F -->|"Time Saved: +135m · Cost: +$45 · SLA Risk: 4.2%"| G["7. Executive Rationale & RCA Generated"]
+    G -->|"Operator Approves Spoken / Button Decision"| H["8. Atomic Decision Lock & Immutable Audit Log"]
+    H -->|"Broadcasts Real-Time State Mutation"| B
 ```
 
 ### 1. Dynamic Onboarding & Hub Initialization (Zero Hardcoding)
@@ -81,16 +81,16 @@ flowchart TD
 ### 3. Tactical Voice Copilot (Powered by Pipecat AI & Groq)
 * Operators use hands-free natural voice commands via the floating HUD companion.
 * Spoken utterances are parsed by **Groq LLaMA-3.3-70B** with function calling, executing physical UI actions:
-  * *"Fly map to Denver hub"* $\rightarrow$ Map camera immediately swoops to the coordinates.
-  * *"Simulate I-70 detour on vehicle NX-104"* $\rightarrow$ Runs mathematical What-If physics simulation.
-  * *"Filter vehicles below 30% battery"* $\rightarrow$ Highlights low-charge haulers.
+  * *"Fly map to Denver hub"* → Map camera immediately swoops to the coordinates.
+  * *"Simulate I-70 detour on vehicle NX-104"* → Runs mathematical What-If physics simulation.
+  * *"Filter vehicles below 30% battery"* → Highlights low-charge haulers.
 
 ### 4. Deterministic Simulation Physics Engine
 * Evaluates alternative corridors using exact physical equations:
   * **Aerodynamic Drag**: $F_{\text{aero}} = \frac{1}{2} \rho C_d A v^2$
   * **Rolling Resistance**: $F_{\text{roll}} = C_r m g$
   * **SLA Survival Risk Probability**: Normal CDF integral of scheduled delivery buffers.
-  * **Multi-Objective Pareto Decision Scoring** ($0 - 100$).
+  * **Multi-Objective Pareto Decision Scoring** (0 – 100).
 
 ### 5. Atomic Decision Execution & Immutable Governance
 * Approved route diversions and fleet re-assignments are committed using **optimistic concurrency locking** to prevent race conditions.
@@ -107,7 +107,7 @@ nexus/
 ├── backend/                             # Python 3.13 FastAPI Backend
 │   ├── app/
 │   │   ├── api/v1/endpoints/            # REST & WebSocket API Routers (Auth, Voice, Weather, Location, Sim)
-│   │   ├── core/                        # Configuration, Security, JWT, Error Handlers
+│   │   ├── core/                        # Configuration, Caching, Security, JWT, Error Handlers
 │   │   ├── db/                          # Database Session & Base Engine
 │   │   ├── integrations/                # Location (Geoapify) & Weather (Open-Meteo) Providers
 │   │   ├── models/                      # SQLAlchemy ORM Models (User, Workspace, Vehicle, Incident)
@@ -119,12 +119,13 @@ nexus/
 │
 ├── frontend/                            # Next.js 15 App Router Frontend
 │   ├── app/
-│   │   ├── (auth)/                      # Login, Signup, Forgot Password, Reset Password
+│   │   ├── (auth)/                      # Split-Screen 3D Login, Signup, Password Recovery
 │   │   ├── (onboarding)/                # Welcome, Role Selection, Workspace, Environment Setup
-│   │   ├── (app)/                       # Core Application Views (Overview, Live World, Sim, Admin)
-│   │   └── api/v1/                      # Client-Side API Route Handlers
+│   │   ├── (app)/                       # Core Views (Overview, Live World, Sim, Admin)
+│   │   └── api/v1/                      # Client-Side Route Handlers
 │   ├── components/
-│   │   ├── avatar/                      # 3D Procedural Companion Avatar with 9 Emotional States
+│   │   ├── avatar/                      # 3D Procedural Companion Avatar & Global Sliding Widget
+│   │   ├── brand/                       # 3D WebGL Hero & 7-Stage Scrollytelling Journey
 │   │   ├── location/                    # Location Search & Picker with Debounced Autocomplete
 │   │   ├── map/                         # MapLibre 3D GIS Map, Route Renderers, and Hazard Polygons
 │   │   ├── simulation/                  # What-If Scenario Builder & Matrix Visualizer
@@ -175,7 +176,7 @@ nexus/
 
 ### Security Guarantees:
 * **Secret Isolation**: All API keys (`GROQ_API_KEY`, `GEOAPIFY_API_KEY`, DB connection strings) are stored strictly server-side in `backend/.env` and excluded from git and client bundles.
-* **Access Control Gating**: Frontend admin routes (`/admin/*`) are protected by [AdminLayout](frontend/app/(app)/admin/layout.tsx) with tactical access-denied shields for unauthorized roles.
+* **Access Control Gating**: Frontend admin routes (`/admin/*`) are protected with tactical access-denied shields for unauthorized roles.
 * **Authentication Safeguards**: Passwords require $\ge 6$ characters and wrong credentials are rejected with HTTP 401 and audio-visual alert states.
 
 ---
@@ -201,8 +202,8 @@ NEXUS is thoroughly tested across both frontend and backend layers:
 
 ### 1. Clone & Configure Environment
 ```bash
-git clone https://github.com/your-org/nexus.git
-cd nexus
+git clone https://github.com/AadityaUniyal/Nexus.git
+cd Nexus
 
 # Copy environment variables
 cp .env.example .env
@@ -224,7 +225,7 @@ cd ..
 ### 3. Run Automated Tests
 ```bash
 # Run backend pytest suite (30/30 tests)
-cd backend && python -m pytest && cd ..
+cd backend && python -m pytest ../tests/backend && cd ..
 
 # Run frontend TypeScript type-check
 cd frontend && npx tsc --noEmit && cd ..
@@ -233,7 +234,7 @@ cd frontend && npx tsc --noEmit && cd ..
 ### 4. Launch Development Servers
 ```bash
 # Option A: Start both concurrently from root
-npm run dev
+python run.py
 
 # Option B: Run separately
 # Terminal 1 (Backend API on http://localhost:8000)
