@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Incident Center</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#201a1b",
+                    "surface-dim": "#dcd9d8",
+                    "surface-container-high": "#ebe7e6",
+                    "on-secondary-fixed-variant": "#0e503e",
+                    "outline-variant": "#c5c7c1",
+                    "secondary-container": "#b1f0d6",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-container": "#918789",
+                    "primary-fixed-dim": "#c5c7c1",
+                    "on-secondary-fixed": "#002117",
+                    "tertiary": "#100b0c",
+                    "secondary-fixed": "#b1f0d6",
+                    "primary-fixed": "#e1e3dd",
+                    "primary-container": "#20231f",
+                    "error-container": "#ffdad6",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f6f3f1",
+                    "secondary-fixed-dim": "#96d3bb",
+                    "inverse-primary": "#c5c7c1",
+                    "secondary": "#2d6955",
+                    "on-surface-variant": "#454843",
+                    "on-primary-container": "#888a85",
+                    "on-secondary-container": "#336f5b",
+                    "on-secondary": "#ffffff",
+                    "outline": "#757872",
+                    "on-primary-fixed-variant": "#454843",
+                    "surface-variant": "#e5e2e0",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#fcf9f7",
+                    "inverse-surface": "#313030",
+                    "on-primary": "#ffffff",
+                    "inverse-on-surface": "#f3f0ef",
+                    "surface-bright": "#fcf9f7",
+                    "on-tertiary-fixed-variant": "#4c4546",
+                    "surface-container": "#f1edec",
+                    "on-surface": "#1c1b1b",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#cfc4c5",
+                    "surface-tint": "#5c5f5a",
+                    "tertiary-container": "#272122",
+                    "tertiary-fixed": "#ece0e1",
+                    "on-background": "#1c1b1b",
+                    "surface-container-highest": "#e5e2e0",
+                    "primary": "#0a0d09",
+                    "background": "#fcf9f7",
+                    "on-primary-fixed": "#191c19",
+                    "on-tertiary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-gap": "16px",
+                    "card-padding": "24px",
+                    "gutter": "24px",
+                    "container-margin": "32px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Geist"],
+                    "display-lg": ["Geist"],
+                    "body-sm": ["Geist"],
+                    "headline-lg": ["Geist"],
+                    "body-lg": ["Geist"],
+                    "data-mono": ["JetBrains Mono"],
+                    "title-md": ["Geist"],
+                    "label-caps": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          }
+        },
+      }
+    </script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body {
+            background-color: #fcf9f7; /* bg-background */
+        }
+        
+        /* Smooth scrolling for main canvas */
+        .scroller {
+            scrollbar-width: thin;
+            scrollbar-color: var(--color-surface-dim) transparent;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-on-background font-body-lg antialiased bg-background">
+<!-- JSON Navigation: SideNavBar -->
+<nav class="h-screen w-72 flex flex-col fixed left-0 top-0 z-50 bg-surface-container-low shadow-sm flex flex-col h-full p-container-margin gap-stack-gap border-r border-surface-variant">
+<!-- Header -->
+<div class="flex items-center gap-4 mb-8 px-2">
+<div class="h-10 w-10 rounded-lg overflow-hidden bg-surface-container-high border border-outline-variant/30 flex items-center justify-center shrink-0">
+<img class="w-full h-full object-cover" data-alt="A highly detailed, premium 3D render of a futuristic robot companion mascot head, smiling softly. Warm industrial aesthetic, matte white polymer and sandblasted glass materials. Clean light mode studio lighting, professional corporate environment context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuADtJyBPU2wJQrYGog0aAliB8fCmYgMQicXIy3BtsHRv7XoLdIZR2-0NUO74BhJKrzqSU3dcD-BfVfjVm_7G8g9eCO29h1u92YQSige5LOFX6CNbPqUSScEPXlai4ef7L6NHHQzAVT4G5KajdECK35esLIkwkJ6BX0tKWxAQGBcYR5dQ4q8VdP8n0GDayvKa4X4OaUZ5Ts5P3If4q4iuTOak8rkc7_nWlkkeUD715CZOyoVBO-4yoby"/>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">NEXUS</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant tracking-widest mt-0.5">Operational Intelligence</p>
+</div>
+</div>
+<!-- Main Navigation Links -->
+<div class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="regular">dashboard</span>
+<span class="font-body-lg text-body-lg font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="regular">public</span>
+<span class="font-body-lg text-body-lg font-medium">Live World</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="regular">precision_manufacturing</span>
+<span class="font-body-lg text-body-lg font-medium">Operations</span>
+</a>
+<!-- ACTIVE TAB: Incidents -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-on-primary shadow-md font-medium transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-body-lg text-body-lg font-medium">Incidents</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="regular">model_training</span>
+<span class="font-body-lg text-body-lg font-medium">Simulations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="regular">psychology</span>
+<span class="font-body-lg text-body-lg font-medium">Intelligence</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="regular">insights</span>
+<span class="font-body-lg text-body-lg font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-lg" data-weight="regular">description</span>
+<span class="font-body-lg text-body-lg font-medium">Reports</span>
+</a>
+</div>
+<!-- Call to Action -->
+<button class="w-full mt-4 bg-primary text-on-primary font-body-lg text-body-lg font-medium py-3 rounded-lg hover:bg-inverse-surface transition-colors shadow-sm">
+            Run Simulation
+        </button>
+<!-- Footer Links -->
+<div class="flex flex-col gap-1 mt-6 border-t border-surface-variant pt-6">
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-lg">support_agent</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-lg">check_circle</span>
+<span class="font-body-sm text-body-sm">System Status</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-72 h-full overflow-y-auto scroller p-container-margin flex flex-col gap-stack-gap">
+<!-- Header Section -->
+<header class="flex justify-between items-end mb-4">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-2">LIVE WORLD &gt; OPERATIONS OVERVIEW</p>
+<h2 class="font-display-lg text-display-lg text-on-surface">Incident Center</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface-container-low px-4 py-2 rounded-full border border-surface-variant shadow-sm">
+<span class="w-2 h-2 rounded-full bg-secondary mr-2"></span>
+<span class="font-data-mono text-data-mono text-on-surface">SYS.HEALTH: OPTIMAL</span>
+</div>
+</div>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter flex-1">
+<!-- Left Column: Summaries & List (Span 8) -->
+<div class="col-span-12 xl:col-span-8 flex flex-col gap-stack-gap">
+<!-- High-level Summary Row -->
+<div class="grid grid-cols-2 gap-gutter">
+<!-- Critical Summary Card -->
+<div class="bg-surface rounded-xl p-card-padding border-t-2 border-t-error border-x border-b border-surface-variant shadow-[0px_4px_20px_rgba(32,35,31,0.04)] flex flex-col justify-between h-32 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-6xl text-error">warning</span>
+</div>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant">ACTIVE INCIDENTS: CRITICAL</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-error">03</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">requiring immediate action</span>
+</div>
+</div>
+<!-- Attention Summary Card -->
+<div class="bg-surface rounded-xl p-card-padding border-t-2 border-t-tertiary border-x border-b border-surface-variant shadow-[0px_4px_20px_rgba(32,35,31,0.04)] flex flex-col justify-between h-32 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-5">
+<span class="material-symbols-outlined text-6xl text-tertiary">error</span>
+</div>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant">ACTIVE INCIDENTS: ATTENTION</h3>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-on-surface">14</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">under investigation</span>
+</div>
+</div>
+</div>
+<!-- Incident List Card -->
+<div class="bg-surface rounded-xl border border-surface-variant shadow-[0px_4px_20px_rgba(32,35,31,0.04)] flex-1 flex flex-col">
+<div class="p-card-padding border-b border-surface-variant flex justify-between items-center">
+<h3 class="font-title-md text-title-md text-on-surface">Operational Incidents Log</h3>
+<button class="font-label-caps text-label-caps text-primary hover:bg-surface-container-high px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">filter_list</span> FILTER
+                        </button>
+</div>
+<!-- List Header -->
+<div class="grid grid-cols-12 gap-4 px-card-padding py-3 bg-surface-container-lowest border-b border-surface-variant">
+<div class="col-span-2 font-label-caps text-label-caps text-on-surface-variant">INCIDENT ID</div>
+<div class="col-span-2 font-label-caps text-label-caps text-on-surface-variant">SEVERITY</div>
+<div class="col-span-3 font-label-caps text-label-caps text-on-surface-variant">AFFECTED ASSET</div>
+<div class="col-span-2 font-label-caps text-label-caps text-on-surface-variant">DURATION</div>
+<div class="col-span-3 font-label-caps text-label-caps text-on-surface-variant text-right">STATUS</div>
+</div>
+<!-- List Items -->
+<div class="flex-1 overflow-y-auto scroller">
+<!-- Row 1: Critical / Action Pending -->
+<div class="grid grid-cols-12 gap-4 px-card-padding py-4 border-b border-surface-variant hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface">INC-9942</div>
+<div class="col-span-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-error-container text-on-error-container font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span> CRITICAL
+                                </span>
+</div>
+<div class="col-span-3 font-body-sm text-body-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">local_shipping</span>
+                                Vehicle V-102
+                            </div>
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface-variant">00:14:22</div>
+<div class="col-span-3 text-right">
+<span class="inline-flex px-2.5 py-1 rounded-md bg-surface-variant text-on-surface-variant font-data-mono text-xs border border-outline-variant/50">
+                                    ACTION PENDING
+                                </span>
+</div>
+</div>
+<!-- Row 2: Attention / Investigating -->
+<div class="grid grid-cols-12 gap-4 px-card-padding py-4 border-b border-surface-variant hover:bg-surface-container-lowest transition-colors items-center">
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface">INC-9941</div>
+<div class="col-span-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span> ATTENTION
+                                </span>
+</div>
+<div class="col-span-3 font-body-sm text-body-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">warehouse</span>
+                                Warehouse W-04
+                            </div>
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface-variant">01:45:10</div>
+<div class="col-span-3 text-right">
+<span class="inline-flex px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant font-data-mono text-xs border border-outline-variant/30">
+                                    INVESTIGATING
+                                </span>
+</div>
+</div>
+<!-- Row 3: Attention / Detected -->
+<div class="grid grid-cols-12 gap-4 px-card-padding py-4 border-b border-surface-variant hover:bg-surface-container-lowest transition-colors items-center">
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface">INC-9940</div>
+<div class="col-span-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span> ATTENTION
+                                </span>
+</div>
+<div class="col-span-3 font-body-sm text-body-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">dns</span>
+                                Server Node A2
+                            </div>
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface-variant">00:03:05</div>
+<div class="col-span-3 text-right">
+<span class="inline-flex px-2.5 py-1 rounded-md bg-surface-container-low text-on-surface-variant font-data-mono text-xs border border-outline-variant/30">
+                                    DETECTED
+                                </span>
+</div>
+</div>
+<!-- Row 4: Resolved -->
+<div class="grid grid-cols-12 gap-4 px-card-padding py-4 border-b border-surface-variant hover:bg-surface-container-lowest transition-colors items-center opacity-60">
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface">INC-9938</div>
+<div class="col-span-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> RESOLVED
+                                </span>
+</div>
+<div class="col-span-3 font-body-sm text-body-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">conveyor_belt</span>
+                                Line Assembly 4
+                            </div>
+<div class="col-span-2 font-data-mono text-data-mono text-on-surface-variant">04:20:00</div>
+<div class="col-span-3 text-right">
+<span class="inline-flex px-2.5 py-1 rounded-md bg-transparent text-secondary font-data-mono text-xs border border-secondary/30">
+                                    RESOLVED
+                                </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Mascot & Context Actions (Span 4) -->
+<div class="col-span-12 xl:col-span-4 flex flex-col gap-stack-gap">
+<!-- Mascot Notification Panel -->
+<div class="bg-surface rounded-xl border border-surface-variant shadow-[0px_4px_20px_rgba(32,35,31,0.04)] overflow-hidden">
+<!-- Image Area with Glassmorphic overlay text -->
+<div class="h-48 w-full relative bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A highly detailed 3D render of a futuristic robot mascot in a 'concerned' or 'alert' posture looking at a holographic data display. The mascot features warm, tactile materials like matte white polymers and soft grey sandblasted glass components. It is set against a clean, light-mode background with soft, ambient studio lighting. The color palette emphasizes off-whites, subtle grays, and a touch of warning red to convey the operational context. The aesthetic is 'Warm Industrial' and highly professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBjPusHvZ5tUGRZ8eHwwMgU62Tj3yIL6dgza-d8VdW2AIECMYzxs19kZmuT_i5Gfy7d8pVgKiioEZ18FXsJTtA8YjmM84M79kbhgGE-xl8bE_8UsKgJ0m6N5LJkvHit5NvGOixuocy-xoRrwXWtdThj9lElQMVOf5_xg_1UJpNwq5t8cU97K5tMJkXVcMxTPURBDxe487u6BX-eH_-5VwYeE-juFg4n863JFiATxEYH790IIuEXkPR"/>
+<!-- Overlay -->
+<div class="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/60 to-transparent">
+<h4 class="font-title-md text-title-md text-white">System Alert</h4>
+</div>
+</div>
+<div class="p-card-padding">
+<div class="flex items-start gap-3 mb-4">
+<span class="material-symbols-outlined text-error mt-0.5">warning</span>
+<p class="font-body-sm text-body-sm text-on-surface">
+                                Anomaly density is currently <span class="font-semibold text-error">higher than baseline</span> in Sector 4 (Logistics). I recommend dispatching a field unit to Vehicle V-102 immediately.
+                            </p>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-primary text-on-primary font-body-sm text-body-sm py-2 rounded-lg hover:bg-inverse-surface transition-colors">
+                                Dispatch Unit
+                            </button>
+<button class="flex-1 bg-surface-container-high text-on-surface font-body-sm text-body-sm py-2 rounded-lg border border-surface-variant hover:bg-surface-variant transition-colors">
+                                View Details
+                            </button>
+</div>
+</div>
+</div>
+<!-- Quick Intel Panel -->
+<div class="bg-surface rounded-xl border border-surface-variant shadow-[0px_4px_20px_rgba(32,35,31,0.04)] p-card-padding flex-1">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-4">SECTOR HOTSPOTS</h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface">Sector 4 (Logistics)</span>
+<span class="font-data-mono text-data-mono text-error">12 Incidents</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-error h-full w-[65%] rounded-full"></div>
+</div>
+<div class="flex justify-between items-center mt-6">
+<span class="font-body-sm text-body-sm text-on-surface">Sector 1 (Processing)</span>
+<span class="font-data-mono text-data-mono text-tertiary">4 Incidents</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-tertiary h-full w-[25%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

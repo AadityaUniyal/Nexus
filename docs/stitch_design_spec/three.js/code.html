@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<!-- STITCH_THREEJS_START:ANIMATION_1 class="fixed inset-0 w-full h-full bg-transparent" -->
+<div class="fixed inset-0 w-full h-full bg-transparent" style="display:block;">
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+<div id="threejs-container-ANIMATION_1" style="width:100%;height:100%"></div>
+<script>
+(function() {
+  const container = document.getElementById('threejs-container-ANIMATION_1');
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const container = document.getElementById('threejs-container') || document.body;
+const width = container.clientWidth || window.innerWidth;
+const height = container.clientHeight || window.innerHeight;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+renderer.setSize(width, height);
+renderer.setPixelRatio(window.devicePixelRatio);
+container.appendChild(renderer.domElement);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 10, 7.5);
+scene.add(directionalLight);
+
+// Nexus Avatar: A soft, rounded, non-humanoid creature
+const bodyGroup = new THREE.Group();
+
+// Main Body - Rounded, teardrop-like shape
+const bodyGeom = new THREE.SphereGeometry(1, 32, 32);
+const bodyMat = new THREE.MeshPhongMaterial({ color: 0xDDEDE4, shininess: 100, flatShading: false });
+const body = new THREE.Mesh(bodyGeom, bodyMat);
+body.scale.set(1, 1.2, 1);
+bodyGroup.add(body);
+
+// Head/Eyes area
+const eyeGeom = new THREE.SphereGeometry(0.1, 16, 16);
+const eyeMat = new THREE.MeshBasicMaterial({ color: 0x20231F });
+
+const leftEye = new THREE.Mesh(eyeGeom, eyeMat);
+leftEye.position.set(-0.3, 0.4, 0.8);
+bodyGroup.add(leftEye);
+
+const rightEye = new THREE.Mesh(eyeGeom, eyeMat);
+rightEye.position.set(0.3, 0.4, 0.8);
+bodyGroup.add(rightEye);
+
+// Small "antenna" or architectural detail
+const antennaGeom = new THREE.CylinderGeometry(0.02, 0.05, 0.4);
+const antennaMat = new THREE.MeshPhongMaterial({ color: 0x2F6B57 });
+const antenna = new THREE.Mesh(antennaGeom, antennaMat);
+antenna.position.set(0, 1.2, 0);
+bodyGroup.add(antenna);
+
+scene.add(bodyGroup);
+camera.position.z = 5;
+
+// Animation
+function animate() {
+    requestAnimationFrame(animate);
+    
+    // Idle breathing/movement
+    const time = Date.now() * 0.001;
+    bodyGroup.position.y = Math.sin(time) * 0.1;
+    bodyGroup.rotation.y = Math.sin(time * 0.5) * 0.1;
+    
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    const w = container.clientWidth || window.innerWidth;
+    const h = container.clientHeight || window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+});
+
+animate();
+})();
+</script>
+</div>
+<!-- STITCH_THREEJS_END:ANIMATION_1 -->
+</body>
+</html>

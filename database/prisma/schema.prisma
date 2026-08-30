@@ -1,0 +1,357 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMINISTRATOR
+  OPERATIONS_MANAGER
+  ANALYST
+  OPERATOR
+  VIEWER
+}
+
+enum VehicleStatus {
+  IDLE
+  IN_TRANSIT
+  LOADING
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  DETECTED
+  ACKNOWLEDGED
+  INVESTIGATING
+  SIMULATING
+  ACTION_PENDING
+  ACTION_APPLIED
+  RESOLVED
+  ARCHIVED
+}
+
+enum OrderPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum OrderStatus {
+  PENDING
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  DELAYED
+  CANCELLED
+}
+
+enum SimulationStatus {
+  DRAFT
+  RUNNING
+  COMPLETED
+  APPLIED
+  FAILED
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  region      String   @default("North America Central")
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users              User[]
+  warehouses         Warehouse[]
+  vehicles           Vehicle[]
+  routes             Route[]
+  orders             Order[]
+  incidents          Incident[]
+  simulations        Simulation[]
+  events             OperationalEvent[]
+  locations          Location[]
+  workspaceLocations WorkspaceLocation[]
+}
+
+model User {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email       String    @unique
+  name        String
+  password    String    // Hashed or demo token
+  role        Role      @default(OPERATIONS_MANAGER)
+  avatarUrl   String?
+  department  String?
+  active      Boolean   @default(true)
+  lastActive  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  simulations   Simulation[]
+}
+
+model Location {
+  id               String   @id @default(uuid())
+  workspaceId      String?
+  workspace        Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  displayName      String
+  formattedAddress String?
+  latitude         Float
+  longitude        Float
+  country          String?
+  countryCode      String?
+  region           String?
+  city             String?
+  district         String?
+  postcode         String?
+  resultType       String   @default("city")
+  provider         String   @default("geoapify")
+  providerPlaceId  String?
+  confidence       Float    @default(1.0)
+  timezone         String?
+  metadataJson     Json?
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspaceLocations WorkspaceLocation[]
+}
+
+model WorkspaceLocation {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  locationId  String
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  label       String    @default("Primary Operations Area")
+  type        String    @default("OPERATING_REGION")
+  isPrimary   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Warehouse {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code          String    @unique
+  name          String
+  city          String
+  state         String
+  lat           Float
+  lng           Float
+  capacityUnits Int       @default(10000)
+  currentUnits  Int       @default(6200)
+  dockCount     Int       @default(12)
+  activeDocks   Int       @default(8)
+  efficiencyPct Float     @default(94.2)
+  status        String    @default("OPERATIONAL")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  originRoutes  Route[]   @relation("OriginWarehouse")
+  destRoutes    Route[]   @relation("DestWarehouse")
+  orders        Order[]
+}
+
+model Vehicle {
+  id            String        @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code          String        @unique
+  name          String
+  model         String        @default("Freightliner eCascadia")
+  driverName    String?
+  driverPhone   String?
+  capacityKg    Float         @default(18000)
+  currentLoadKg Float         @default(11400)
+  batteryPct    Float         @default(82.0)
+  healthScore   Float         @default(98.5)
+  speedKmh      Float         @default(65.0)
+  lat           Float
+  lng           Float
+  heading       Float         @default(90.0)
+  status        VehicleStatus @default(IN_TRANSIT)
+  currentRouteId String?
+  route         Route?        @relation(fields: [currentRouteId], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  orders        Order[]
+}
+
+model Route {
+  id                String    @id @default(uuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code              String    @unique
+  name              String
+  originWarehouseId String
+  originWarehouse   Warehouse @relation("OriginWarehouse", fields: [originWarehouseId], references: [id], onDelete: Cascade)
+  destWarehouseId   String
+  destWarehouse     Warehouse @relation("DestWarehouse", fields: [destWarehouseId], references: [id], onDelete: Cascade)
+  distanceKm        Float
+  avgDurationMins   Int
+  riskScore         Float     @default(12.0)
+  trafficCondition  String    @default("CLEAR")
+  waypointsJson     Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  vehicles          Vehicle[]
+  orders            Order[]
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  workspaceId     String
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  orderNumber     String        @unique
+  customerName    String
+  destination     String
+  priority        OrderPriority @default(NORMAL)
+  status          OrderStatus   @default(IN_TRANSIT)
+  warehouseId     String?
+  warehouse       Warehouse?    @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  routeId         String?
+  route           Route?        @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  vehicleId       String?
+  vehicle         Vehicle?      @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  deadline        DateTime
+  estimatedEta    DateTime
+  itemsCount      Int           @default(45)
+  totalCost       Float         @default(1250.00)
+  slaCompliant    Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Incident {
+  id                 String           @id @default(uuid())
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code               String           @unique
+  title              String
+  summary            String
+  severity           IncidentSeverity @default(HIGH)
+  status             IncidentStatus   @default(DETECTED)
+  affectedEntityType String           // VEHICLE, ROUTE, WAREHOUSE, ORDER
+  affectedEntityId   String
+  affectedEntityName String
+  rootCause          String?
+  aiAnalysis         String?
+  potentialImpact    String?
+  costEstimate       Float            @default(4200.00)
+  ordersAffected     Int              @default(14)
+  delayMinutes       Int              @default(85)
+  resolvedAt         DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  timeline           IncidentTimeline[]
+  simulations        Simulation[]
+}
+
+model IncidentTimeline {
+  id          String         @id @default(uuid())
+  incidentId  String
+  incident    Incident       @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  status      IncidentStatus
+  note        String
+  actorName   String         @default("Nexus Automated Telemetry")
+  createdAt   DateTime       @default(now())
+}
+
+model Simulation {
+  id                 String           @id @default(uuid())
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId             String?
+  user               User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  incidentId         String?
+  incident           Incident?        @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  code               String           @unique
+  title              String
+  description        String
+  status             SimulationStatus @default(COMPLETED)
+  variablesJson      Json             // { rerouteVehicleId, altRouteId, priorityShift, warehouseTransfer }
+  baselineMetrics    Json             // { cost, delayMins, ordersAtRisk, slaImpact }
+  simulatedMetrics   Json             // { cost, delayMins, ordersAtRisk, slaImpact, netSavings }
+  aiBriefing         String?
+  appliedAt          DateTime?
+  appliedBy          String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model OperationalEvent {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  eventType   String   // vehicle.telemetry, route.congestion, warehouse.capacity, incident.created, simulation.applied
+  entityType  String
+  entityId    String
+  severity    String   @default("INFO") // INFO, WARNING, CRITICAL, SUCCESS, SIMULATION
+  message     String
+  payloadJson Json?
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String   @default("INFO") // CRITICAL, ATTENTION, INFO, SUCCESS, SIMULATION
+  title      String
+  message    String
+  entityType String?
+  entityId   String?
+  deepLink   String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  user       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName  String
+  action     String   // USER_CREATED, DECISION_APPLIED, ROUTE_ALTERED, INCIDENT_RESOLVED, SETTINGS_UPDATED
+  entityType String
+  entityId   String
+  details    String
+  beforeJson Json?
+  afterJson  Json?
+  ipAddress  String   @default("127.0.0.1")
+  createdAt  DateTime @default(now())
+}
+
+model DataPipelineHealth {
+  id               String   @id @default(uuid())
+  sourceName       String   @unique
+  sourceType       String   // TELEMETRY_INGESTION, AZURE_IOT_HUB, FABRIC_DELTA_LAKE, POSTGRES_STREAM
+  status           String   @default("HEALTHY") // HEALTHY, DEGRADED, OFFLINE
+  latencyMs        Int      @default(18)
+  throughputPerSec Int      @default(2400)
+  recordsToday     Int      @default(1840000)
+  errorCount       Int      @default(0)
+  lastSyncAt       DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

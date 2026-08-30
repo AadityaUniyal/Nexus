@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Warehouse Operations</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#c5c7c1",
+                        "surface-container-highest": "#e5e2e0",
+                        "tertiary-fixed-dim": "#cfc4c5",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#b1f0d6",
+                        "inverse-on-surface": "#f3f0ef",
+                        "on-primary-fixed-variant": "#454843",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#002117",
+                        "surface": "#fcf9f7",
+                        "surface-tint": "#5c5f5a",
+                        "on-surface": "#1c1b1b",
+                        "on-secondary-fixed-variant": "#0e503e",
+                        "primary": "#0a0d09",
+                        "outline-variant": "#c5c7c1",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#f1edec",
+                        "tertiary-container": "#272122",
+                        "on-tertiary-fixed": "#201a1b",
+                        "primary-fixed": "#e1e3dd",
+                        "tertiary": "#100b0c",
+                        "outline": "#757872",
+                        "secondary-container": "#b1f0d6",
+                        "on-primary-container": "#888a85",
+                        "on-background": "#1c1b1b",
+                        "tertiary-fixed": "#ece0e1",
+                        "surface-dim": "#dcd9d8",
+                        "surface-container-low": "#f6f3f1",
+                        "on-surface-variant": "#454843",
+                        "on-secondary-container": "#336f5b",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#313030",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "surface-container-high": "#ebe7e6",
+                        "on-tertiary-container": "#918789",
+                        "primary-container": "#20231f",
+                        "surface-bright": "#fcf9f7",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e5e2e0",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#2d6955",
+                        "background": "#fcf9f7",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed": "#191c19"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin": "32px",
+                        "gutter": "24px",
+                        "card-padding": "24px",
+                        "stack-gap": "16px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-lg": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "data-mono": ["JetBrains Mono"],
+                        "title-md": ["Geist"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .nexus-shadow {
+            box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04);
+        }
+        .nexus-inset {
+            box-shadow: inset 0px 2px 4px rgba(32, 35, 31, 0.06);
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dcd9d8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c5c7c1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-sm antialiased h-screen flex overflow-hidden">
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex flex-col h-screen py-container-margin border-r border-outline-variant bg-surface w-64 shadow-[0px_4px_20px_rgba(32,35,31,0.04)] z-40 shrink-0">
+<div class="px-6 mb-8">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">NEXUS</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest mt-1">Operational Intel</p>
+</div>
+<div class="flex-1 overflow-y-auto px-4 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+                Overview
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">public</span>
+                Live World
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary font-bold bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200 relative" href="#">
+<div class="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-primary rounded-r-full"></div>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">settings_input_component</span>
+                Operations
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">error</span>
+                Incidents
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">science</span>
+                Simulations
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">psychology</span>
+                Intelligence
+            </a>
+</div>
+<div class="px-4 mt-auto pt-6 border-t border-outline-variant space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-caps text-label-caps uppercase active:scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+                Support
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden relative bg-surface-container-low">
+<!-- TopAppBar (Mobile & Desktop overrides) -->
+<header class="flex justify-between items-center h-16 px-container-margin sticky top-0 z-50 w-full bg-surface/85 backdrop-blur-xl border-b border-outline-variant md:px-8">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="font-title-md text-title-md font-bold tracking-tight text-primary">Warehouse DT</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:flex items-center focus-within:ring-2 focus-within:ring-primary/10 rounded-full bg-surface-container px-4 py-1.5 nexus-inset">
+<span class="material-symbols-outlined text-on-surface-variant mr-2 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm font-data-mono w-48 text-on-surface placeholder:text-on-surface-variant/50" placeholder="Search entity..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors relative p-2">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-surface"></span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 hidden sm:block">
+<span class="material-symbols-outlined">history</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant ml-2 shrink-0">
+<img class="w-full h-full object-cover" data-alt="A macro photography shot of an abstract, geometric textured surface in warm ivory tones, resembling a highly engineered polymer material. Soft, diffuse studio lighting highlights subtle ridges and valleys, creating a sense of premium, tactile quality. Minimalist and technical aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCC30d1vflETQ2SjC1DQXNVbIa-1LcZKGNQ3sZjfeYVF1Q_3wxn3LcLSx8-2hWpIOI9O6H0BBYw2EZbbu-u8Y_LcIK55CLSHLvYL151zLkqdy_Mi36dGOqtC5XRZRhxzQB3lOz7JZdaFXdQ_UjOlygEkhfyjwki_z7uLQOVetnzGSxjaWLsQJ0HrjemyUJMOI2lVq_uutOiwiODkY6yZ72DvGWYuvnhXt0siB2x2q4Y3fa4XdeTOeEb"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Canvas -->
+<div class="flex-1 overflow-y-auto p-container-margin md:p-8 space-y-gutter">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2">
+<div>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg font-bold text-on-surface">Facility Alpha</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Real-time throughput &amp; automation telemetry.</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/15 text-secondary font-label-caps text-label-caps uppercase border border-secondary/20">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                        Live Sync
+                    </span>
+<div class="font-data-mono text-data-mono text-on-surface-variant bg-surface-container px-3 py-1 rounded-lg border border-outline-variant/50">
+                        14:22:09 UTC
+                    </div>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter auto-rows-min">
+<!-- 3D Visualization / Zone Map (Span 8) -->
+<div class="md:col-span-8 bg-surface rounded-xl border border-outline-variant nexus-shadow overflow-hidden flex flex-col h-[400px] md:h-[500px]">
+<div class="px-card-padding py-4 border-b border-outline-variant/50 flex justify-between items-center bg-surface-bright z-10 relative">
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">view_in_ar</span>
+                            Digital Twin: Zone Topography
+                        </h3>
+<div class="flex gap-2">
+<button class="p-1.5 rounded-md hover:bg-surface-container transition-colors text-on-surface-variant"><span class="material-symbols-outlined text-sm">zoom_in</span></button>
+<button class="p-1.5 rounded-md hover:bg-surface-container transition-colors text-on-surface-variant"><span class="material-symbols-outlined text-sm">filter_alt</span></button>
+</div>
+</div>
+<div class="flex-1 relative bg-surface-container-highest/20">
+<!-- Fallback map image -->
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-60 mix-blend-multiply" data-alt="A highly stylized, isometric 3D render of a futuristic warehouse floor plan. The environment is minimalist, rendered in warm ivory and light grey tones, reminiscent of architectural blueprints combined with modern dashboard aesthetics. Subtle lighting highlights different storage zones (Zone A, B, C) with faint, glowing neon accents indicating activity levels. Smooth, technical, and clean." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOAiCZi_MO4DtzMiineXDFSRLjYqz4E2t5bKeEoUPl4EEMJN77KlPfeazlh8LNdl1arCXZElYe2iIeHgb6c7diPlW2C8gnvHV2L9M0JMDsttVRV2GgtGq-81sOirobOI7z2TdECfYOAy4xFMcRQ1rwAwkGvfu93hwY3jdgnDGR3ez6EhzSs2tTBh6DAbfiXJchkd9dsN0cCTHf-Bz76gclbZ2K2Kcg5Gz_n72jUfTYtf9OWx9loaEb"/>
+</div>
+<!-- Overlay elements mimicking interactive digital twin -->
+<div class="absolute inset-0 z-10 p-6 flex flex-col justify-end">
+<div class="flex gap-4">
+<div class="bg-surface/90 backdrop-blur-md border border-outline-variant rounded-lg p-3 w-48 shadow-lg hover:-translate-y-1 transition-transform duration-300">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Zone A (Inbound)</span>
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+</div>
+<div class="font-data-mono text-lg font-medium text-on-surface">84% Cap</div>
+<div class="w-full bg-surface-container h-1 mt-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-[84%]"></div>
+</div>
+</div>
+<div class="bg-surface/90 backdrop-blur-md border border-outline-variant rounded-lg p-3 w-48 shadow-lg hover:-translate-y-1 transition-transform duration-300">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label-caps text-label-caps uppercase text-on-surface-variant">Zone B (Sort)</span>
+<span class="w-2 h-2 rounded-full bg-error animate-pulse shadow-[0_0_8px_rgba(186,26,26,0.6)]"></span>
+</div>
+<div class="font-data-mono text-lg font-medium text-error">98% Cap</div>
+<div class="w-full bg-surface-container h-1 mt-2 rounded-full overflow-hidden">
+<div class="bg-error h-full w-[98%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Key Metrics Sidebar (Span 4) -->
+<div class="md:col-span-4 flex flex-col gap-gutter">
+<!-- Throughput -->
+<div class="bg-surface rounded-xl border border-outline-variant nexus-shadow p-card-padding">
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">sync_alt</span>
+                                Throughput
+                            </h3>
+<span class="font-data-mono text-xs text-on-surface-variant">Units/hr</span>
+</div>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between items-end mb-1">
+<span class="font-body-sm text-on-surface-variant">Inbound Rate</span>
+<span class="font-data-mono text-xl font-medium text-on-surface">4,205</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[65%] rounded-full"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-end mb-1">
+<span class="font-body-sm text-on-surface-variant">Outbound Rate</span>
+<span class="font-data-mono text-xl font-medium text-on-surface">3,890</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-outline h-full w-[55%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Automation Health -->
+<div class="bg-surface rounded-xl border border-outline-variant nexus-shadow p-card-padding flex-1">
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">precision_manufacturing</span>
+                                Automation State
+                            </h3>
+</div>
+<ul class="space-y-3">
+<li class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-secondary-container/30 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-sm">conveyor_belt</span>
+</div>
+<div>
+<p class="font-body-sm font-medium text-on-surface">Main Conveyor</p>
+<p class="font-label-caps text-[10px] text-on-surface-variant uppercase">Line A</p>
+</div>
+</div>
+<span class="font-data-mono text-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded">99.8%</span>
+</li>
+<li class="flex items-center justify-between p-2 rounded-lg bg-error-container/20 border border-error/10 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-error-container/50 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-sm">smart_toy</span>
+</div>
+<div>
+<p class="font-body-sm font-medium text-on-surface">Sortation Bots</p>
+<p class="font-label-caps text-[10px] text-error uppercase">3 Units Offline</p>
+</div>
+</div>
+<span class="font-data-mono text-sm text-error bg-error/10 px-2 py-0.5 rounded">82.4%</span>
+</li>
+<li class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">forklift</span>
+</div>
+<div>
+<p class="font-body-sm font-medium text-on-surface">AGV Fleet</p>
+<p class="font-label-caps text-[10px] text-on-surface-variant uppercase">Idle: 4</p>
+</div>
+</div>
+<span class="font-data-mono text-sm text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">95.0%</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

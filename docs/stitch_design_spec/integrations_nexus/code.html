@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Integrations</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed-dim": "#cfc4c5",
+                    "on-tertiary-fixed": "#201a1b",
+                    "outline": "#757872",
+                    "tertiary": "#100b0c",
+                    "secondary-fixed": "#b1f0d6",
+                    "primary": "#0a0d09",
+                    "secondary-fixed-dim": "#96d3bb",
+                    "on-secondary": "#ffffff",
+                    "inverse-primary": "#c5c7c1",
+                    "inverse-surface": "#313030",
+                    "surface-container-low": "#f6f3f1",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#191c19",
+                    "surface": "#fcf9f7",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed": "#002117",
+                    "inverse-on-surface": "#f3f0ef",
+                    "tertiary-fixed": "#ece0e1",
+                    "surface-container-high": "#ebe7e6",
+                    "on-primary-fixed-variant": "#454843",
+                    "primary-container": "#20231f",
+                    "primary-fixed-dim": "#c5c7c1",
+                    "surface-variant": "#e5e2e0",
+                    "secondary": "#2d6955",
+                    "surface-container-highest": "#e5e2e0",
+                    "on-tertiary-container": "#918789",
+                    "background": "#fcf9f7",
+                    "tertiary-container": "#272122",
+                    "surface-bright": "#fcf9f7",
+                    "on-primary-container": "#888a85",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#e1e3dd",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1c1b1b",
+                    "on-error-container": "#93000a",
+                    "error-container": "#ffdad6",
+                    "surface-container": "#f1edec",
+                    "surface-dim": "#dcd9d8",
+                    "secondary-container": "#b1f0d6",
+                    "surface-tint": "#5c5f5a",
+                    "on-surface-variant": "#454843",
+                    "on-error": "#ffffff",
+                    "on-secondary-container": "#336f5b",
+                    "on-tertiary-fixed-variant": "#4c4546",
+                    "on-secondary-fixed-variant": "#0e503e",
+                    "on-surface": "#1c1b1b",
+                    "outline-variant": "#c5c7c1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-gap": "16px",
+                    "gutter": "24px",
+                    "unit": "4px",
+                    "card-padding": "24px",
+                    "container-margin": "32px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": [
+                            "Geist"
+                    ],
+                    "body-lg": [
+                            "Geist"
+                    ],
+                    "display-lg": [
+                            "Geist"
+                    ],
+                    "label-caps": [
+                            "JetBrains Mono"
+                    ],
+                    "title-md": [
+                            "Geist"
+                    ],
+                    "body-sm": [
+                            "Geist"
+                    ],
+                    "headline-lg": [
+                            "Geist"
+                    ],
+                    "data-mono": [
+                            "JetBrains Mono"
+                    ]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "title-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-sm": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "data-mono": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #F7F5EF; /* Level 0 (Base) */
+            color: #1c1b1b;
+        }
+        .nexus-card {
+            background-color: #FFFDF8; /* Level 1 (Cards/Panels) */
+            border: 1px solid #E5E2D9;
+            box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04);
+            border-radius: 0.5rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .nexus-card:hover {
+            box-shadow: 0px 8px 30px rgba(32, 35, 31, 0.08);
+            transform: translateY(-2px);
+        }
+        .nexus-input {
+            background-color: #F1EEE6;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid transparent;
+        }
+        .nexus-input:focus {
+            outline: none;
+            border-color: #0a0d09;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px #0a0d09;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-lg antialiased flex flex-col h-screen overflow-hidden md:flex-row">
+<!-- SideNavBar (Desktop) -->
+<nav class="bg-surface dark:bg-surface-container-lowest border-r border-surface-variant dark:border-outline-variant shadow-md h-screen w-64 fixed left-0 top-0 flex flex-col h-full py-6 gap-stack-gap hidden md:flex z-50">
+<div class="px-container-margin mb-4">
+<h1 class="font-headline-lg text-headline-lg font-black text-primary dark:text-on-primary-fixed">NEXUS</h1>
+<p class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant">Operational Intel</p>
+</div>
+<div class="flex flex-col gap-unit flex-1 overflow-y-auto">
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-body-lg text-body-lg">Overview</span>
+</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">public</span>
+<span class="font-body-lg text-body-lg">Live World</span>
+</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings_input_component</span>
+<span class="font-body-lg text-body-lg">Operations</span>
+</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">error_outline</span>
+<span class="font-body-lg text-body-lg">Incidents</span>
+</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">science</span>
+<span class="font-body-lg text-body-lg">Simulations</span>
+</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">psychology</span>
+<span class="font-body-lg text-body-lg">Intelligence</span>
+</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">insights</span>
+<span class="font-body-lg text-body-lg">Analytics</span>
+</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform rounded-lg mx-2 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">description</span>
+<span class="font-body-lg text-body-lg">Reports</span>
+</a>
+<!-- Settings Active -->
+<a class="bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-lg font-bold mx-2 hover:bg-surface-container-high transition-all duration-150 hover:translate-x-1 transition-transform px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">integration_instructions</span>
+<span class="font-body-lg text-body-lg">Integrations</span>
+</a>
+</div>
+<div class="px-container-margin mt-auto">
+<div class="flex items-center gap-3 pt-4 border-t border-surface-variant">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-sm">person</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface">Commander</span>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col md:ml-64 w-full h-full overflow-hidden">
+<!-- TopNavBar (Mobile only) -->
+<header class="bg-background dark:bg-primary-container border-b border-surface-variant dark:border-outline-variant shadow-sm w-full h-16 flex justify-between items-center px-container-margin md:hidden z-40 relative">
+<div class="flex items-center gap-4">
+<h1 class="font-display-lg text-headline-lg font-bold text-primary dark:text-on-primary-fixed tracking-tight">NEXUS</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 active:scale-95 transition-transform p-2 rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 active:scale-95 transition-transform p-2 rounded-full">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-primary font-bold hover:bg-surface-container-low transition-colors duration-200 active:scale-95 transition-transform p-2 rounded-full flex items-center gap-2">
+<span class="font-body-sm text-body-sm">Profile</span>
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-xs">person</span>
+</div>
+</button>
+</div>
+</header>
+<!-- Page Header & Controls -->
+<div class="px-container-margin pt-container-margin pb-stack-gap flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Integrations Hub</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Manage external data sources and communication channels.</p>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<div class="relative w-full sm:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="nexus-input w-full pl-9 pr-4 py-2 rounded-md font-body-sm text-body-sm text-on-surface focus:ring-0" placeholder="Search integrations..." type="text"/>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-md font-body-sm text-body-sm font-medium hover:bg-primary-container transition-colors shrink-0 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Connect New
+                </button>
+</div>
+</div>
+<!-- Integrations Grid Canvas -->
+<div class="flex-1 overflow-y-auto px-container-margin pb-container-margin">
+<!-- Category: Data Sources -->
+<section class="mb-8">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-4 uppercase tracking-wider flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">database</span>
+                    Data Sources
+                </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Integration Card 1 -->
+<div class="nexus-card p-card-padding flex flex-col">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-md bg-surface-container-high flex items-center justify-center">
+<img class="w-6 h-6 object-contain" data-alt="A clean, minimalist abstract geometric icon representing Microsoft Fabric, utilizing soft blue and purple tones, set against a pristine white background. High contrast, professional corporate software aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiveSws-Ucg4q7nOcQf2AHYh9tX3NOaXEssBUSvf1CEYG6aZ43i-Vt4G8oXI1EKD3j5hCWvJP6Y81HGINNNh0ezLyfDIeQv1Q65gR8lN81oM4CDvadao2qgFro3UCVGr8fhYeluC4yLMMkyVVO-Ekqi3Sqw8IPDaqOjYBWwloOMHLgajSusGzDUPp3jH1pnO1tUVLg6UfEPhQ-TZ8EwGTyr3JNMAtCe4UU2lniI4z7xHWEfxpvquq_"/>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Microsoft Fabric</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Data Analytics</p>
+</div>
+</div>
+<div class="bg-secondary-container/20 px-2 py-1 rounded-full flex items-center gap-1.5 border border-secondary-container">
+<div class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_4px_#2d6955]"></div>
+<span class="font-data-mono text-[10px] uppercase text-secondary font-medium tracking-wide">Active</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 line-clamp-2">Unified analytics platform for operational intelligence data warehousing.</p>
+<div class="mt-auto flex items-center justify-between border-t border-surface-variant pt-4">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">sync</span>
+<span class="font-data-mono text-xs">2 mins ago</span>
+</div>
+<button class="px-3 py-1.5 rounded text-sm font-medium hover:bg-surface-container-high transition-colors text-primary border border-surface-dim">Configure</button>
+</div>
+</div>
+<!-- Integration Card 2 -->
+<div class="nexus-card p-card-padding flex flex-col">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-md bg-surface-container-high flex items-center justify-center">
+<img class="w-6 h-6 object-contain" data-alt="A sleek, modern 3D icon of a storage bucket or cloud container representing AWS S3, using warm orange and dark grey colors, isolated on a clean white background. Crisp lighting, corporate tech feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8lVWyucH2Ud6v4FVYdedkJxIIH-n7iVi8UFvfqUPfWuACLRgn0IP2D0NnnWqkj2xZDsMUQsm9VAscVM8ZjJaalgOZrCTLx-5FlbHattef_Cwptp0P6kOJU_dbyu2PKH9HrjKqvQST0pEcWOVR_8xhSJVNHOBQgCTmnqETQVe1xfD48Qh8IB9PiVa8i17vhaXIE_L_C2oBK9ajKOXtPhmWbFIemmMyDRTb5O8aTV80ZepISjnePlFv"/>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">AWS S3</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Object Storage</p>
+</div>
+</div>
+<div class="bg-secondary-container/20 px-2 py-1 rounded-full flex items-center gap-1.5 border border-secondary-container">
+<div class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_4px_#2d6955]"></div>
+<span class="font-data-mono text-[10px] uppercase text-secondary font-medium tracking-wide">Active</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 line-clamp-2">Scalable storage for raw telemetry and historical incident reports.</p>
+<div class="mt-auto flex items-center justify-between border-t border-surface-variant pt-4">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">sync</span>
+<span class="font-data-mono text-xs">15 mins ago</span>
+</div>
+<button class="px-3 py-1.5 rounded text-sm font-medium hover:bg-surface-container-high transition-colors text-primary border border-surface-dim">Configure</button>
+</div>
+</div>
+<!-- Integration Card 3 -->
+<div class="nexus-card p-card-padding flex flex-col">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-md bg-surface-container-high flex items-center justify-center">
+<img class="w-6 h-6 object-contain" data-alt="A minimalist, geometric snowflake icon in sharp light blue and white, representing Snowflake Data Cloud. Clean, technical design, flat lighting, high contrast against a white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBct9NU1VgnbZt7Ehv5REqf4oPwoWtJ3hUglSZA4Ru4UhrMz1EHqsSxXTdFOdIT8EdRF7GKUsGDvOwtiPcJusMFk-178GFoP1kv5-TOMBJt5Tu3d1Xe3e3QwB086v92UJJmp1SkvwVTF04rDsED9KvYwik8tY1TuA8EPuApEQPjaKEVbALvC4-mdSr12bFD1lktAVHTRiE4QQSs56hER0s7lAZY3z6WZIuBEDPtffLo-whUx0EgzHdE"/>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Snowflake</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Data Cloud</p>
+</div>
+</div>
+<div class="bg-surface-container-high px-2 py-1 rounded-full flex items-center gap-1.5 border border-surface-dim">
+<div class="w-2 h-2 rounded-full bg-outline"></div>
+<span class="font-data-mono text-[10px] uppercase text-on-surface-variant font-medium tracking-wide">Offline</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 line-clamp-2">Cross-cloud data mobilization and secure data sharing.</p>
+<div class="mt-auto flex items-center justify-between border-t border-surface-variant pt-4">
+<div class="flex items-center gap-1.5 text-error">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+<span class="font-data-mono text-xs">Auth Failed</span>
+</div>
+<button class="px-3 py-1.5 rounded text-sm font-medium hover:bg-surface-container-high transition-colors text-primary border border-surface-dim">Reconnect</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Category: Communication -->
+<section class="mb-8">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-4 uppercase tracking-wider flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">forum</span>
+                    Communication &amp; Alerting
+                </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Integration Card 4 -->
+<div class="nexus-card p-card-padding flex flex-col">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-md bg-surface-container-high flex items-center justify-center">
+<img class="w-6 h-6 object-contain" data-alt="A stylized hashtag or chat bubble icon using vibrant primary colors (red, blue, yellow, green) on a clean white background, representing a generic communication tool like Slack. Minimalist and flat design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2ynNJ50Yysk4PKl3Umzu3Ia-__flP97W5__oNevjLohNGxCe-Vxn4gUDNi3CsDI4DAkUpsLSKJC19-iTBGggMPh3claBOOVbu732ZNBvGpXDSPdyrbb4vbXgqWj-emDSp6AqBHc-l0vu4kO6cyhhoNBFTVM-g3CKxkco51zET69VzBhueeVeB4ldLiKJnJ0FCIpujswNQzXPUha0VZZP9GTPsdfaVvIaOt_nyL4HS8yzmiGJ3IwJs"/>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Slack</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Team Chat</p>
+</div>
+</div>
+<div class="bg-secondary-container/20 px-2 py-1 rounded-full flex items-center gap-1.5 border border-secondary-container">
+<div class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_4px_#2d6955]"></div>
+<span class="font-data-mono text-[10px] uppercase text-secondary font-medium tracking-wide">Active</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 line-clamp-2">Direct routing of critical incident alerts to operational channels.</p>
+<div class="mt-auto flex items-center justify-between border-t border-surface-variant pt-4">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span class="font-data-mono text-xs">Healthy</span>
+</div>
+<button class="px-3 py-1.5 rounded text-sm font-medium hover:bg-surface-container-high transition-colors text-primary border border-surface-dim">Configure</button>
+</div>
+</div>
+<!-- Integration Card 5 -->
+<div class="nexus-card p-card-padding flex flex-col">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-md bg-surface-container-high flex items-center justify-center">
+<img class="w-6 h-6 object-contain" data-alt="A professional icon showing a T inside a blue/purple gradient square shield, representing Microsoft Teams. Clean lines, corporate aesthetic, isolated on a stark white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjpPGxoCZX9kikKhdNUdZ9ZYX85i0FDP151kCDEomf4tnb34u46aqIC6XKT2atKy-sK5oEDFHwDpSZeFYClompHdAioeES-VT_SkpwEAFoZfzrQHHVkkElcyZJCe0brr4LVylJoaTptK8FMg7-5CkatcWGN64BRpS6-0oNPB7oWHZliOyOQDWBqh-kmenS1-mxwOQIdHQ_kbB2zd_ukW89h2LqI00LG1PahOpLO0j1i4VqJoffaZKz"/>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Microsoft Teams</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Enterprise Comms</p>
+</div>
+</div>
+<div class="bg-secondary-container/20 px-2 py-1 rounded-full flex items-center gap-1.5 border border-secondary-container">
+<div class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_4px_#2d6955]"></div>
+<span class="font-data-mono text-[10px] uppercase text-secondary font-medium tracking-wide">Active</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 line-clamp-2">Automated situation reports and commander briefings.</p>
+<div class="mt-auto flex items-center justify-between border-t border-surface-variant pt-4">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span class="font-data-mono text-xs">Healthy</span>
+</div>
+<button class="px-3 py-1.5 rounded text-sm font-medium hover:bg-surface-container-high transition-colors text-primary border border-surface-dim">Configure</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

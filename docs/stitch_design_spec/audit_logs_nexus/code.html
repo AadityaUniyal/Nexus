@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Audit Logs</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#918789",
+                        "surface-dim": "#dcd9d8",
+                        "primary-container": "#20231f",
+                        "tertiary-fixed": "#ece0e1",
+                        "secondary-container": "#b1f0d6",
+                        "on-surface": "#1c1b1b",
+                        "primary": "#0a0d09",
+                        "outline-variant": "#c5c7c1",
+                        "tertiary-container": "#272122",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#ebe7e6",
+                        "on-secondary-fixed-variant": "#0e503e",
+                        "surface-container-highest": "#e5e2e0",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "background": "#fcf9f7",
+                        "outline": "#757872",
+                        "on-secondary-fixed": "#002117",
+                        "surface-container": "#f1edec",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "surface": "#fcf9f7",
+                        "primary-fixed": "#e1e3dd",
+                        "on-secondary-container": "#336f5b",
+                        "inverse-surface": "#313030",
+                        "on-primary-container": "#888a85",
+                        "surface-tint": "#5c5f5a",
+                        "inverse-primary": "#c5c7c1",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f3f0ef",
+                        "secondary": "#2d6955",
+                        "surface-variant": "#e5e2e0",
+                        "on-primary-fixed": "#191c19",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#1c1b1b",
+                        "secondary-fixed": "#b1f0d6",
+                        "on-tertiary-fixed": "#201a1b",
+                        "surface-container-low": "#f6f3f1",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "error": "#ba1a1a",
+                        "tertiary": "#100b0c",
+                        "on-primary-fixed-variant": "#454843",
+                        "surface-bright": "#fcf9f7",
+                        "on-surface-variant": "#454843",
+                        "tertiary-fixed-dim": "#cfc4c5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin": "32px",
+                        "stack-gap": "16px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "card-padding": "24px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-lg": ["Geist"],
+                        "data-mono": ["JetBrains Mono"],
+                        "display-lg": ["Geist"],
+                        "headline-lg-mobile": ["Geist"]
+                    },
+                    "fontSize": {
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .glass-panel {
+            background-color: rgba(255, 253, 248, 0.85); /* Light mode surface color roughly */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .dark .glass-panel {
+            background-color: rgba(24, 26, 23, 0.85); /* Dark mode approximation */
+        }
+        .tactile-card {
+            background-color: theme('colors.surface-container-lowest');
+            border: 1px solid theme('colors.outline-variant');
+            box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04);
+            border-radius: theme('borderRadius.xl');
+        }
+        .dark .tactile-card {
+            background-color: theme('colors.surface-container-lowest');
+            border: 1px solid theme('colors.outline-variant');
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen font-body-lg text-body-lg antialiased">
+<!-- TopNavBar -->
+<header class="bg-surface/85 dark:bg-surface-container-highest/85 text-primary dark:text-primary-fixed-dim text-body-lg font-body-lg docked full-width top-0 sticky backdrop-blur-md border-b border-outline-variant/30 shadow-sm flex justify-between items-center w-full px-container-margin py-2 z-50">
+<div class="flex items-center gap-4">
+<span class="text-title-md font-title-md font-bold tracking-tight text-primary dark:text-primary-fixed">NEXUS</span>
+</div>
+<!-- Center Nav - Suppressed as this is a specific tool view, not main navigation -->
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors text-on-surface-variant dark:text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors text-on-surface-variant dark:text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors text-on-surface-variant dark:text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors text-on-surface-variant dark:text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-outline-variant/30" data-alt="A small, circular avatar image of a professional operator in a high-tech control room environment, light mode aesthetic, sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhjOK4LUsQXp8CmQIEEK-Fdr6liB-RPsJcf3OMBWC1qsX7rv3-HAX1ECr-imJ8MzWyjG6gmeK8jUEFWWeFc7Gl9zVbK_72kb5vFB5-6HwIRNuqkNGrDokXmkdWOZOR3Jd_fJ618egHIH31UQH8cXPPmWdwKcsWuC0h08j1V1efFH9H5H2BjqabsbQxASxL1Ea_NA1eKk3cCAxYVrvVelI4h-cwu52g_daAu6XHLGlWgbANXzdj2jXn"/>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-screen w-64 bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant/20 py-6 px-4">
+<div class="mb-8 px-4 flex items-center gap-3">
+<img alt="NEXUS 3D Companion" class="w-10 h-10 rounded-lg" data-alt="A sleek, metallic 3D icon representing a core AI system, minimalist design, warm industrial style, high resolution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuARxhvr_2nuxyX1YNC7pXdWlVgI1PIvb8sRQf5Xbs9kubiAkrVoaESLXdby-nkKmRzEE0jI3tREGWV108RRnbPzx-JVjvppmSgvCKcq5PVuo9ClNjYEgisuPMbuG-xg71jbFonjaw3kEpRRXW3HzNZ4ANm9kNIEI-m7t2JrGX_omRCyk3KtbxxYPupTyhU8mLl9WrPrmqP33kwFAnyokosNS9VhPwzRTqrHbOKU2QiyJRJl-gicQLr4"/>
+<div>
+<h2 class="text-title-md font-title-md font-black text-primary">NEXUS Core</h2>
+<p class="text-label-caps font-label-caps text-on-surface-variant mt-1">System Operational</p>
+</div>
+</div>
+<ul class="flex flex-col gap-2 flex-1">
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="dashboard">dashboard</span> <span class="text-label-caps font-label-caps">Overview</span></a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="public">public</span> <span class="text-label-caps font-label-caps">Live World</span></a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span> <span class="text-label-caps font-label-caps">Operations</span></a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="error">error</span> <span class="text-label-caps font-label-caps">Incidents</span></a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="science">science</span> <span class="text-label-caps font-label-caps">Simulations</span></a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="psychology">psychology</span> <span class="text-label-caps font-label-caps">Intelligence</span></a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span> <span class="text-label-caps font-label-caps">Analytics</span></a></li>
+<li><a class="flex items-center gap-3 bg-primary-container dark:bg-primary-container text-on-primary-container font-medium rounded-lg px-4 py-3 scale-[0.99] transition-transform" href="#"><span class="material-symbols-outlined" data-icon="description">description</span> <span class="text-label-caps font-label-caps">Reports</span></a></li>
+</ul>
+<ul class="flex flex-col gap-2 mt-auto border-t border-outline-variant/20 pt-4">
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span> <span class="text-label-caps font-label-caps">Admin</span></a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined" data-icon="contact_support">contact_support</span> <span class="text-label-caps font-label-caps">Help</span></a></li>
+</ul>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-container-margin bg-background">
+<div class="max-w-7xl mx-auto space-y-stack-gap">
+<!-- Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+<div>
+<h1 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-surface">Audit Logs</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant mt-2">Comprehensive record of administrative and operational actions.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors font-label-caps text-label-caps">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span> Export CSV
+                        </button>
+</div>
+</div>
+<!-- Filters -->
+<div class="tactile-card p-card-padding">
+<div class="flex flex-col lg:flex-row gap-4 items-end">
+<div class="flex-1 w-full space-y-2">
+<label class="text-label-caps font-label-caps text-on-surface-variant">Date Range</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant" data-icon="calendar_today">calendar_today</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container text-on-surface border border-outline-variant rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-body-sm font-body-sm inset-shadow-sm" placeholder="Last 7 Days (Oct 10 - Oct 17)" type="text"/>
+</div>
+</div>
+<div class="flex-1 w-full space-y-2">
+<label class="text-label-caps font-label-caps text-on-surface-variant">Severity</label>
+<select class="w-full px-4 py-2 bg-surface-container text-on-surface border border-outline-variant rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-body-sm font-body-sm inset-shadow-sm appearance-none">
+<option>All Severities</option>
+<option>Info</option>
+<option>Warning</option>
+<option>Critical</option>
+</select>
+</div>
+<div class="flex-1 w-full space-y-2">
+<label class="text-label-caps font-label-caps text-on-surface-variant">User Role</label>
+<select class="w-full px-4 py-2 bg-surface-container text-on-surface border border-outline-variant rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-body-sm font-body-sm inset-shadow-sm appearance-none">
+<option>All Roles</option>
+<option>Super Admin</option>
+<option>Operator</option>
+<option>System</option>
+</select>
+</div>
+<div class="flex-1 w-full space-y-2">
+<label class="text-label-caps font-label-caps text-on-surface-variant">Search</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container text-on-surface border border-outline-variant rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-body-sm font-body-sm inset-shadow-sm" placeholder="Search entity, action..." type="text"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Table -->
+<div class="tactile-card overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="py-3 px-4 text-label-caps font-label-caps text-on-surface-variant font-medium">Timestamp</th>
+<th class="py-3 px-4 text-label-caps font-label-caps text-on-surface-variant font-medium">User</th>
+<th class="py-3 px-4 text-label-caps font-label-caps text-on-surface-variant font-medium">Action</th>
+<th class="py-3 px-4 text-label-caps font-label-caps text-on-surface-variant font-medium">Entity</th>
+<th class="py-3 px-4 text-label-caps font-label-caps text-on-surface-variant font-medium">Change (Before/After)</th>
+<th class="py-3 px-4 text-label-caps font-label-caps text-on-surface-variant font-medium text-right">Audit ID</th>
+</tr>
+</thead>
+<tbody class="text-body-sm font-body-sm divide-y divide-outline-variant/30">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-4 px-4 text-data-mono font-data-mono text-on-surface-variant">2023-10-17 14:32:01</td>
+<td class="py-4 px-4">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold">AK</span>
+<span class="text-on-surface font-medium">A. Keller</span>
+</div>
+</td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/10 text-secondary text-label-caps font-label-caps">
+<span class="material-symbols-outlined text-[14px]" data-icon="edit">edit</span> Config Update
+                                        </span>
+</td>
+<td class="py-4 px-4 text-on-surface font-medium">Routing Node Alpha</td>
+<td class="py-4 px-4">
+<div class="flex flex-col gap-1 text-data-mono font-data-mono text-xs">
+<span class="text-error/80 line-through">Capacity: 80%</span>
+<span class="text-secondary">Capacity: 95%</span>
+</div>
+</td>
+<td class="py-4 px-4 text-right text-data-mono font-data-mono text-outline">#AUD-8992-A</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-4 px-4 text-data-mono font-data-mono text-on-surface-variant">2023-10-17 14:15:22</td>
+<td class="py-4 px-4">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center"><span class="material-symbols-outlined text-[16px]" data-icon="smart_toy">smart_toy</span></span>
+<span class="text-on-surface font-medium">SYSTEM</span>
+</div>
+</td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-error/10 text-error text-label-caps font-label-caps relative">
+<span class="absolute inset-0 rounded-full border border-error/30 animate-pulse"></span>
+<span class="material-symbols-outlined text-[14px]" data-icon="restart_alt">restart_alt</span> Auto-Restart
+                                        </span>
+</td>
+<td class="py-4 px-4 text-on-surface font-medium">Telemetry DB Cluster</td>
+<td class="py-4 px-4">
+<div class="flex flex-col gap-1 text-data-mono font-data-mono text-xs">
+<span class="text-on-surface-variant">Status: Unresponsive</span>
+<span class="text-secondary">Status: Running</span>
+</div>
+</td>
+<td class="py-4 px-4 text-right text-data-mono font-data-mono text-outline">#AUD-8991-S</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-4 px-4 text-data-mono font-data-mono text-on-surface-variant">2023-10-17 13:45:00</td>
+<td class="py-4 px-4">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold">MR</span>
+<span class="text-on-surface font-medium">M. Reyes</span>
+</div>
+</td>
+<td class="py-4 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant text-label-caps font-label-caps">
+<span class="material-symbols-outlined text-[14px]" data-icon="login">login</span> User Login
+                                        </span>
+</td>
+<td class="py-4 px-4 text-on-surface font-medium">NEXUS Core Console</td>
+<td class="py-4 px-4">
+<div class="flex flex-col gap-1 text-data-mono font-data-mono text-xs">
+<span class="text-on-surface-variant">IP: 192.168.1.104</span>
+<span class="text-on-surface-variant">Auth: MFA Success</span>
+</div>
+</td>
+<td class="py-4 px-4 text-right text-data-mono font-data-mono text-outline">#AUD-8990-U</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-4 py-3 border-t border-outline-variant/30 flex items-center justify-between bg-surface-container-lowest rounded-b-xl">
+<span class="text-label-caps font-label-caps text-on-surface-variant">Showing 1-3 of 1,204</span>
+<div class="flex gap-1">
+<button class="p-1 rounded hover:bg-surface-container-low text-on-surface-variant" disabled=""><span class="material-symbols-outlined text-[20px]" data-icon="chevron_left">chevron_left</span></button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-data-mono text-data-mono">1</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-low text-on-surface font-data-mono text-data-mono">2</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-low text-on-surface font-data-mono text-data-mono">3</button>
+<span class="w-8 h-8 flex items-center justify-center text-on-surface-variant">...</span>
+<button class="p-1 rounded hover:bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined text-[20px]" data-icon="chevron_right">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

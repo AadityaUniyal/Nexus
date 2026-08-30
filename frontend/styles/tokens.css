@@ -1,0 +1,101 @@
+:root {
+  --surface: #fcf9f7;
+  --surface-dim: #dcd9d8;
+  --surface-bright: #fcf9f7;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f6f3f1;
+  --surface-container: #f1edec;
+  --surface-container-high: #ebe7e6;
+  --surface-container-highest: #e5e2e0;
+  
+  --on-surface: #1c1b1b;
+  --on-surface-variant: #454843;
+  --inverse-surface: #313030;
+  --inverse-on-surface: #f3f0ef;
+  
+  --outline: #757872;
+  --outline-variant: #c5c7c1;
+  --surface-tint: #5c5f5a;
+  
+  --primary: #0a0d09;
+  --on-primary: #ffffff;
+  --primary-container: #20231f;
+  --on-primary-container: #888a85;
+  
+  --secondary: #2d6955;
+  --on-secondary: #ffffff;
+  --secondary-container: #b1f0d6;
+  --on-secondary-container: #336f5b;
+  
+  --tertiary: #100b0c;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #272122;
+  --on-tertiary-container: #918789;
+  
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  
+  --simulation: #6344d4;
+  --simulation-container: #ede8fc;
+  --on-simulation: #ffffff;
+  
+  --ai: #4f31a6;
+  --ai-container: #e0d8fa;
+  --on-ai: #ffffff;
+  
+  --color-healthy: #2d6955;
+  --color-attention: #d97706;
+  --color-critical: #ba1a1a;
+  --color-simulation: #6344d4;
+  --color-ai: #4f31a6;
+}
+
+.dark {
+  --surface: #121319;
+  --surface-dim: #121319;
+  --surface-bright: #383940;
+  --surface-container-lowest: #0d0e13;
+  --surface-container-low: #1a1b22;
+  --surface-container: #1e1f26;
+  --surface-container-high: #292931;
+  --surface-container-highest: #34343c;
+  
+  --on-surface: #e3e1eb;
+  --on-surface-variant: #c5c5d5;
+  --inverse-surface: #e3e1eb;
+  --inverse-on-surface: #121319;
+  
+  --outline: #8f909e;
+  --outline-variant: #444653;
+  --surface-tint: #b9c3ff;
+  
+  --primary: #dde1ff;
+  --on-primary: #002388;
+  --primary-container: #1f3ba6;
+  --on-primary-container: #dde1ff;
+  
+  --secondary: #5dd9d0;
+  --on-secondary: #003734;
+  --secondary-container: #00504c;
+  --on-secondary-container: #7cf6ec;
+  
+  --tertiary: #ffb964;
+  --on-tertiary: #472a00;
+  --tertiary-container: #663e00;
+  --on-tertiary-container: #ffddb9;
+  
+  --error: #ffb4ab;
+  --on-error: #690005;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+  
+  --simulation: #a78bfa;
+  --simulation-container: #2e1065;
+  --on-simulation: #ffffff;
+  
+  --ai: #c084fc;
+  --ai-container: #3b0764;
+  --on-ai: #ffffff;
+}

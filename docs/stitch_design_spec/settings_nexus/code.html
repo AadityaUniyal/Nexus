@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#cfc4c5",
+                        "on-tertiary-fixed": "#201a1b",
+                        "outline": "#757872",
+                        "tertiary": "#100b0c",
+                        "secondary-fixed": "#b1f0d6",
+                        "primary": "#0a0d09",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "on-secondary": "#ffffff",
+                        "inverse-primary": "#c5c7c1",
+                        "inverse-surface": "#313030",
+                        "surface-container-low": "#f6f3f1",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#191c19",
+                        "surface": "#fcf9f7",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#002117",
+                        "inverse-on-surface": "#f3f0ef",
+                        "tertiary-fixed": "#ece0e1",
+                        "surface-container-high": "#ebe7e6",
+                        "on-primary-fixed-variant": "#454843",
+                        "primary-container": "#20231f",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "surface-variant": "#e5e2e0",
+                        "secondary": "#2d6955",
+                        "surface-container-highest": "#e5e2e0",
+                        "on-tertiary-container": "#918789",
+                        "background": "#fcf9f7",
+                        "tertiary-container": "#272122",
+                        "surface-bright": "#fcf9f7",
+                        "on-primary-container": "#888a85",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#e1e3dd",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1c1b1b",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#f1edec",
+                        "surface-dim": "#dcd9d8",
+                        "secondary-container": "#b1f0d6",
+                        "surface-tint": "#5c5f5a",
+                        "on-surface-variant": "#454843",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#336f5b",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "on-secondary-fixed-variant": "#0e503e",
+                        "on-surface": "#1c1b1b",
+                        "outline-variant": "#c5c7c1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "16px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "card-padding": "24px",
+                        "container-margin": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "label-caps": ["JetBrains Mono"],
+                        "title-md": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    },
+                    "boxShadow": {
+                        'level-1': '0px 4px 20px rgba(32, 35, 31, 0.04)',
+                        'level-2': '0px 8px 30px rgba(32, 35, 31, 0.08)',
+                        'inset-field': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col antialiased">
+<!-- Nav shell is suppressed due to "Details/Settings" screen intent as per logic rules -->
+<!-- Top App Bar for Context -->
+<header class="bg-background dark:bg-primary-container border-b border-surface-variant dark:border-outline-variant shadow-sm w-full h-16 flex justify-between items-center px-container-margin sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-display-lg text-headline-lg font-bold text-primary dark:text-on-primary-fixed tracking-tight">Settings</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="h-8 w-8 rounded-full overflow-hidden border border-surface-variant">
+<img alt="Operational Commander Avatar" class="w-full h-full object-cover" data-alt="A macro photography shot of a high-end, brushed titanium and black polymer interface node. The lighting is pristine and clinical, highlighting the precise engineering and warm, understated materials. A subtle green LED glow emanates from a recessed seam, indicating operational status. The overall aesthetic is highly detailed, modern, and aligned with a premium operational dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXADNLvMo5BMzCtsZ6mVUOpUpJ5CBKkBqYP0BTf_uPgmJWA4Rx0dm3r5Ci_6wZMQKxkGO64ahq9IXvZ1-4_jgKdWF1mVNo1bKjg2HZHbVYTDo8rBBgpjN87eAfmVOvkl2iJ7Ksk0MNlFtwHmjbFQrvdaJzmpFseVdoAGOKRxoUG6P9RPMyTBO-aWNCT_CMmpy-Eg3-VlMZIIq-BGFm6FYVSTAfHbaTjVaW4I31GDqU1m1DXVkdrRIh"/>
+</div>
+</div>
+</header>
+<!-- Main Workspace Layout -->
+<main class="flex-1 w-full max-w-7xl mx-auto px-container-margin py-8 flex flex-col md:flex-row gap-gutter">
+<!-- Settings Side Navigation (In-page) -->
+<aside class="w-full md:w-64 shrink-0">
+<nav class="flex flex-col gap-unit">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" style="font-variation-settings: 'FILL' 0;">tune</span>
+<span class="font-body-lg text-body-lg">General</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" style="font-variation-settings: 'FILL' 0;">palette</span>
+<span class="font-body-lg text-body-lg">Appearance</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" style="font-variation-settings: 'FILL' 0;">notifications</span>
+<span class="font-body-lg text-body-lg">Notifications</span>
+</a>
+<!-- Active Tab -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-surface-container-high text-primary font-bold shadow-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">security</span>
+<span class="font-body-lg text-body-lg">Security</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" style="font-variation-settings: 'FILL' 0;">group</span>
+<span class="font-body-lg text-body-lg">Team Management</span>
+</a>
+</nav>
+</aside>
+<!-- Settings Content Area -->
+<section class="flex-1 flex flex-col gap-stack-gap">
+<!-- Section Header -->
+<div class="mb-4">
+<h2 class="font-title-md text-title-md text-on-surface mb-1">Security Settings</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Manage Multi-Factor Authentication and API Access.</p>
+</div>
+<!-- MFA Card -->
+<article class="bg-surface border border-surface-variant rounded-xl p-card-padding shadow-level-1">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant mb-2">Authentication</h3>
+<div class="font-title-md text-title-md text-on-surface">Multi-Factor Authentication (MFA)</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 max-w-2xl">Require an additional layer of security when logging into NEXUS. This applies to all high-level operational commands.</p>
+</div>
+<div class="font-data-mono text-data-mono text-secondary px-3 py-1 bg-secondary/10 rounded-full flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                        Enabled
+                    </div>
+</div>
+<div class="flex gap-4 mt-6">
+<button class="bg-surface-container-low border border-surface-variant hover:bg-surface-variant text-on-surface font-body-sm text-body-sm px-4 py-2 rounded-lg transition-colors shadow-sm">Manage MFA Devices</button>
+</div>
+</article>
+<!-- API Keys Card -->
+<article class="bg-surface border border-surface-variant rounded-xl p-card-padding shadow-level-1 flex flex-col flex-1">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant mb-2">API Access</h3>
+<div class="font-title-md text-title-md text-on-surface">Active API Keys</div>
+</div>
+<button class="bg-primary text-on-primary hover:bg-primary/90 font-body-sm text-body-sm px-4 py-2 rounded-lg flex items-center gap-2 transition-transform active:scale-95 shadow-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 0;">add</span>
+                        Add New Key
+                    </button>
+</div>
+<!-- API Keys List -->
+<div class="flex flex-col gap-unit">
+<!-- Key Row 1 -->
+<div class="flex items-center justify-between p-4 bg-background border border-surface-variant rounded-lg hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<span class="font-body-lg text-body-lg font-medium text-on-surface">Production Telemetry Node</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant bg-surface-container py-0.5 px-2 rounded-full border border-surface-dim">READ-ONLY</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant font-data-mono text-data-mono">
+<span>nx_prod_*********************8x9a</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-primary" title="Copy to clipboard">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0;">content_copy</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="font-data-mono text-data-mono text-on-surface-variant">Created: 2023-10-24</span>
+<div class="flex items-center gap-2">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">edit</span>
+</button>
+<button class="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-error-container">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Key Row 2 -->
+<div class="flex items-center justify-between p-4 bg-background border border-surface-variant rounded-lg hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<span class="font-body-lg text-body-lg font-medium text-on-surface">External Analytics Integration</span>
+<span class="font-label-caps text-label-caps text-error bg-error-container/50 py-0.5 px-2 rounded-full border border-error-container">FULL ACCESS</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant font-data-mono text-data-mono">
+<span>nx_live_*********************2b1c</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-primary" title="Copy to clipboard">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0;">content_copy</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="font-data-mono text-data-mono text-on-surface-variant">Created: 2023-11-05</span>
+<div class="flex items-center gap-2">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">edit</span>
+</button>
+<button class="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-error-container">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Key Row 3 -->
+<div class="flex items-center justify-between p-4 bg-background border border-surface-variant rounded-lg hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<span class="font-body-lg text-body-lg font-medium text-on-surface">Simulation Sandbox Auth</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant bg-surface-container py-0.5 px-2 rounded-full border border-surface-dim">SANDBOX</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant font-data-mono text-data-mono">
+<span>nx_test_*********************7z4p</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-primary" title="Copy to clipboard">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 0;">content_copy</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="font-data-mono text-data-mono text-on-surface-variant">Created: 2023-11-20</span>
+<div class="flex items-center gap-2">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">edit</span>
+</button>
+<button class="text-on-surface-variant hover:text-error transition-colors p-1 rounded hover:bg-error-container">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</article>
+</section>
+</main>
+</body></html>

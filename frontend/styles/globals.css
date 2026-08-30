@@ -1,0 +1,118 @@
+@import './tokens.css';
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: var(--outline-variant);
+  }
+  
+  html {
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--surface);
+    color: var(--on-surface);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  body {
+    background-color: var(--surface);
+    color: var(--on-surface);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  code, pre, kbd, samp {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .font-mono-data {
+    font-family: 'JetBrains Mono', monospace;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.02em;
+  }
+  
+  .font-label-caps {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Tactile Card with subtle ambient shadow & 1px tactile border */
+  .tactile-card {
+    background-color: var(--surface-container-lowest);
+    border: 1px solid rgba(32, 35, 31, 0.08);
+    box-shadow: 0 4px 20px rgba(32, 35, 31, 0.035), 0 1px 3px rgba(32, 35, 31, 0.02);
+    border-radius: 1rem;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  }
+
+  .tactile-card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -4px rgba(32, 35, 31, 0.07), 0 2px 6px rgba(32, 35, 31, 0.03);
+    border-color: rgba(32, 35, 31, 0.16);
+  }
+
+  .tactile-card-interactive:active {
+    transform: scale(0.985);
+  }
+
+  /* Simulation Mode Overlay with dashed architectural border */
+  .simulation-layer {
+    border: 1.5px dashed var(--simulation);
+    background-color: rgba(99, 68, 212, 0.03);
+  }
+
+  /* Tactile Pressed Input Field */
+  .tactile-input {
+    background-color: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
+    box-shadow: inset 0 1px 2px rgba(32, 35, 31, 0.04);
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+  }
+
+  .tactile-input:focus {
+    background-color: var(--surface-container-lowest);
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(45, 105, 85, 0.12);
+    outline: none;
+  }
+
+  /* Status LED pulse */
+  .led-glow-healthy {
+    box-shadow: 0 0 8px rgba(45, 105, 85, 0.6);
+  }
+  .led-glow-critical {
+    box-shadow: 0 0 10px rgba(186, 26, 26, 0.7);
+  }
+  .led-glow-attention {
+    box-shadow: 0 0 8px rgba(217, 119, 6, 0.6);
+  }
+  .led-glow-simulation {
+    box-shadow: 0 0 8px rgba(99, 68, 212, 0.6);
+  }
+}
+
+/* Custom Scrollbar for tactile feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-container-low);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--outline);
+}

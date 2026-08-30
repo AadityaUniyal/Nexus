@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Analytics Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-bright": "#fcf9f7",
+                      "surface-container": "#f1edec",
+                      "on-primary-fixed": "#191c19",
+                      "on-tertiary-container": "#918789",
+                      "primary-fixed": "#e1e3dd",
+                      "on-error-container": "#93000a",
+                      "on-secondary-fixed-variant": "#0e503e",
+                      "on-error": "#ffffff",
+                      "surface": "#fcf9f7",
+                      "error-container": "#ffdad6",
+                      "outline-variant": "#c5c7c1",
+                      "secondary": "#2d6955",
+                      "on-primary-container": "#888a85",
+                      "outline": "#757872",
+                      "tertiary-container": "#272122",
+                      "primary-container": "#20231f",
+                      "on-surface": "#1c1b1b",
+                      "inverse-primary": "#c5c7c1",
+                      "primary": "#0a0d09",
+                      "on-tertiary": "#ffffff",
+                      "surface-dim": "#dcd9d8",
+                      "on-background": "#1c1b1b",
+                      "secondary-fixed-dim": "#96d3bb",
+                      "inverse-on-surface": "#f3f0ef",
+                      "on-surface-variant": "#454843",
+                      "on-tertiary-fixed": "#201a1b",
+                      "tertiary-fixed": "#ece0e1",
+                      "surface-container-low": "#f6f3f1",
+                      "on-secondary-fixed": "#002117",
+                      "surface-tint": "#5c5f5a",
+                      "surface-variant": "#e5e2e0",
+                      "tertiary-fixed-dim": "#cfc4c5",
+                      "secondary-fixed": "#b1f0d6",
+                      "primary-fixed-dim": "#c5c7c1",
+                      "surface-container-high": "#ebe7e6",
+                      "on-primary-fixed-variant": "#454843",
+                      "on-secondary-container": "#336f5b",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary-fixed-variant": "#4c4546",
+                      "tertiary": "#100b0c",
+                      "error": "#ba1a1a",
+                      "surface-container-lowest": "#ffffff",
+                      "background": "#fcf9f7",
+                      "surface-container-highest": "#e5e2e0",
+                      "inverse-surface": "#313030",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#b1f0d6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "card-padding": "24px",
+                      "gutter": "24px",
+                      "stack-gap": "16px",
+                      "unit": "4px",
+                      "container-margin": "32px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Geist"],
+                      "headline-lg-mobile": ["Geist"],
+                      "data-mono": ["JetBrains Mono"],
+                      "display-lg": ["Geist"],
+                      "headline-lg": ["Geist"],
+                      "title-md": ["Geist"],
+                      "body-sm": ["Geist"],
+                      "label-caps": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        
+        /* Tactical Card Styling */
+        .tactical-card {
+            background-color: theme('colors.surface-container-lowest');
+            border: 1px solid theme('colors.surface-variant');
+            box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04);
+            border-radius: theme('borderRadius.xl');
+            transition: all 0.2s ease-in-out;
+        }
+        .tactical-card:hover {
+            box-shadow: 0px 8px 30px rgba(32, 35, 31, 0.08);
+            transform: translateY(-2px);
+        }
+
+        /* Chart Placeholder Styles */
+        .chart-placeholder-line {
+            background: linear-gradient(180deg, rgba(16, 11, 12, 0.02) 0%, rgba(16, 11, 12, 0) 100%);
+            position: relative;
+        }
+        .chart-placeholder-line::after {
+            content: '';
+            position: absolute;
+            bottom: 20%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: theme('colors.primary');
+            clip-path: polygon(0 80%, 20% 60%, 40% 70%, 60% 30%, 80% 50%, 100% 20%, 100% 100%, 0 100%);
+            opacity: 0.3;
+        }
+        
+        .chart-placeholder-heatmap {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 2px;
+        }
+        .heatmap-cell { border-radius: 2px; }
+        
+        /* Status Glow */
+        .status-glow-critical {
+            box-shadow: 0 0 8px theme('colors.error');
+        }
+        .status-glow-healthy {
+            box-shadow: 0 0 8px theme('colors.secondary');
+        }
+
+        /* Glassmorphic Overlay Base */
+        .glass-overlay {
+            background-color: rgba(255, 253, 248, 0.85); /* Surface color with opacity */
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden antialiased font-body-lg text-body-lg bg-background text-on-background selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar (Mobile Only) -->
+<header class="md:hidden w-full top-0 sticky bg-surface border-b border-outline-variant shadow-sm z-50">
+<div class="flex justify-between items-center px-container-margin h-16 w-full">
+<div class="flex items-center gap-4">
+<span class="font-display-lg text-display-lg font-semibold text-primary">NEXUS</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-surface-container-low transition-colors duration-200 rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary">notifications</span>
+</button>
+<button class="p-2 hover:bg-surface-container-low transition-colors duration-200 rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A detailed headshot of a professional operator in a high-tech control room environment, wearing a sleek headset, neutral expression, subtle warm industrial lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMihwsI9rcDO8K3ZySIQJ__1cGlsZ3PvBF7oZvf7fkNx2DOyRYvMKmxaAFTMqnx2Lg6TVI_4jJIoVztO13YohVF94dj1LBMzj9az5BBLm6j32rcjMkNSwBVXrV9_jY_9BpsMxLPd17mU8tqI0zR0oN_-ZQrfVu6fkQO0hFJRfeTRGrb3OYxxC0S96NzzOLSEBqIDLNBTNn6OgUoyjJMDDN0lyhZpegtmPtyViUFmYi4KSecUXoFDSP"/>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant shadow-sm z-40 py-stack-gap">
+<div class="px-container-margin mb-8">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-sm" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary truncate">NEXUS Platform</h1>
+</div>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Operational Intel</p>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary rounded-lg py-2 hover:bg-surface-tint transition-colors duration-200 shadow-sm active:scale-95">
+<span class="material-symbols-outlined text-sm">add</span>
+<span class="font-body-sm font-medium">New Analysis</span>
+</button>
+</div>
+<ul class="flex-1 space-y-1 overflow-y-auto px-2">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant mx-2 hover:bg-surface-container-high transition-all duration-200 active:translate-x-1" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-body-sm font-medium">Intelligence</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant mx-2 hover:bg-surface-container-high transition-all duration-200 active:translate-x-1" href="#">
+<span class="material-symbols-outlined">drive_file_stream</span>
+<span class="font-body-sm font-medium">Patterns</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary-container text-on-primary-container mx-2 transition-all duration-200 active:translate-x-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-body-sm font-medium">Analytics</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant mx-2 hover:bg-surface-container-high transition-all duration-200 active:translate-x-1" href="#">
+<span class="material-symbols-outlined">science</span>
+<span class="font-body-sm font-medium">Simulations</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant mx-2 hover:bg-surface-container-high transition-all duration-200 active:translate-x-1" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-body-sm font-medium">Archive</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto px-2 space-y-1 pt-4 border-t border-outline-variant">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant mx-2 hover:bg-surface-container-high transition-all duration-200 active:translate-x-1" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-body-sm font-medium">Help</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant mx-2 hover:bg-surface-container-high transition-all duration-200 active:translate-x-1" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+<span class="font-body-sm font-medium">Support</span>
+</a>
+</li>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 h-full overflow-y-auto bg-background p-container-margin relative">
+<!-- Top Toolbar -->
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface mb-1">Analytics Workspace</h2>
+<p class="font-body-sm text-on-surface-variant">Real-time performance metrics and flow analysis.</p>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-low p-1 rounded-lg border border-outline-variant shadow-sm">
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors">Today</button>
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors">7D</button>
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps bg-surface-container-lowest shadow-sm text-on-surface border border-outline-variant transition-colors">30D</button>
+<button class="px-4 py-1.5 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-variant transition-colors">Quarterly</button>
+</div>
+</div>
+<!-- KPI Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-8">
+<!-- KPI 1: SLA -->
+<div class="tactical-card p-card-padding relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant">SLA Compliance</h3>
+<span class="font-data-mono text-data-mono text-secondary bg-secondary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary status-glow-healthy"></span>
+                        99.8%
+                    </span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-on-surface">4m 12s</span>
+<span class="font-body-sm text-on-surface-variant">avg response</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[99.8%] rounded-full"></div>
+</div>
+</div>
+<!-- KPI 2: Fleet -->
+<div class="tactical-card p-card-padding">
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant">Fleet Utilization</h3>
+<span class="font-data-mono text-data-mono text-on-surface bg-surface-variant px-2 py-0.5 rounded-full">Active</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-on-surface">84%</span>
+<span class="font-body-sm text-on-surface-variant text-secondary flex items-center"><span class="material-symbols-outlined text-sm">trending_up</span> +2.4%</span>
+</div>
+<div class="flex gap-1 mt-4">
+<div class="h-8 flex-1 bg-primary-container rounded-sm"></div>
+<div class="h-8 flex-1 bg-primary-container rounded-sm"></div>
+<div class="h-8 flex-1 bg-primary-container rounded-sm"></div>
+<div class="h-8 flex-1 bg-surface-variant rounded-sm"></div>
+</div>
+</div>
+<!-- KPI 3: Warehouse -->
+<div class="tactical-card p-card-padding">
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant">Warehouse Efficiency</h3>
+<span class="font-data-mono text-data-mono text-error bg-error/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error status-glow-critical"></span>
+                        Alert
+                    </span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-on-surface">92.1</span>
+<span class="font-body-sm text-on-surface-variant">index score</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mt-2 border-l-2 border-error pl-2 text-error">Zone C bottleneck detected.</p>
+</div>
+<!-- KPI 4: Throughput -->
+<div class="tactical-card p-card-padding">
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant">Global Throughput</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">public</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-on-surface">1.2M</span>
+<span class="font-body-sm text-on-surface-variant">units/hr</span>
+</div>
+<div class="mt-4 flex items-center justify-between text-on-surface-variant font-data-mono text-data-mono text-xs">
+<span>MIN: 0.8M</span>
+<span>MAX: 1.5M</span>
+</div>
+</div>
+</div>
+</main>
+</body></html>

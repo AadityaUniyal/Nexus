@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Sign In</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=JetBrains+Mono:wght@100..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#313030",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#201a1b",
+                        "tertiary-fixed-dim": "#cfc4c5",
+                        "on-secondary-fixed": "#002117",
+                        "surface-tint": "#5c5f5a",
+                        "outline-variant": "#c5c7c1",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#918789",
+                        "inverse-primary": "#c5c7c1",
+                        "on-primary-fixed": "#191c19",
+                        "on-secondary-container": "#336f5b",
+                        "on-background": "#1c1b1b",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "secondary": "#2d6955",
+                        "tertiary": "#100b0c",
+                        "background": "#fcf9f7",
+                        "on-surface": "#1c1b1b",
+                        "surface-container-highest": "#e5e2e0",
+                        "secondary-fixed": "#b1f0d6",
+                        "error": "#ba1a1a",
+                        "tertiary-container": "#272122",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#f3f0ef",
+                        "tertiary-fixed": "#ece0e1",
+                        "on-primary-container": "#888a85",
+                        "secondary-container": "#b1f0d6",
+                        "surface-bright": "#fcf9f7",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#f1edec",
+                        "surface": "#fcf9f7",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "surface-dim": "#dcd9d8",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "primary": "#0a0d09",
+                        "on-surface-variant": "#454843",
+                        "surface-variant": "#e5e2e0",
+                        "surface-container-high": "#ebe7e6",
+                        "on-primary-fixed-variant": "#454843",
+                        "primary-container": "#20231f",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#757872",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "surface-container-low": "#f6f3f1",
+                        "primary-fixed": "#e1e3dd",
+                        "on-secondary-fixed-variant": "#0e503e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "16px",
+                        "gutter": "24px",
+                        "container-margin": "32px",
+                        "card-padding": "24px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Geist"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "title-md": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "label-caps": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col md:flex-row">
+<div class="hidden md:flex md:w-[55%] lg:w-[60%] bg-surface-container-low relative overflow-hidden flex-col items-center justify-center p-12">
+<div class="absolute inset-0 z-0">
+<div class="w-full h-full bg-cover bg-center opacity-90 mix-blend-multiply" data-alt="A high-quality 3D render of a soft, rounded, welcoming companion creature, serving as an operational intelligence avatar. The creature sits in a warm, gently lit architectural space featuring sandblasted glass and matte polymer surfaces. The color palette is bright and airy, utilizing light creams, warm off-whites, and subtle hints of forest green to evoke a calm, premium 'Warm Industrial' aesthetic. High key lighting creates soft ambient shadows, emphasizing spatial minimalism and approachability." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCUQLErWyNAqg3W-fqH6wGaBii_Gd6lFHGFpjuIxq9po0t_7IxJzpgkP1ISabBrYau_wqAjfiDaCvobQ7M9U_iVLpcYu_LIQbbRFx-ueGqhM2V407sO56F6UAvti17ITYp82-cNJU7r3GV29tI96wYcF-qklUz-shmnCM3xX-WB3vFCMnNK2lbolXzfT2-GK7T26gv-CUwCo46MfruaSTIa0rl5klAp6u4OaaFhdEw3j27KNIj1lyVN')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-transparent to-transparent"></div>
+</div>
+<div class="relative z-10 w-full max-w-2xl mt-auto pb-12">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">hexagon</span>
+<h1 class="font-display-lg text-display-lg text-primary tracking-tight">NEXUS</h1>
+</div>
+<p class="font-title-md text-title-md text-on-surface-variant max-w-lg">
+                Operational Intelligence.<br/>
+                Clarity in complex environments.
+            </p>
+</div>
+</div>
+<div class="w-full md:w-[45%] lg:w-[40%] flex items-center justify-center p-6 sm:p-12 lg:p-container-margin bg-background relative z-10">
+<div class="w-full max-w-[420px]">
+<div class="md:hidden flex items-center gap-2 mb-12">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">hexagon</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary tracking-tight">NEXUS</h1>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-8 lg:p-10 border border-surface-variant/50 relative">
+<div class="absolute inset-0 -z-10 bg-black/[0.02] blur-xl rounded-xl transform translate-y-2"></div>
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Sign in</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-8">Access your core operations dashboard.</p>
+<form class="flex flex-col gap-stack-gap">
+<div class="flex flex-col gap-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="email">Email Address</label>
+<input class="w-full bg-surface-container border-transparent text-on-surface font-body-lg text-body-lg rounded-lg px-4 py-3 focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" id="email" placeholder="operator@nexus.core" required="" type="email"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="password">Password</label>
+<div class="relative">
+<input class="w-full bg-surface-container border-transparent text-on-surface font-body-lg text-body-lg rounded-lg px-4 py-3 pr-12 focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary transition-all" id="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors focus:outline-none" id="togglePassword" type="button">
+<span class="material-symbols-outlined" id="visibilityIcon">visibility_off</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between mt-2 mb-4">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline-variant text-secondary bg-surface-container focus:ring-secondary focus:ring-offset-0 transition-colors" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Remember me</span>
+</label>
+<a class="font-body-sm text-body-sm text-secondary hover:text-on-secondary-container hover:underline transition-colors" href="#">Forgot password?</a>
+</div>
+<button class="w-full bg-secondary text-on-secondary font-title-md text-body-lg rounded-lg py-3.5 px-6 flex items-center justify-center gap-2 hover:bg-on-secondary-container transition-colors shadow-sm active:scale-[0.98]" type="submit">
+                        Sign in
+                        <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</form>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center mt-8">
+                    Don't have an account? 
+                    <a class="text-secondary font-medium hover:underline hover:text-on-secondary-container transition-colors" href="#">Request access</a>
+</p>
+</div>
+</div>
+</div>
+<script>
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const icon = document.getElementById('visibilityIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.textContent = 'visibility';
+            } else {
+                passwordInput.type = 'password';
+                icon.textContent = 'visibility_off';
+            }
+        });
+    </script>
+</body></html>

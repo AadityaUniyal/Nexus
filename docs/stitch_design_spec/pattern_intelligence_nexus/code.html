@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Pattern Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#fcf9f7",
+                        "surface-container": "#f1edec",
+                        "on-primary-fixed": "#191c19",
+                        "on-tertiary-container": "#918789",
+                        "primary-fixed": "#e1e3dd",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#0e503e",
+                        "on-error": "#ffffff",
+                        "surface": "#fcf9f7",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c5c7c1",
+                        "secondary": "#2d6955",
+                        "on-primary-container": "#888a85",
+                        "outline": "#757872",
+                        "tertiary-container": "#272122",
+                        "primary-container": "#20231f",
+                        "on-surface": "#1c1b1b",
+                        "inverse-primary": "#c5c7c1",
+                        "primary": "#0a0d09",
+                        "on-tertiary": "#ffffff",
+                        "surface-dim": "#dcd9d8",
+                        "on-background": "#1c1b1b",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "inverse-on-surface": "#f3f0ef",
+                        "on-surface-variant": "#454843",
+                        "on-tertiary-fixed": "#201a1b",
+                        "tertiary-fixed": "#ece0e1",
+                        "surface-container-low": "#f6f3f1",
+                        "on-secondary-fixed": "#002117",
+                        "surface-tint": "#5c5f5a",
+                        "surface-variant": "#e5e2e0",
+                        "tertiary-fixed-dim": "#cfc4c5",
+                        "secondary-fixed": "#b1f0d6",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "surface-container-high": "#ebe7e6",
+                        "on-primary-fixed-variant": "#454843",
+                        "on-secondary-container": "#336f5b",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "tertiary": "#100b0c",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#fcf9f7",
+                        "surface-container-highest": "#e5e2e0",
+                        "inverse-surface": "#313030",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#b1f0d6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "card-padding": "24px",
+                        "gutter": "24px",
+                        "stack-gap": "16px",
+                        "unit": "4px",
+                        "container-margin": "32px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "data-mono": ["JetBrains Mono"],
+                        "display-lg": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "title-md": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "label-caps": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }]
+                    }
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-lg text-body-lg flex h-screen overflow-hidden antialiased">
+<!-- SideNavBar (Web Only) -->
+<nav class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline shadow-sm py-stack-gap z-20">
+<div class="px-container-margin mb-8">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed">NEXUS</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Operational Intel</p>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center px-4 py-3 text-on-surface-variant dark:text-on-surface-variant mx-2 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined mr-3 text-on-surface-variant" data-icon="insights">insights</span>
+<span class="font-label-caps text-label-caps">Intelligence</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 bg-primary-container dark:bg-primary-fixed text-on-primary-container dark:text-on-primary-fixed rounded-lg mx-2 transition-transform active:translate-x-1 group" href="#">
+<span class="material-symbols-outlined mr-3 text-on-primary-container" data-icon="Grain">drive_file_stream</span>
+<span class="font-label-caps text-label-caps font-bold">Patterns</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 text-on-surface-variant dark:text-on-surface-variant mx-2 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined mr-3 text-on-surface-variant" data-icon="analytics">analytics</span>
+<span class="font-label-caps text-label-caps">Analytics</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 text-on-surface-variant dark:text-on-surface-variant mx-2 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined mr-3 text-on-surface-variant" data-icon="science">science</span>
+<span class="font-label-caps text-label-caps">Simulations</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 text-on-surface-variant dark:text-on-surface-variant mx-2 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined mr-3 text-on-surface-variant" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-caps text-label-caps">Archive</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="px-container-margin mt-auto pt-4">
+<button class="w-full py-2 bg-primary-container text-on-primary rounded-lg font-label-caps text-label-caps hover:bg-surface-tint transition-colors">New Analysis</button>
+</div>
+<div class="mt-4 border-t border-outline-variant pt-4 px-2 space-y-1">
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant mx-2 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all duration-200 rounded-lg text-sm" href="#">
+<span class="material-symbols-outlined mr-3 text-on-surface-variant text-[20px]" data-icon="help_outline">help_outline</span>
+<span class="font-label-caps text-label-caps">Help</span>
+</a>
+<a class="flex items-center px-4 py-2 text-on-surface-variant dark:text-on-surface-variant mx-2 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all duration-200 rounded-lg text-sm" href="#">
+<span class="material-symbols-outlined mr-3 text-on-surface-variant text-[20px]" data-icon="contact_support">contact_support</span>
+<span class="font-label-caps text-label-caps">Support</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col md:ml-64 h-screen bg-surface-bright">
+<!-- TopNavBar (Mobile Only + Web Actions) -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-container border-b border-outline-variant dark:border-outline shadow-sm z-10 flex justify-between items-center px-container-margin h-16 w-full">
+<div class="md:hidden flex items-center">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-primary-fixed">NEXUS</h1>
+</div>
+<div class="hidden md:flex flex-1 items-center space-x-6 px-4">
+<a class="text-on-surface-variant dark:text-on-surface-variant font-body-lg text-body-lg hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors duration-200 px-2 py-1 rounded" href="#">Overview</a>
+<a class="text-primary dark:text-primary-fixed font-bold border-b-2 border-primary dark:border-primary-fixed pb-1 font-body-lg text-body-lg active:scale-95 transition-transform" href="#">Patterns</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant font-body-lg text-body-lg hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors duration-200 px-2 py-1 rounded" href="#">Workspace</a>
+</div>
+<div class="flex items-center space-x-4">
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden border border-outline-variant">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A small, stylized avatar image representing a generic user profile. It should use a modern, warm industrial aesthetic with a subtle geometric pattern in soft muted tones of cream and very pale sage green, avoiding realistic human faces." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwA0sQkAnOYsnFZ1YmY_kj9GbxpyqjKscj1fvF6D1NRWWW0Mr1E-ZYzQtmQf3cbRFV6PMkMbVrgcYaoOUFzuiLQOMcvN5o0p93afCBwGCQK9YQKOvCZWMBGnJXCGrt0I0nDqQhK7N4z2gMrfmlY4tJdLeN8xtmRJVHi3Vd6I2_5PKrr_TzRSf3--gqZdsNKjYfGsb2ZcV3KJZMff6S2hl4cnpe0mGZBxXbqpNsAz7QF8jr_Hsqxeka"/>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="flex-1 overflow-y-auto p-container-margin">
+<div class="max-w-7xl mx-auto space-y-gutter">
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-display-lg text-display-lg text-primary mb-2">Detected Patterns</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">AI-driven analysis of recurring operational issues and anomalies.</p>
+</div>
+<div class="flex items-center space-x-3">
+<span class="font-data-mono text-data-mono text-on-surface-variant bg-surface-container px-3 py-1 rounded-full border border-outline-variant">Scanning: Active</span>
+<button class="bg-surface text-on-surface border border-outline-variant px-4 py-2 rounded-lg font-label-caps text-label-caps hover:bg-surface-container transition-colors shadow-sm">Export Data</button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Pattern 1: Route Delay Frequency (High Impact) -->
+<div class="col-span-1 md:col-span-8 bg-surface border border-outline-variant rounded-xl p-card-padding shadow-[0px_4px_20px_rgba(32,35,31,0.04)] hover:shadow-md hover:-translate-y-[2px] transition-all duration-300 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-error"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-primary mb-1">Route Delay Frequency</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Correlated with specific traffic choke points during peak hours.</p>
+</div>
+<div class="text-right">
+<span class="font-data-mono text-data-mono text-error bg-error-container/20 px-2 py-1 rounded">Confidence: 94%</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-6">
+<div class="bg-surface-container-low p-4 rounded-lg">
+<span class="font-label-caps text-label-caps text-on-surface-variant block mb-1">Time Range</span>
+<span class="font-data-mono text-data-mono text-primary">06:00 - 09:30 AM (Daily)</span>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg">
+<span class="font-label-caps text-label-caps text-on-surface-variant block mb-1">Affected Entities</span>
+<span class="font-data-mono text-data-mono text-primary">Fleet Alpha, Logistics Hub B</span>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg">
+<span class="font-label-caps text-label-caps text-on-surface-variant block mb-1">Impact</span>
+<span class="font-data-mono text-data-mono text-error font-medium">High (Avg +42m delay)</span>
+</div>
+</div>
+<div class="h-32 w-full bg-surface-container rounded-lg border border-outline-variant/50 relative overflow-hidden flex items-center justify-center">
+<!-- Placeholder for visualization -->
+<div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNjNWM3YzEiLz48L3N2Zz4=')] opacity-20"></div>
+<p class="font-data-mono text-data-mono text-on-surface-variant z-10">[Time-Series Graph Visualization]</p>
+</div>
+</div>
+<!-- Side Panel: Quick Stats -->
+<div class="col-span-1 md:col-span-4 space-y-gutter">
+<div class="bg-tertiary-container text-on-tertiary p-card-padding rounded-xl shadow-sm relative overflow-hidden">
+<!-- Subtle geometric accent -->
+<div class="absolute -right-8 -bottom-8 w-32 h-32 bg-tertiary-fixed opacity-10 rounded-full blur-xl"></div>
+<h4 class="font-label-caps text-label-caps text-tertiary-fixed-dim mb-4">Pattern Density</h4>
+<div class="flex items-end space-x-2">
+<span class="font-display-lg text-display-lg text-tertiary-fixed leading-none">12</span>
+<span class="font-body-sm text-body-sm text-on-tertiary-container pb-2">Active Patterns</span>
+</div>
+<div class="mt-4 pt-4 border-t border-on-tertiary-container/30">
+<div class="flex justify-between items-center text-sm">
+<span class="font-body-sm text-on-tertiary-container">Critical</span>
+<span class="font-data-mono text-error font-bold">3</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

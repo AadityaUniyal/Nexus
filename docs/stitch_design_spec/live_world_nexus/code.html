@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Live World</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary": "#0a0d09",
+                      "on-secondary-container": "#336f5b",
+                      "inverse-surface": "#313030",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#b1f0d6",
+                      "surface-variant": "#e5e2e0",
+                      "surface-tint": "#5c5f5a",
+                      "tertiary-fixed": "#ece0e1",
+                      "on-error-container": "#93000a",
+                      "surface-container-low": "#f6f3f1",
+                      "on-primary-fixed-variant": "#454843",
+                      "surface-dim": "#dcd9d8",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed": "#002117",
+                      "primary-container": "#20231f",
+                      "surface-container-highest": "#e5e2e0",
+                      "on-primary-fixed": "#191c19",
+                      "primary-fixed-dim": "#c5c7c1",
+                      "secondary-fixed-dim": "#96d3bb",
+                      "on-background": "#1c1b1b",
+                      "on-primary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#454843",
+                      "secondary": "#2d6955",
+                      "on-secondary-fixed-variant": "#0e503e",
+                      "inverse-on-surface": "#f3f0ef",
+                      "on-tertiary-fixed-variant": "#4c4546",
+                      "background": "#fcf9f7",
+                      "surface-container-lowest": "#ffffff",
+                      "surface": "#fcf9f7",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed": "#201a1b",
+                      "error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#cfc4c5",
+                      "surface-bright": "#fcf9f7",
+                      "tertiary": "#100b0c",
+                      "secondary-fixed": "#b1f0d6",
+                      "outline": "#757872",
+                      "on-surface": "#1c1b1b",
+                      "on-tertiary-container": "#918789",
+                      "outline-variant": "#c5c7c1",
+                      "inverse-primary": "#c5c7c1",
+                      "tertiary-container": "#272122",
+                      "surface-container-high": "#ebe7e6",
+                      "primary-fixed": "#e1e3dd",
+                      "surface-container": "#f1edec",
+                      "on-primary-container": "#888a85"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "container-margin": "32px",
+                      "card-padding": "24px",
+                      "unit": "4px",
+                      "stack-gap": "16px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Geist"
+                      ],
+                      "display-lg": [
+                              "Geist"
+                      ],
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg": [
+                              "Geist"
+                      ],
+                      "body-sm": [
+                              "Geist"
+                      ],
+                      "data-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "title-md": [
+                              "Geist"
+                      ],
+                      "headline-lg-mobile": [
+                              "Geist"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #fcf9f7; /* background token */
+        }
+        .card-shadow {
+            box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04);
+        }
+        .glass-panel {
+            background-color: rgba(255, 253, 248, 0.85); /* Surface color with opacity */
+            backdrop-filter: blur(12px);
+        }
+        .status-glow-critical {
+            box-shadow: 0 0 0 4px rgba(186, 26, 26, 0.2); /* error token */
+        }
+      </style>
+</head>
+<body class="font-body-lg text-body-lg text-on-background h-screen overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="bg-surface border-r border-surface-variant shadow-md flex flex-col h-full py-6 gap-stack-gap h-screen w-64 fixed left-0 top-0 z-50 hidden md:flex">
+<div class="px-container-margin mb-8">
+<h1 class="font-headline-lg text-headline-lg font-black text-primary tracking-tight">NEXUS</h1>
+<p class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant mt-1">Operational Intel</p>
+</div>
+<div class="flex-1 flex flex-col gap-2">
+<a class="text-on-surface-variant hover:text-primary mx-2 hover:bg-surface-container-high transition-all duration-150 rounded-lg flex items-center px-4 py-3 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-primary" data-icon="dashboard">dashboard</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Overview</span>
+</a>
+<a class="bg-secondary-container text-on-secondary-container rounded-lg font-bold mx-2 hover:bg-surface-container-high transition-all duration-150 flex items-center px-4 py-3 group shadow-sm translate-y-[-1px]" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="public" data-weight="fill" style="font-variation-settings: 'FILL' 1;">public</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Live World</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary mx-2 hover:bg-surface-container-high transition-all duration-150 rounded-lg flex items-center px-4 py-3 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-primary" data-icon="settings_input_component">settings_input_component</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Operations</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary mx-2 hover:bg-surface-container-high transition-all duration-150 rounded-lg flex items-center px-4 py-3 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-primary" data-icon="error_outline">error_outline</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Incidents</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary mx-2 hover:bg-surface-container-high transition-all duration-150 rounded-lg flex items-center px-4 py-3 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-primary" data-icon="science">science</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Simulations</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary mx-2 hover:bg-surface-container-high transition-all duration-150 rounded-lg flex items-center px-4 py-3 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-primary" data-icon="psychology">psychology</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Intelligence</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary mx-2 hover:bg-surface-container-high transition-all duration-150 rounded-lg flex items-center px-4 py-3 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-primary" data-icon="insights">insights</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Analytics</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary mx-2 hover:bg-surface-container-high transition-all duration-150 rounded-lg flex items-center px-4 py-3 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-primary" data-icon="description">description</span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest">Reports</span>
+</a>
+</div>
+<div class="px-container-margin mt-auto flex items-center gap-3 pt-6 border-t border-surface-variant mx-2">
+<img class="w-10 h-10 rounded-full object-cover border border-surface-variant" data-alt="NEXUS System Logo as a minimalist geometric avatar, dark warm tones, premium industrial aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1PBp1fXx3770fXK2hkl8y_jEP8BS8MHT8Tk14nKBJhzi6bKs9sS7UnNcKdBL9DgWSQd5gV3qkx-DvWL--JQEEGP8NCnG3Wad-YZ9kLch_LDEMl8w_TU-MhRTZ6WlaMDTdlLdseTDLq3XszC8X-yNPGMDnyQcYFVCv3jatnTtc8gI-PgkYnwf4zDRqou85mC7upw_tGTawlh8eIqhLnj3nf1DkyoYuTRGbsFcFqItfFf0iJ6TkdEV-"/>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-primary">System</span>
+<span class="font-data-mono text-data-mono text-secondary">Online</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col md:ml-64 relative">
+<!-- Top App Bar (Mobile only for nav, but using it for search/actions on desktop) -->
+<header class="bg-background border-b border-surface-variant shadow-sm w-full h-16 flex justify-between items-center px-container-margin z-40 relative md:bg-transparent md:border-none md:shadow-none md:absolute md:top-0 md:left-0 md:right-0 md:pt-6">
+<div class="flex items-center gap-4 w-full max-w-xl md:bg-surface md:rounded-lg md:border md:border-surface-variant md:shadow-sm md:h-12 md:px-4">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="search">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 font-body-lg text-body-lg text-primary placeholder-on-surface-variant md:h-full shadow-inner bg-[#F1EEE6] rounded md:bg-transparent md:shadow-none" placeholder="Locate Asset, Route, or Facility..." type="text"/>
+</div>
+<div class="flex items-center gap-4 ml-auto">
+<button class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:bg-surface-container-high transition-colors text-primary relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error status-glow-critical"></span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:bg-surface-container-high transition-colors text-primary">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded font-label-caps text-label-caps uppercase tracking-widest hover:bg-[#313030] transition-colors hidden md:block">
+                    Profile
+                </button>
+</div>
+</header>
+<!-- 3D Environment Canvas -->
+<div class="absolute inset-0 z-0 bg-surface-dim overflow-hidden flex items-center justify-center">
+<!-- Simulated 3D space placeholder -->
+<div class="bg-cover bg-center w-full h-full opacity-60 mix-blend-multiply" data-alt="A highly detailed, miniature 3D isometric view of a futuristic logistics hub. Soft architectural lighting, warm ivory surfaces with precise dark mechanical details. Tiny delivery vehicles traverse precise geometric routes. High-end, clean industrial design aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBxh_h_2cT-05oUgPtHoOMvNsLBwZdO88L8ifrE1mBWRaie7LdmgqyXPlvopmHeYDhU07xXkONteLsEANDCWhnHKynPfSzalscauqAEzzlhN-fL65U5KeCpk40rEQ6zPDbgJF3RjFsk8lsq_sucvUsxE_njz1IcHTFuGVglDVqHd4X-bjaVTg80VsN1Sil89lZCKi_vxu8advY_KfewGwF5OqzQ-SqSIWx_MwVX6NEFEFl7Q_MkIGJk')"></div>
+<!-- Overlay grid/markers -->
+<div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U1RTJEOSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50 pointer-events-none"></div>
+<!-- Spatial Markers (Interactive) -->
+<button class="absolute top-[40%] left-[30%] group w-8 h-8 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 z-10" onclick="document.getElementById('inspector-panel').classList.toggle('translate-x-full'); document.getElementById('inspector-panel').classList.toggle('opacity-0');">
+<div class="w-3 h-3 rounded-full bg-secondary relative">
+<div class="absolute inset-0 rounded-full bg-secondary animate-ping opacity-75"></div>
+</div>
+<div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-surface px-2 py-1 rounded border border-surface-variant shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+<span class="font-data-mono text-data-mono text-primary">UNIT-74A</span>
+</div>
+</button>
+<button class="absolute top-[60%] left-[65%] group w-8 h-8 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="w-3 h-3 rounded-full bg-error relative status-glow-critical">
+</div>
+<div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-surface px-2 py-1 rounded border border-surface-variant shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+<span class="font-data-mono text-data-mono text-error">HUB-EAST (ERR)</span>
+</div>
+</button>
+</div>
+<!-- High-level Operational Health Indicators -->
+<div class="absolute top-24 left-8 z-30 flex gap-4 pointer-events-none">
+<div class="bg-surface glass-panel rounded-lg border border-surface-variant p-4 flex flex-col gap-1 card-shadow w-48 pointer-events-auto">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Network Status
+                </span>
+<span class="font-title-md text-title-md text-primary">Optimal</span>
+<div class="w-full h-1 bg-surface-container-high mt-2 rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[92%]"></div>
+</div>
+</div>
+<div class="bg-surface glass-panel rounded-lg border border-surface-variant p-4 flex flex-col gap-1 card-shadow w-48 pointer-events-auto">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error status-glow-critical"></span> Active Incidents
+                </span>
+<span class="font-title-md text-title-md text-error">3 Critical</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant mt-1 text-xs">Response T-12m</span>
+</div>
+</div>
+<!-- Contextual Inspector Panel (Right) -->
+<aside class="absolute right-6 top-24 bottom-6 w-80 bg-surface rounded-xl border border-surface-variant card-shadow z-40 flex flex-col transition-all duration-300 transform translate-x-full opacity-0 glass-panel" id="inspector-panel">
+<div class="p-card-padding border-b border-surface-variant flex justify-between items-start">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-1 bg-secondary-container/30 text-secondary rounded-full font-data-mono text-xs uppercase">Vehicle</span>
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary tracking-tight">UNIT-74A</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Heavy Transport</p>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors" onclick="document.getElementById('inspector-panel').classList.add('translate-x-full'); document.getElementById('inspector-panel').classList.add('opacity-0');">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="p-card-padding flex-1 overflow-y-auto flex flex-col gap-stack-gap">
+<!-- Metrics Grid -->
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant">Speed</span>
+<span class="font-data-mono text-title-md text-primary">64 <span class="text-xs text-on-surface-variant">km/h</span></span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant">Status</span>
+<span class="font-data-mono text-title-md text-secondary">En Route</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant">ETA</span>
+<span class="font-data-mono text-title-md text-primary">14:22 <span class="text-xs text-on-surface-variant">ZULU</span></span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant">Fuel</span>
+<span class="font-data-mono text-title-md text-primary">78%</span>
+</div>
+</div>
+<div class="border-t border-surface-variant pt-4">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant mb-3 block">Health Integrity</span>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center text-sm">
+<span class="font-body-sm text-primary">Powertrain</span>
+<span class="font-data-mono text-secondary">98%</span>
+</div>
+<div class="w-full h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[98%]"></div>
+</div>
+<div class="flex justify-between items-center text-sm mt-2">
+<span class="font-body-sm text-primary">Cooling System</span>
+<span class="font-data-mono text-error">42%</span>
+</div>
+<div class="w-full h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-error w-[42%]"></div>
+</div>
+</div>
+</div>
+<div class="border-t border-surface-variant pt-4 flex-1">
+<span class="font-label-caps text-label-caps uppercase tracking-widest text-on-surface-variant mb-3 block">Current Task</span>
+<div class="bg-surface-container-low p-3 rounded inset-shadow">
+<p class="font-body-sm text-primary">Delivering priority load LC-992 to HUB-NORTH. Route clear.</p>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-surface-variant bg-surface-container-lowest rounded-b-xl flex gap-2">
+<button class="flex-1 bg-surface-container-high hover:bg-surface-variant text-primary py-2 rounded font-label-caps text-label-caps uppercase tracking-widest transition-colors">
+                    Reroute
+                </button>
+<button class="flex-1 bg-primary hover:bg-[#313030] text-on-primary py-2 rounded font-label-caps text-label-caps uppercase tracking-widest transition-colors">
+                    Contact
+                </button>
+</div>
+</aside>
+</main>
+</body></html>

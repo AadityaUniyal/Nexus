@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Simulation Lab</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#201a1b",
+                        "surface-dim": "#dcd9d8",
+                        "surface-container-high": "#ebe7e6",
+                        "on-secondary-fixed-variant": "#0e503e",
+                        "outline-variant": "#c5c7c1",
+                        "secondary-container": "#b1f0d6",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-container": "#918789",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "on-secondary-fixed": "#002117",
+                        "tertiary": "#100b0c",
+                        "secondary-fixed": "#b1f0d6",
+                        "primary-fixed": "#e1e3dd",
+                        "primary-container": "#20231f",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f6f3f1",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "inverse-primary": "#c5c7c1",
+                        "secondary": "#2d6955",
+                        "on-surface-variant": "#454843",
+                        "on-primary-container": "#888a85",
+                        "on-secondary-container": "#336f5b",
+                        "on-secondary": "#ffffff",
+                        "outline": "#757872",
+                        "on-primary-fixed-variant": "#454843",
+                        "surface-variant": "#e5e2e0",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#fcf9f7",
+                        "inverse-surface": "#313030",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f3f0ef",
+                        "surface-bright": "#fcf9f7",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "surface-container": "#f1edec",
+                        "on-surface": "#1c1b1b",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#cfc4c5",
+                        "surface-tint": "#5c5f5a",
+                        "tertiary-container": "#272122",
+                        "tertiary-fixed": "#ece0e1",
+                        "on-background": "#1c1b1b",
+                        "surface-container-highest": "#e5e2e0",
+                        "primary": "#0a0d09",
+                        "background": "#fcf9f7",
+                        "on-primary-fixed": "#191c19",
+                        "on-tertiary": "#ffffff",
+                        "simulation-purple": "#8A4FFF",
+                        "simulation-purple-dim": "rgba(138, 79, 255, 0.15)",
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "16px",
+                        "card-padding": "24px",
+                        "gutter": "24px",
+                        "container-margin": "32px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "data-mono": ["JetBrains Mono"],
+                        "title-md": ["Geist"],
+                        "label-caps": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #F7F5EF; /* Level 0 Base */
+        }
+        .card-surface {
+            background-color: #FFFDF8;
+            border: 1px solid #E5E2D9;
+            box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04);
+        }
+        .simulation-border {
+            border: 1px dashed #8A4FFF;
+        }
+    </style>
+</head>
+<body class="font-body-lg text-on-background flex min-h-screen relative overflow-x-hidden md:flex-row flex-col">
+<!-- TopNavBar (Mobile Only) -->
+<nav class="md:hidden bg-surface/85 dark:bg-surface-container-high/85 sticky top-0 z-40 backdrop-blur-md shadow-sm flex justify-between items-center px-gutter py-unit h-16 w-full border-none">
+<div class="font-label-caps text-label-caps tracking-widest text-primary dark:text-primary-fixed-dim">NEXUS</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors cursor-pointer" data-icon="search">search</span>
+<img class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="A 3D avatar of a friendly but professional futuristic robot mascot, head and shoulders only. The mascot is composed of sleek, matte white polymer panels with precise seams. It features a glowing visor that emits a soft, subtle purple light, indicating it is currently in a 'simulation' or 'analysis' mode. The background is a clean, neutral gray gradient to emphasize the mascot's form. The lighting is soft studio lighting, highlighting the high-quality materials and friendly expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDulTo0eoJ0A3Dpz3LASokLRmyOcb-FaBcIGwZQ48xozu7pF4H_nQy0UxvVTj723pkSDG7Cw8vteoTOcaGhT_MID_pEx3lT20MdWZCjcV7HGhRRJnSJoW3XtBzQjdN4hGRn2vRftcWzkGMVf9biQHTd9OzqkJMO4BM6-AGb2zK6Ft7dXBQSAoclzsvpRJDeAuCR6URzhZlreta-SD-o62LSV8OiUvrwsBq7D_4YeqXZ0LEi3iJK7dQx"/>
+</div>
+</nav>
+<!-- SideNavBar (Desktop Only) -->
+<aside class="hidden md:flex h-screen w-72 flex-col fixed left-0 top-0 z-50 bg-surface-container-low dark:bg-surface-container-lowest shadow-sm border-none p-container-margin gap-stack-gap">
+<div class="flex flex-col gap-1 mb-6">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full border border-outline-variant object-cover" data-alt="A small 3D avatar of a friendly but professional futuristic robot mascot. The mascot is composed of sleek, matte white polymer panels with precise seams. It features a glowing visor that emits a soft, subtle purple light, indicating it is currently in a 'simulation' or 'analysis' mode. The lighting is soft studio lighting, highlighting the high-quality materials." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbRY0MOsVQMqmzJl1k5UwfuXWqHPsyV7ZbDHthEA96f_BskmaC9Gsv3p5VgXEHuvS4B16ByLtvD8ROZ4PeWG15NvTBmkiYeq8Xu09LGYfAfcDVWUsu4Df1ZXNNyGc1L-5nn9WjHlBDv9xfE8nb7_TNcbMwFVHC-EXzuth4FUVSsljYtcIq6-sWDmVh3_pb24bvTuAAi3NsFZbXfK1EFMvi-bI3DiDyZ63gtaO6Z-T8qDKEiPRNqITz"/>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-on-surface dark:text-on-surface-variant">NEXUS</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Operational Intelligence</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-2 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-title-md text-title-md">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="public">public</span>
+<span class="font-title-md text-title-md">Live World</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="precision_manufacturing">precision_manufacturing</span>
+<span class="font-title-md text-title-md">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="font-title-md text-title-md">Incidents</span>
+</a>
+<!-- Active Tab -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary text-on-primary shadow-md font-medium transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="model_training">model_training</span>
+<span class="font-title-md text-title-md">Simulations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-title-md text-title-md">Intelligence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-title-md text-title-md">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-title-md text-title-md">Reports</span>
+</a>
+</nav>
+<div class="mt-auto flex flex-col gap-2 pt-4 border-t border-outline-variant/20">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="support_agent">support_agent</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container transition-all" href="#">
+<span class="material-symbols-outlined text-[#2d6955]" data-icon="check_circle">check_circle</span>
+<span class="font-body-sm text-body-sm">System Status</span>
+</a>
+</div>
+<button class="w-full bg-[#8A4FFF] hover:bg-[#7340d6] text-white py-3 rounded-lg font-title-md text-title-md mt-4 transition-colors flex justify-center items-center gap-2 shadow-md hover:shadow-lg active:scale-95 duration-150">
+<span class="material-symbols-outlined text-[20px]" data-icon="play_arrow">play_arrow</span>
+            Run Simulation
+        </button>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-72 p-gutter md:p-container-margin w-full flex flex-col gap-stack-gap max-w-7xl mx-auto">
+<!-- Header -->
+<header class="flex flex-col md:flex-row md:justify-between md:items-end mb-4 gap-4">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-2">Simulation Lab</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Test scenarios, optimize operations, and predict outcomes.</p>
+</div>
+<div class="flex gap-3">
+<button class="bg-[#F1EEE6] hover:bg-surface-variant text-primary px-4 py-2 rounded-lg font-title-md text-title-md transition-colors border border-outline-variant/30 shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="tune">tune</span>
+                    Parameters
+                </button>
+<button class="bg-primary hover:bg-primary/90 text-on-primary px-5 py-2 rounded-lg font-title-md text-title-md transition-colors shadow-md hover:shadow-lg flex items-center gap-2 active:translate-y-[1px]">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                    Create New Scenario
+                </button>
+</div>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-stack-gap">
+<!-- Saved Scenarios (Left Column, span 4) -->
+<section class="md:col-span-4 flex flex-col gap-stack-gap">
+<div class="card-surface rounded-xl p-card-padding flex flex-col h-full">
+<div class="flex justify-between items-center mb-6 border-b border-outline-variant/20 pb-3">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Saved Scenarios</h3>
+<span class="material-symbols-outlined text-outline" data-icon="bookmark">bookmark</span>
+</div>
+<div class="flex flex-col gap-3 flex-1">
+<!-- Scenario Item 1 -->
+<div class="p-3 rounded-lg border border-outline-variant/30 hover:border-[#8A4FFF]/50 hover:bg-[#8A4FFF]/5 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-title-md text-title-md text-on-surface group-hover:text-[#8A4FFF] transition-colors">Peak Holiday Load</h4>
+<span class="bg-[#8A4FFF]/10 text-[#8A4FFF] px-2 py-0.5 rounded-full font-data-mono text-[10px]">Stress Test</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-3 line-clamp-2">Simulates a 300% increase in order volume across NA fulfillment centers.</p>
+<div class="flex items-center justify-between text-outline">
+<span class="font-data-mono text-data-mono text-[11px]">Last run: 2d ago</span>
+<button class="material-symbols-outlined hover:text-primary transition-colors text-[18px]" data-icon="play_circle">play_circle</button>
+</div>
+</div>
+<!-- Scenario Item 2 -->
+<div class="p-3 rounded-lg border border-outline-variant/30 hover:border-[#8A4FFF]/50 hover:bg-[#8A4FFF]/5 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-title-md text-title-md text-on-surface group-hover:text-[#8A4FFF] transition-colors">Supplier Outage (Asia)</h4>
+<span class="bg-error/10 text-error px-2 py-0.5 rounded-full font-data-mono text-[10px]">Disruption</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-3 line-clamp-2">Evaluates supply chain resilience if primary Asian component supplier halts production.</p>
+<div class="flex items-center justify-between text-outline">
+<span class="font-data-mono text-data-mono text-[11px]">Last run: 1w ago</span>
+<button class="material-symbols-outlined hover:text-primary transition-colors text-[18px]" data-icon="play_circle">play_circle</button>
+</div>
+</div>
+<!-- Scenario Item 3 -->
+<div class="p-3 rounded-lg border border-outline-variant/30 hover:border-[#8A4FFF]/50 hover:bg-[#8A4FFF]/5 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-title-md text-title-md text-on-surface group-hover:text-[#8A4FFF] transition-colors">Route Optimization V3</h4>
+<span class="bg-secondary/10 text-secondary px-2 py-0.5 rounded-full font-data-mono text-[10px]">Efficiency</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-3 line-clamp-2">Tests the new routing algorithm against historical delivery data to measure fuel savings.</p>
+<div class="flex items-center justify-between text-outline">
+<span class="font-data-mono text-data-mono text-[11px]">Last run: Just now</span>
+<button class="material-symbols-outlined hover:text-primary transition-colors text-[18px]" data-icon="play_circle">play_circle</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Simulations & Results (Right Column, span 8) -->
+<section class="md:col-span-8 flex flex-col gap-stack-gap">
+<!-- Featured Result Card -->
+<div class="card-surface rounded-xl p-card-padding simulation-border relative overflow-hidden">
+<!-- Subtle background tint for simulation context -->
+<div class="absolute inset-0 bg-[#8A4FFF]/5 pointer-events-none"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-label-caps text-label-caps text-[#8A4FFF] uppercase mb-1">Recent Simulation Result</h3>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Route Optimization V3 vs. Baseline</h2>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#8A4FFF] animate-pulse"></span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">Completed</span>
+</div>
+</div>
+<!-- Metric Comparison Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<!-- Cost -->
+<div class="bg-surface p-4 rounded-lg border border-outline-variant/20">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-2">Operating Cost</div>
+<div class="flex items-end gap-2 mb-1">
+<span class="font-data-mono text-title-md text-[#8A4FFF]">$2.4M</span>
+<span class="font-data-mono text-body-sm text-outline line-through">$2.8M</span>
+</div>
+<div class="font-body-sm text-body-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_downward">arrow_downward</span> 14% (Simulated)
+                                </div>
+</div>
+<!-- Delay -->
+<div class="bg-surface p-4 rounded-lg border border-outline-variant/20">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-2">Avg Delay</div>
+<div class="flex items-end gap-2 mb-1">
+<span class="font-data-mono text-title-md text-[#8A4FFF]">12m</span>
+<span class="font-data-mono text-body-sm text-outline line-through">45m</span>
+</div>
+<div class="font-body-sm text-body-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_downward">arrow_downward</span> 73% (Simulated)
+                                </div>
+</div>
+<!-- SLA -->
+<div class="bg-surface p-4 rounded-lg border border-outline-variant/20">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-2">SLA Adherence</div>
+<div class="flex items-end gap-2 mb-1">
+<span class="font-data-mono text-title-md text-[#8A4FFF]">99.2%</span>
+<span class="font-data-mono text-body-sm text-outline line-through">94.5%</span>
+</div>
+<div class="font-body-sm text-body-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_upward">arrow_upward</span> +4.7% (Simulated)
+                                </div>
+</div>
+<!-- Risk -->
+<div class="bg-surface p-4 rounded-lg border border-outline-variant/20">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-2">Risk Index</div>
+<div class="flex items-end gap-2 mb-1">
+<span class="font-data-mono text-title-md text-[#8A4FFF]">0.12</span>
+<span class="font-data-mono text-body-sm text-outline line-through">0.18</span>
+</div>
+<div class="font-body-sm text-body-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_downward">arrow_downward</span> Reduced (Simulated)
+                                </div>
+</div>
+</div>
+<!-- Action Bar for Featured Result -->
+<div class="flex justify-end gap-3 mt-4 pt-4 border-t border-outline-variant/20">
+<button class="text-on-surface-variant hover:text-primary font-title-md text-title-md px-4 py-2 transition-colors">View Details</button>
+<button class="bg-[#8A4FFF] hover:bg-[#7340d6] text-white px-5 py-2 rounded-lg font-title-md text-title-md transition-colors shadow-sm active:translate-y-[1px]">Apply to Production</button>
+</div>
+</div>
+</div>
+<!-- Secondary Simulation Result List -->
+<div class="card-surface rounded-xl p-card-padding">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4 border-b border-outline-variant/20 pb-3">History</h3>
+<div class="flex flex-col gap-2">
+<!-- History Row 1 -->
+<div class="flex items-center justify-between p-3 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-outline-variant/20">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[16px]" data-icon="warning">warning</span>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Supplier Outage (Asia)</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Critical inventory depletion detected at Day 14.</p>
+</div>
+</div>
+<div class="text-right flex items-center gap-4">
+<span class="font-data-mono text-data-mono text-outline">Oct 24, 14:32</span>
+<button class="material-symbols-outlined text-outline hover:text-primary" data-icon="more_vert">more_vert</button>
+</div>
+</div>
+<!-- History Row 2 -->
+<div class="flex items-center justify-between p-3 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-outline-variant/20">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[16px]" data-icon="check">check</span>
+</div>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Warehouse Automation Flow</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Throughput increased by 18% within safety parameters.</p>
+</div>
+</div>
+<div class="text-right flex items-center gap-4">
+<span class="font-data-mono text-data-mono text-outline">Oct 22, 09:15</span>
+<button class="material-symbols-outlined text-outline hover:text-primary" data-icon="more_vert">more_vert</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

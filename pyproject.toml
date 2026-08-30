@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+testpaths = ["tests/backend", "backend/tests"]
+pythonpath = ["backend", "."]
+asyncio_mode = "auto"
+
+[tool.pyright]
+include = ["backend", "tests"]
+extraPaths = ["backend"]
+
+[tool.pylint.master]
+init-hook = 'import sys; sys.path.insert(0, "backend")'

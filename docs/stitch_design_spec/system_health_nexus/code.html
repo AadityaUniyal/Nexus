@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - System Health</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#918789",
+                        "surface-dim": "#dcd9d8",
+                        "primary-container": "#20231f",
+                        "tertiary-fixed": "#ece0e1",
+                        "secondary-container": "#b1f0d6",
+                        "on-surface": "#1c1b1b",
+                        "primary": "#0a0d09",
+                        "outline-variant": "#c5c7c1",
+                        "tertiary-container": "#272122",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#ebe7e6",
+                        "on-secondary-fixed-variant": "#0e503e",
+                        "surface-container-highest": "#e5e2e0",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "background": "#fcf9f7",
+                        "outline": "#757872",
+                        "on-secondary-fixed": "#002117",
+                        "surface-container": "#f1edec",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "surface": "#fcf9f7",
+                        "primary-fixed": "#e1e3dd",
+                        "on-secondary-container": "#336f5b",
+                        "inverse-surface": "#313030",
+                        "on-primary-container": "#888a85",
+                        "surface-tint": "#5c5f5a",
+                        "inverse-primary": "#c5c7c1",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f3f0ef",
+                        "secondary": "#2d6955",
+                        "surface-variant": "#e5e2e0",
+                        "on-primary-fixed": "#191c19",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#1c1b1b",
+                        "secondary-fixed": "#b1f0d6",
+                        "on-tertiary-fixed": "#201a1b",
+                        "surface-container-low": "#f6f3f1",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "error": "#ba1a1a",
+                        "tertiary": "#100b0c",
+                        "on-primary-fixed-variant": "#454843",
+                        "surface-bright": "#fcf9f7",
+                        "on-surface-variant": "#454843",
+                        "tertiary-fixed-dim": "#cfc4c5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin": "32px",
+                        "stack-gap": "16px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "card-padding": "24px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-lg": ["Geist"],
+                        "data-mono": ["JetBrains Mono"],
+                        "display-lg": ["Geist"],
+                        "headline-lg-mobile": ["Geist"]
+                    },
+                    "fontSize": {
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Geist', sans-serif; }
+        .font-label-caps, .font-data-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-overlay { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .tactile-card { box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04); }
+        .tactile-card:hover { box-shadow: 0px 6px 24px rgba(32, 35, 31, 0.06); transform: translateY(-2px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #c5c7c1; border-radius: 4px; }
+        
+        /* Simulating graph lines with CSS for placeholder data */
+        .sparkline {
+            background: linear-gradient(to right, transparent 50%, rgba(45, 105, 85, 0.1) 50%);
+            background-size: 20px 100%;
+            position: relative;
+        }
+        .sparkline::after {
+            content: '';
+            position: absolute;
+            bottom: 20%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0,15 L20,10 L40,18 L60,5 L80,12 L100,2' stroke='%232d6955' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+            background-size: 100% 100%;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col md:flex-row antialiased">
+<!-- TopNavBar (Mobile) -->
+<nav class="md:hidden flex justify-between items-center w-full px-container-margin py-2 z-50 bg-surface/85 dark:bg-surface-container-highest/85 text-body-lg font-body-lg backdrop-blur-md border-b border-outline-variant/30 shadow-sm sticky top-0">
+<div class="text-title-md font-title-md font-bold tracking-tight text-primary dark:text-primary-fixed">NEXUS</div>
+<div class="flex gap-4 items-center">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">search</span>
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">notifications</span>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="A small, circular avatar portrait of a professional system operator in a modern control room. The lighting is bright and high-key, aligning with the warm industrial light mode aesthetic of the UI. Focus is on clarity and precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJMbwBf8gaAFq7nhqRu3wpYXub0QTDEM-xfTAqbeMkWj_2zK6Oz7_FlUXZCukfVlKfwKMMPHaTnbD3BSrFebutvjbD_7G5j_eB7M0HsngiVrEjBYPLxZVLKBdUseMsE4pmc8HVty9cEzmqeLJ2KeZDrRc_WDs99dl1lc7ztd19Pf9ES2yJfmUIfVc93jk9I7hn5GIRj4_0uFhvvYZ6FK7fjdztz4EjXheOQ9iPLNnwqdzLveO0oxkp"/>
+</div>
+</nav>
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex h-screen w-64 flex-col bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant/20 sticky top-0 py-6 px-4">
+<div class="flex items-center gap-3 mb-8 px-2">
+<img alt="NEXUS 3D Companion" class="w-10 h-10 rounded-lg shadow-sm" data-alt="A stylized 3D rendered avatar icon representing an AI operational companion. Rendered in matte polymers and soft glass textures against a bright background, perfectly matching the premium, soft-shadow tactile feel of the interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6gtMT3Jwe4u-fVDUUG6X9VgsCuMQkHHv7VaRPJoBLyMNPc2SauVZuTpljc8XTGnYBVPK0OcbAwak4jVmFzbw1ys8Cgh3qAysBc9C1vBp3VNigzqgFM75g-WBovavqC3pK7oLe5gsfzRaJ46aegVPYEyMEWaq3ggCq_S6kOH-T0OY2YJZCEB1opDCb7h1VzfK3LhgtTWvu8qDFw7figh6voy2-jHSIHJMAuYRSjhE9GKQ_m7woTd6l"/>
+<div>
+<h1 class="text-title-md font-title-md font-black text-primary">NEXUS Core</h1>
+<p class="text-label-caps font-label-caps text-on-surface-variant">System Operational</p>
+</div>
+</div>
+<ul class="flex flex-col gap-1 flex-1 text-label-caps font-label-caps">
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">dashboard</span> Overview</a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">public</span> Live World</a></li>
+<li><a class="flex items-center gap-3 bg-primary-container dark:bg-primary-container text-on-primary-container font-medium rounded-lg px-4 py-3 Active: scale-[0.99] transition-transform" href="#"><span class="material-symbols-outlined">settings_input_component</span> Operations</a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">error</span> Incidents</a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">science</span> Simulations</a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">psychology</span> Intelligence</a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">leaderboard</span> Analytics</a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest dark:hover:bg-surface-container-high rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">description</span> Reports</a></li>
+</ul>
+<div class="mt-auto pt-4 border-t border-outline-variant/20">
+<ul class="flex flex-col gap-1 text-label-caps font-label-caps">
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">admin_panel_settings</span> Admin</a></li>
+<li><a class="flex items-center gap-3 text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 hover:bg-surface-container-highest rounded-lg transition-colors" href="#"><span class="material-symbols-outlined">contact_support</span> Help</a></li>
+</ul>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="flex-1 flex flex-col min-h-screen overflow-hidden">
+<!-- Header -->
+<header class="px-container-margin py-8 md:py-12 border-b border-outline-variant/10 bg-surface">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+<div>
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-primary mb-2">System Health</h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant">Real-time status of all NEXUS platform services.</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container px-4 py-2 rounded-lg border border-outline-variant/20 flex flex-col">
+<span class="text-label-caps font-label-caps text-on-surface-variant">Global Uptime</span>
+<span class="text-title-md font-title-md text-primary font-bold">99.98%</span>
+</div>
+<div class="bg-secondary/10 px-4 py-2 rounded-lg border border-secondary/20 flex flex-col">
+<span class="text-label-caps font-label-caps text-secondary">System Status</span>
+<span class="text-title-md font-title-md text-secondary font-bold flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span> Optimal
+                        </span>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-container-margin bg-background">
+<div class="max-w-7xl mx-auto space-y-gutter">
+<!-- Services Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-stack-gap">
+<!-- Frontend -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-card-padding tactile-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-title-md font-title-md text-primary font-bold">Frontend</h3>
+<p class="text-label-caps font-label-caps text-on-surface-variant mt-1">NEXUS Web Application</p>
+</div>
+<span class="bg-secondary/10 text-secondary text-label-caps font-label-caps px-2 py-1 rounded font-bold">99.99%</span>
+</div>
+<div class="h-16 w-full sparkline rounded opacity-70 mb-4"></div>
+<div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant border-t border-outline-variant/10 pt-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span> Healthy</span>
+<span class="text-data-mono font-data-mono">42ms avg latency</span>
+</div>
+</div>
+<!-- API Gateway -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-card-padding tactile-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-title-md font-title-md text-primary font-bold">API Gateway</h3>
+<p class="text-label-caps font-label-caps text-on-surface-variant mt-1">Edge Routing &amp; Auth</p>
+</div>
+<span class="bg-secondary/10 text-secondary text-label-caps font-label-caps px-2 py-1 rounded font-bold">99.95%</span>
+</div>
+<div class="h-16 w-full sparkline rounded opacity-70 mb-4"></div>
+<div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant border-t border-outline-variant/10 pt-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span> Healthy</span>
+<span class="text-data-mono font-data-mono">1.2k req/s</span>
+</div>
+</div>
+<!-- Real-time Event Processor -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-card-padding tactile-card transition-all duration-300 ring-2 ring-error/20 bg-error/5">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-title-md font-title-md text-primary font-bold">Real-time Processor</h3>
+<p class="text-label-caps font-label-caps text-on-surface-variant mt-1">Kafka Streams</p>
+</div>
+<span class="bg-error/10 text-error text-label-caps font-label-caps px-2 py-1 rounded font-bold">98.40%</span>
+</div>
+<div class="h-16 w-full rounded mb-4 relative bg-surface-container-high/50">
+<!-- Simulated degraded graph -->
+<svg class="w-full h-full absolute inset-0" preserveaspectratio="none" viewbox="0 0 100 20">
+<path d="M0,10 L20,12 L40,15 L50,18 L60,8 L80,10 L100,5" fill="none" opacity="0.6" stroke="#ba1a1a" stroke-width="2"></path>
+</svg>
+</div>
+<div class="flex justify-between items-center text-body-sm font-body-sm text-error border-t border-error/20 pt-4">
+<span class="flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">warning</span> Degraded</span>
+<span class="text-data-mono font-data-mono text-on-surface-variant">Queue backup</span>
+</div>
+</div>
+<!-- Notification Service -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-card-padding tactile-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-title-md font-title-md text-primary font-bold">Notification Svc</h3>
+<p class="text-label-caps font-label-caps text-on-surface-variant mt-1">Push &amp; Email</p>
+</div>
+<span class="bg-secondary/10 text-secondary text-label-caps font-label-caps px-2 py-1 rounded font-bold">100%</span>
+</div>
+<div class="h-16 w-full sparkline rounded opacity-70 mb-4"></div>
+<div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant border-t border-outline-variant/10 pt-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span> Healthy</span>
+<span class="text-data-mono font-data-mono">0 pending</span>
+</div>
+</div>
+<!-- Lakehouse Sync -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-card-padding tactile-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-title-md font-title-md text-primary font-bold">Lakehouse Sync</h3>
+<p class="text-label-caps font-label-caps text-on-surface-variant mt-1">Batch ETL Jobs</p>
+</div>
+<span class="bg-secondary/10 text-secondary text-label-caps font-label-caps px-2 py-1 rounded font-bold">99.90%</span>
+</div>
+<div class="h-16 w-full sparkline rounded opacity-70 mb-4"></div>
+<div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant border-t border-outline-variant/10 pt-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span> Healthy</span>
+<span class="text-data-mono font-data-mono">Last run: 5m ago</span>
+</div>
+</div>
+<!-- AI Model Server -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-card-padding tactile-card transition-all duration-300">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-title-md font-title-md text-primary font-bold">AI Model Server</h3>
+<p class="text-label-caps font-label-caps text-on-surface-variant mt-1">Inference Engine</p>
+</div>
+<span class="bg-secondary/10 text-secondary text-label-caps font-label-caps px-2 py-1 rounded font-bold">99.98%</span>
+</div>
+<div class="h-16 w-full sparkline rounded opacity-70 mb-4"></div>
+<div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant border-t border-outline-variant/10 pt-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span> Healthy</span>
+<span class="text-data-mono font-data-mono">850ms p99</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="w-full py-4 bg-surface-container-lowest dark:bg-surface-dim border-t border-outline-variant/10 mt-auto">
+<div class="max-w-7xl mx-auto px-container-margin flex justify-between items-center">
+<span class="text-body-sm font-body-sm text-on-surface-variant dark:text-outline font-bold text-primary">© 2024 NEXUS Operational Intelligence</span>
+<div class="flex gap-4">
+<a class="text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors opacity-100" href="#">Privacy Policy</a>
+<a class="text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors opacity-100" href="#">Terms of Service</a>
+<a class="text-body-sm font-body-sm text-primary underline opacity-100" href="#">API Status</a>
+</div>
+</div>
+</footer>
+</main>
+</body></html>

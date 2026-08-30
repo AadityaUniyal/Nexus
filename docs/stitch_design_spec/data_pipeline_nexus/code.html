@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEXUS - Data Pipeline</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#918789",
+                        "surface-dim": "#dcd9d8",
+                        "primary-container": "#20231f",
+                        "tertiary-fixed": "#ece0e1",
+                        "secondary-container": "#b1f0d6",
+                        "on-surface": "#1c1b1b",
+                        "primary": "#0a0d09",
+                        "outline-variant": "#c5c7c1",
+                        "tertiary-container": "#272122",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#ebe7e6",
+                        "on-secondary-fixed-variant": "#0e503e",
+                        "surface-container-highest": "#e5e2e0",
+                        "on-tertiary-fixed-variant": "#4c4546",
+                        "background": "#fcf9f7",
+                        "outline": "#757872",
+                        "on-secondary-fixed": "#002117",
+                        "surface-container": "#f1edec",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#96d3bb",
+                        "surface": "#fcf9f7",
+                        "primary-fixed": "#e1e3dd",
+                        "on-secondary-container": "#336f5b",
+                        "inverse-surface": "#313030",
+                        "on-primary-container": "#888a85",
+                        "surface-tint": "#5c5f5a",
+                        "inverse-primary": "#c5c7c1",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f3f0ef",
+                        "secondary": "#2d6955",
+                        "surface-variant": "#e5e2e0",
+                        "on-primary-fixed": "#191c19",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#1c1b1b",
+                        "secondary-fixed": "#b1f0d6",
+                        "on-tertiary-fixed": "#201a1b",
+                        "surface-container-low": "#f6f3f1",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#c5c7c1",
+                        "error": "#ba1a1a",
+                        "tertiary": "#100b0c",
+                        "on-primary-fixed-variant": "#454843",
+                        "surface-bright": "#fcf9f7",
+                        "on-surface-variant": "#454843",
+                        "tertiary-fixed-dim": "#cfc4c5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin": "32px",
+                        "stack-gap": "16px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "card-padding": "24px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-lg": ["Geist"],
+                        "data-mono": ["JetBrains Mono"],
+                        "display-lg": ["Geist"],
+                        "headline-lg-mobile": ["Geist"]
+                    },
+                    "fontSize": {
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        .shadow-soft {
+            box-shadow: 0px 4px 20px rgba(32, 35, 31, 0.04);
+        }
+        
+        .node-line {
+            stroke: #c5c7c1;
+            stroke-width: 2;
+            stroke-dasharray: 4;
+            animation: dash 20s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+        
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(45, 105, 85, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(45, 105, 85, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(45, 105, 85, 0); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-lg min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-surface/85 dark:bg-surface-container-highest/85 text-primary dark:text-primary-fixed-dim text-body-lg font-body-lg docked full-width top-0 sticky backdrop-blur-md border-b border-outline-variant/30 shadow-sm flex justify-between items-center w-full px-container-margin py-2 z-50">
+<div class="flex items-center gap-4">
+<span class="text-title-md font-title-md font-bold tracking-tight text-primary dark:text-primary-fixed">NEXUS</span>
+</div>
+<div class="flex items-center gap-6">
+<!-- Search bar on left placeholder if needed, omitted for minimalism here as it's a dashboard -->
+<button class="hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors p-2 rounded-full Active: opacity-80 duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors p-2 rounded-full Active: opacity-80 duration-200">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors p-2 rounded-full Active: opacity-80 duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover border border-outline-variant/50" data-alt="A small circular avatar of a professional user in a high-tech control room environment, sharp focus, cool lighting, subtle warm industrial tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuASmU4ByPNcAooN9u7kv4De2JjeR0YcKJaIdeJGLyU4VZONOK5UbFcxsMMTSFwJzZ-WrVsWdj_iZbrSrtxUbAJt5iEF9IJYBub_SugptIKC3HV9qZjnPjwDFnYz31gF9WoyyA2sQVUBI8tBhrvxjTQ7TYkzwIquuzUIKIGmdNKYloI-FUpVJ2q9wBVVJnt9szahQCGUbTn_hgMkaA64pA1-JCkCtm3yn2QM9Al9R_08Ex-c7kNSO7jN"/>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex bg-surface-container-low dark:bg-surface-container-lowest text-primary dark:text-primary-fixed-dim text-label-caps font-label-caps h-screen w-64 flex-col border-r border-outline-variant/20 flat no shadows flex flex-col h-full py-6 px-4 shrink-0">
+<div class="mb-8 px-4 flex items-center gap-3">
+<img alt="NEXUS 3D Companion" class="w-10 h-10 rounded-lg object-cover" data-alt="A stylized 3D avatar of a digital companion, geometric shapes, warm industrial color palette, soft ambient lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7BTc45tdEIyOyBAofO2Ml-QoOzaq2R65SNyP5Ak4oafdu8jzMsQmTDRpVR31jRG1XYyZhvSnOw_jR2z4mwJPgMjCmDgu7TscDir_M63yXKBZj5gIX_SL_OrXADx2pUFLcxWKnrvZhy3vQmEUpkuE7K7NkA6jFt2RHOZl7mIIA9BVgRFah5bfiCFyPe-RLBIatMA_t2-me8LArHfLy9zv03vKj3XvwVtqV-Xdyn1mF42ZUS-G2CvCl"/>
+<div>
+<h2 class="text-title-md font-title-md font-black text-primary">NEXUS Core</h2>
+<p class="text-on-surface-variant font-data-mono text-xs opacity-70">System Operational</p>
+</div>
+</div>
+<ul class="flex flex-col gap-2 flex-1">
+<li>
+<a class="text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 flex items-center gap-3 rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span> Overview
+                    </a>
+</li>
+<li>
+<a class="text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 flex items-center gap-3 rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="public">public</span> Live World
+                    </a>
+</li>
+<li>
+<a class="bg-primary-container dark:bg-primary-container text-on-primary-container font-medium rounded-lg px-4 py-3 flex items-center gap-3 Active: scale-[0.99] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span> Operations
+                    </a>
+</li>
+<li>
+<a class="text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 flex items-center gap-3 rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="error">error</span> Incidents
+                    </a>
+</li>
+</ul>
+<div class="mt-auto border-t border-outline-variant/20 pt-4 flex flex-col gap-2">
+<a class="text-on-surface-variant dark:text-outline hover:text-primary px-4 py-3 flex items-center gap-3 rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span> Admin
+                </a>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-container-margin relative">
+<div class="max-w-7xl mx-auto flex flex-col gap-stack-gap">
+<!-- Header -->
+<div class="flex justify-between items-end mb-gutter">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary mb-2">Data Pipeline</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Real-time digital twin of the infrastructure telemetry.</p>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2 bg-secondary/10 text-secondary px-3 py-1 rounded-full font-label-caps text-label-caps">
+<div class="w-2 h-2 rounded-full bg-secondary pulse-glow"></div>
+                            Pipeline Healthy
+                        </div>
+</div>
+</div>
+<!-- Pipeline Visualization Canvas -->
+<div class="relative bg-surface rounded-xl border border-outline-variant/30 shadow-soft p-card-padding min-h-[600px] flex items-center justify-center overflow-x-auto">
+<!-- Simplified SVG Background for connectors -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+<path class="node-line" d="M 200 300 Q 350 300 500 150" fill="none"></path>
+<path class="node-line" d="M 200 300 Q 350 300 500 450" fill="none"></path>
+<path class="node-line" d="M 500 150 Q 650 150 800 300" fill="none"></path>
+<path class="node-line" d="M 500 450 Q 650 450 800 300" fill="none"></path>
+</svg>
+<div class="flex items-center gap-32 relative z-10 w-max mx-auto">
+<!-- Node 1: Operational DB -->
+<div class="bg-surface-container-lowest border border-outline-variant/40 rounded-lg shadow-sm p-4 w-64 flex flex-col gap-3 relative bg-opacity-95 backdrop-blur-sm transition-transform hover:-translate-y-1 hover:shadow-md cursor-pointer">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" data-icon="database">database</span>
+<span class="font-label-caps text-label-caps text-primary">Ops DB</span>
+</div>
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+</div>
+<div>
+<div class="font-data-mono text-data-mono text-primary">42.8M</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant text-[10px]">Records</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

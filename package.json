@@ -1,0 +1,31 @@
+{
+  "name": "nexus-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NEXUS Operational Intelligence & Decision Simulation Platform",
+  "scripts": {
+    "dev": "python run.py",
+    "build": "python run.py --compile",
+    "test": "python run.py --test",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "start:frontend": "npm run start --prefix frontend",
+    "dev:backend": "cd backend && python -m uvicorn app.main:app --reload --port 8000",
+    "worker:backend": "cd backend && python -m app.workers.worker",
+    "test:backend": "cd backend && python -m pytest",
+    "prisma:generate": "npm run prisma:generate --prefix frontend",
+    "prisma:push": "npm run prisma:push --prefix frontend",
+    "prisma:seed": "npm run prisma:seed --prefix frontend"
+  },
+  "keywords": [
+    "operational-intelligence",
+    "decision-simulation",
+    "fastapi",
+    "nextjs",
+    "pipecat",
+    "geoapify",
+    "open-meteo"
+  ],
+  "author": "NEXUS Platform Team",
+  "license": "MIT"
+}
