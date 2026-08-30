@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/styles/globals.css";
 import { ToastProvider } from "@/components/ui/toast";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { SlidingAvatarCompanion } from "@/components/avatar/SlidingAvatarCompanion";
 
 export const metadata: Metadata = {
   title: "NEXUS · Operational Intelligence & Decision Simulation",
@@ -18,7 +19,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="bg-nexus-surface text-nexus-on-surface antialiased selection:bg-nexus-secondary/20 selection:text-nexus-secondary">
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            {children}
+            <SlidingAvatarCompanion />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

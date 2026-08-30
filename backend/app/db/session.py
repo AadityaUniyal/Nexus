@@ -6,14 +6,24 @@ from sqlalchemy.ext.asyncio import (
 )
 from app.core.config import settings
 
-# Create async engine with robust pool configuration
+# Create async engine with robust, low-latency pool configuration
+engine_kwargs = {
+    "echo": False,
+    "future": True,
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
+
+if "sqlite" not in settings.DATABASE_URL.lower():
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 5,
+    })
+
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=False,
-    future=True,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    **engine_kwargs
 )
 
 # Async session factory

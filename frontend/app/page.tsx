@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar3D } from "@/components/avatar/Avatar3D";
 import { StatusLed } from "@/components/ui/status-led";
+import { ScrollStory3D } from "@/components/brand/ScrollStory3D";
 
 export default function LandingPage() {
   const [activeStoryStep, setActiveStoryStep] = React.useState(0);
@@ -205,51 +206,24 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* Product Story Section: OBSERVE -> UNDERSTAND -> INVESTIGATE -> SIMULATE -> DECIDE -> LEARN -> OPERATE */}
-      <section id="story" className="py-20 bg-nexus-surface-container-low/40 border-y border-nexus-outline-variant/30 px-6 md:px-12">
+      {/* Product Story Section: 3D Interactive Scrollytelling (OBSERVE -> OPERATE) */}
+      <section id="story" className="py-24 bg-nexus-surface-container-low/40 border-y border-nexus-outline-variant/30 px-6 md:px-12">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-mono-data text-nexus-secondary font-bold uppercase tracking-wider">
-              The Seven-Step Loop
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="text-xs font-mono-data text-nexus-secondary font-bold uppercase tracking-widest">
+              The Living Operational Loop · 7-Stage Spatial Twin
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-nexus-on-surface mt-2 tracking-tight">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-nexus-on-surface mt-3 tracking-tight">
               From Observation to Actionable Decisions
             </h2>
-            <p className="text-sm text-nexus-on-surface-variant mt-3">
-              NEXUS transforms chaotic physical logistics telemetry into a coherent, simulated decision engine.
+            <p className="text-base text-nexus-on-surface-variant mt-4 leading-relaxed">
+              Experience how NEXUS transforms chaotic physical logistics telemetry into a coherent,
+              simulated decision engine in real time.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {storySteps.map((step, idx) => (
-              <div
-                key={step.num}
-                className="tactile-card p-6 flex flex-col justify-between hover:translate-y-[-2px] transition-all"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-black font-mono-data text-nexus-outline/60">
-                      {step.num}
-                    </span>
-                    <Badge variant={step.badgeVariant} size="sm">
-                      {step.badge}
-                    </Badge>
-                  </div>
-                  <h3 className="text-lg font-bold text-nexus-on-surface tracking-tight">
-                    {step.title} · {step.subtitle}
-                  </h3>
-                  <p className="text-xs text-nexus-on-surface-variant mt-2.5 leading-relaxed">
-                    {step.desc}
-                  </p>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-nexus-outline-variant/20 flex items-center justify-between text-xs font-mono-data text-nexus-secondary font-semibold">
-                  <span>Explore Phase</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Interactive 3D Scrollytelling Stage */}
+          <ScrollStory3D />
         </div>
       </section>
 
