@@ -41,4 +41,8 @@ class EventBroadcaster:
             except Exception:
                 pass
 
+    async def broadcast_event(self, event_type: str, data: dict) -> None:
+        """Alias for broadcast method accepting 'data' parameter for event_service compatibility."""
+        await self.broadcast(event_type=event_type, payload=data)
+
 broadcaster = EventBroadcaster()

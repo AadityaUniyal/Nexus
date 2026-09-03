@@ -16,15 +16,67 @@ import {
   ShieldAlert,
   Truck,
 } from 'lucide-react';
-import { INITIAL_ROUTES, INITIAL_VEHICLES } from '@/lib/mock-data';
+import { RouteItem, VehicleItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn, SpringCard } from '@/components/motion';
 
 export default function RouteDetailPage() {
   const params = useParams();
   const routeId = params.id as string;
 
-  const route = INITIAL_ROUTES.find((r) => r.id === routeId) || INITIAL_ROUTES[0];
-  const assignedVehicles = INITIAL_VEHICLES.filter((v) => v.currentRouteId === route.id);
+  const [route, setRoute] = React.useState<RouteItem | null>(null);
+  const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getRoute(routeId),
+      dataProvider.getVehicles(),
+    ])
+      .then(([r, vList]) => {
+        if (mounted) {
+          setRoute(r);
+          setVehicles(vList);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch route details:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [routeId]);
+
+  const assignedVehicles = route ? vehicles.filter((v) => v.currentRouteId === route.id) : [];
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="p-8 font-mono text-sm text-nexus-on-surface-variant">
+          Loading route telemetry...
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!route) {
+    return (
+      <AppShell>
+        <div className="p-8 space-y-4 font-mono text-sm">
+          <p className="text-nexus-on-surface">Route '{routeId}' was not found.</p>
+          <Link href="/operations/routes">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              <ArrowLeft className="h-4 w-4" /> Back to Routes
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

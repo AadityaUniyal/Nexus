@@ -8,25 +8,50 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Database, RefreshCw } from 'lucide-react';
-import { INITIAL_PIPELINE, PipelineHealthItem } from '@/lib/mock-data';
+import { PipelineHealthItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { useToast } from '@/components/ui/toast';
 import { FadeIn, SpringCard } from '@/components/motion';
 
 export default function AdminPipelinePage() {
   const { toast } = useToast();
-  const [pipeline, setPipeline] = React.useState<PipelineHealthItem[]>(INITIAL_PIPELINE);
+  const [pipeline, setPipeline] = React.useState<PipelineHealthItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [isSyncing, setIsSyncing] = React.useState(false);
 
-  const handleTriggerSync = () => {
+  const loadPipeline = React.useCallback(async () => {
+    try {
+      const data = await dataProvider.getPipelineHealth();
+      setPipeline(data);
+    } catch (err) {
+      console.error("Failed to fetch pipeline health:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadPipeline();
+  }, [loadPipeline]);
+
+  const handleTriggerSync = async () => {
     setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
+    try {
+      await loadPipeline();
       toast({
         title: 'Data Pipeline Synced',
         message: 'All Bronze, Silver, Gold, and OneLake stages synchronized.',
         type: 'success',
       });
-    }, 1000);
+    } catch (err: any) {
+      toast({
+        title: 'Sync Failed',
+        message: err?.message || 'Pipeline synchronization failed.',
+        type: 'critical',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (

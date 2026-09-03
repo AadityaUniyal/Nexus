@@ -1,101 +1,119 @@
 from typing import List, Optional, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 
 # --- Warehouse Schemas ---
 class WarehouseBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     code: str
     name: str
     city: str
     state: str
     lat: float
     lng: float
-    capacity_units: int = 10000
-    current_units: int = 0
-    dock_count: int = 8
-    active_docks: int = 4
-    efficiency_pct: float = 95.0
+    capacity_units: int = Field(10000, alias="capacityUnits")
+    current_units: int = Field(0, alias="currentUnits")
+    dock_count: int = Field(8, alias="dockCount")
+    active_docks: int = Field(4, alias="activeDocks")
+    efficiency_pct: float = Field(95.0, alias="efficiencyPct")
     status: str = "OPERATIONAL"
 
 class WarehouseCreate(WarehouseBase):
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    workspace_id: str = Field(..., alias="workspaceId")
 
 class WarehouseRead(WarehouseBase):
-    id: str
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    model_config = {"from_attributes": True}
+    id: str
+    workspace_id: str = Field(..., alias="workspaceId")
 
 # --- Vehicle Schemas ---
 class VehicleBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     code: str
     name: str
     model: str
-    driver_name: str
+    driver_name: str = Field(..., alias="driverName")
     status: str = "IN_TRANSIT"
-    current_lat: float
-    current_lng: float
-    speed_kmh: float = 0.0
-    battery_pct: int = 100
-    health_score: int = 95
-    current_route_id: Optional[str] = None
-    current_route_name: Optional[str] = None
+    current_lat: float = Field(..., alias="currentLat")
+    current_lng: float = Field(..., alias="currentLng")
+    speed_kmh: float = Field(0.0, alias="speedKmh")
+    battery_pct: int = Field(100, alias="batteryPct")
+    health_score: int = Field(95, alias="healthScore")
+    current_route_id: Optional[str] = Field(None, alias="currentRouteId")
+    current_route_name: Optional[str] = Field(None, alias="currentRouteName")
 
 class VehicleCreate(VehicleBase):
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    workspace_id: str = Field(..., alias="workspaceId")
 
 class VehicleUpdateTelemetry(BaseModel):
-    current_lat: Optional[float] = None
-    current_lng: Optional[float] = None
-    speed_kmh: Optional[float] = None
-    battery_pct: Optional[int] = None
-    health_score: Optional[int] = None
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    current_lat: Optional[float] = Field(None, alias="currentLat")
+    current_lng: Optional[float] = Field(None, alias="currentLng")
+    speed_kmh: Optional[float] = Field(None, alias="speedKmh")
+    battery_pct: Optional[int] = Field(None, alias="batteryPct")
+    health_score: Optional[int] = Field(None, alias="healthScore")
     status: Optional[str] = None
 
 class VehicleRead(VehicleBase):
-    id: str
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    model_config = {"from_attributes": True}
+    id: str
+    workspace_id: str = Field(..., alias="workspaceId")
 
 # --- Route Schemas ---
 class RouteBase(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     code: str
     name: str
-    origin_warehouse_id: str
-    origin_warehouse_name: str
-    dest_warehouse_id: str
-    dest_warehouse_name: str
-    distance_km: float
-    avg_duration_mins: int
-    traffic_condition: str = "NORMAL"
+    origin_warehouse_id: str = Field(..., alias="originWarehouseId")
+    origin_warehouse_name: str = Field(..., alias="originWarehouseName")
+    dest_warehouse_id: str = Field(..., alias="destWarehouseId")
+    dest_warehouse_name: str = Field(..., alias="destWarehouseName")
+    distance_km: float = Field(..., alias="distanceKm")
+    avg_duration_mins: int = Field(..., alias="avgDurationMins")
+    traffic_condition: str = Field("NORMAL", alias="trafficCondition")
     waypoints: List[Any] = []
 
 class RouteCreate(RouteBase):
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    workspace_id: str = Field(..., alias="workspaceId")
 
 class RouteRead(RouteBase):
-    id: str
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    model_config = {"from_attributes": True}
+    id: str
+    workspace_id: str = Field(..., alias="workspaceId")
 
 # --- Order Schemas ---
 class OrderBase(BaseModel):
-    order_number: str
-    customer_name: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    order_number: str = Field(..., alias="orderNumber")
+    customer_name: str = Field(..., alias="customerName")
     destination: str
     priority: str = "STANDARD"
     status: str = "IN_TRANSIT"
-    total_cost: float = 0.0
+    total_cost: float = Field(0.0, alias="totalCost")
     deadline: str
-    vehicle_id: Optional[str] = None
-    vehicle_code: Optional[str] = None
+    vehicle_id: Optional[str] = Field(None, alias="vehicleId")
+    vehicle_code: Optional[str] = Field(None, alias="vehicleCode")
 
 class OrderCreate(OrderBase):
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    workspace_id: str = Field(..., alias="workspaceId")
 
 class OrderRead(OrderBase):
-    id: str
-    workspace_id: str
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    model_config = {"from_attributes": True}
+    id: str
+    workspace_id: str = Field(..., alias="workspaceId")

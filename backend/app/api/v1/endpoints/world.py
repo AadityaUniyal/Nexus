@@ -32,19 +32,16 @@ async def get_world_snapshot(
         r_stmt = select(Route).where(Route.workspace_id == ws_id)
         i_stmt = select(Incident).where(Incident.workspace_id == ws_id, Incident.status != "RESOLVED")
 
-        # Execute all 4 queries concurrently
-        v_res, w_res, r_res, i_res = await asyncio.gather(
-            db.execute(v_stmt),
-            db.execute(w_stmt),
-            db.execute(r_stmt),
-            db.execute(i_stmt),
-            return_exceptions=True
-        )
+        # Execute queries sequentially on the AsyncSession
+        v_res = await db.execute(v_stmt)
+        w_res = await db.execute(w_stmt)
+        r_res = await db.execute(r_stmt)
+        i_res = await db.execute(i_stmt)
 
-        vehicles = v_res.scalars().all() if not isinstance(v_res, Exception) else []
-        warehouses = w_res.scalars().all() if not isinstance(w_res, Exception) else []
-        routes = r_res.scalars().all() if not isinstance(r_res, Exception) else []
-        incidents = i_res.scalars().all() if not isinstance(i_res, Exception) else []
+        vehicles = v_res.scalars().all()
+        warehouses = w_res.scalars().all()
+        routes = r_res.scalars().all()
+        incidents = i_res.scalars().all()
 
         return {
             "workspaceId": ws_id,

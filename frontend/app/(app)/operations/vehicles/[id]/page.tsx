@@ -16,7 +16,8 @@ import {
   Sparkles,
   ShieldCheck,
 } from 'lucide-react';
-import { INITIAL_VEHICLES, INITIAL_ORDERS, INITIAL_INCIDENTS } from '@/lib/mock-data';
+import { VehicleItem, OrderItem, IncidentItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn, SpringCard } from '@/components/motion';
 
 export default function VehicleDetailPage() {
@@ -24,11 +25,65 @@ export default function VehicleDetailPage() {
   const router = useRouter();
   const vehicleId = params.id as string;
 
-  const vehicle = INITIAL_VEHICLES.find((v) => v.id === vehicleId) || INITIAL_VEHICLES[0];
-  const relatedOrders = INITIAL_ORDERS.filter((o) => o.vehicleId === vehicle.id);
-  const relatedIncidents = INITIAL_INCIDENTS.filter(
-    (i) => i.affectedEntityType === 'VEHICLE' && i.affectedEntityId === vehicle.id
-  );
+  const [vehicle, setVehicle] = React.useState<VehicleItem | null>(null);
+  const [orders, setOrders] = React.useState<OrderItem[]>([]);
+  const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getVehicle(vehicleId),
+      dataProvider.getOrders(),
+      dataProvider.getIncidents(),
+    ])
+      .then(([v, ords, incs]) => {
+        if (mounted) {
+          setVehicle(v);
+          setOrders(ords);
+          setIncidents(incs);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch vehicle details:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [vehicleId]);
+
+  const relatedOrders = vehicle ? orders.filter((o) => o.vehicleId === vehicle.id) : [];
+  const relatedIncidents = vehicle
+    ? incidents.filter((i) => i.affectedEntityType === 'VEHICLE' && (i.affectedEntityId === vehicle.id || i.affectedEntityId === vehicle.code))
+    : [];
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="p-8 font-mono text-sm text-nexus-on-surface-variant">
+          Loading vehicle telemetry...
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!vehicle) {
+    return (
+      <AppShell>
+        <div className="p-8 space-y-4 font-mono text-sm">
+          <p className="text-nexus-on-surface">Vehicle '{vehicleId}' was not found.</p>
+          <Link href="/operations/vehicles">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              <ArrowLeft className="h-4 w-4" /> Back to Vehicles
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

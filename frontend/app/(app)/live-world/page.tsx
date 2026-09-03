@@ -20,13 +20,10 @@ import {
   MapPin,
 } from "lucide-react";
 import {
-  INITIAL_WAREHOUSES,
-  INITIAL_VEHICLES,
-  INITIAL_ROUTES,
-  INITIAL_INCIDENTS,
   VehicleItem,
   WarehouseItem,
   IncidentItem,
+  RouteItem,
 } from "@/lib/mock-data";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -36,10 +33,10 @@ import { motion, AnimatePresence } from "motion/react";
 export default function LiveWorldPage() {
   const [viewMode, setViewMode] = React.useState<"GIS_MAP" | "WEBGL_3D">("GIS_MAP");
   const [simulationMode, setSimulationMode] = React.useState(false);
-  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>(INITIAL_WAREHOUSES);
-  const [vehicles, setVehicles] = React.useState<VehicleItem[]>(INITIAL_VEHICLES);
-  const [routes, setRoutes] = React.useState(INITIAL_ROUTES);
-  const [incidents, setIncidents] = React.useState<IncidentItem[]>(INITIAL_INCIDENTS);
+  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
+  const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+  const [routes, setRoutes] = React.useState<RouteItem[]>([]);
+  const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
 
   const [selectedLocation, setSelectedLocation] = React.useState<ResolvedLocation | null>(null);
 
@@ -82,8 +79,9 @@ export default function LiveWorldPage() {
         ]);
 
         if (vRes && vRes.ok) {
-          const vData = await vRes.json();
-          if (Array.isArray(vData) && vData.length > 0) {
+          const vRaw = await vRes.json();
+          const vData = Array.isArray(vRaw) ? vRaw : (vRaw?.data && Array.isArray(vRaw.data)) ? vRaw.data : [];
+          if (vData.length > 0) {
             setVehicles(
               vData.map((v: any) => ({
                 id: v.id,
@@ -109,8 +107,9 @@ export default function LiveWorldPage() {
         }
 
         if (wRes && wRes.ok) {
-          const wData = await wRes.json();
-          if (Array.isArray(wData) && wData.length > 0) {
+          const wRaw = await wRes.json();
+          const wData = Array.isArray(wRaw) ? wRaw : (wRaw?.data && Array.isArray(wRaw.data)) ? wRaw.data : [];
+          if (wData.length > 0) {
             setWarehouses(
               wData.map((w: any) => ({
                 id: w.id,
@@ -133,8 +132,9 @@ export default function LiveWorldPage() {
         }
 
         if (iRes && iRes.ok) {
-          const iData = await iRes.json();
-          if (Array.isArray(iData) && iData.length > 0) {
+          const iRaw = await iRes.json();
+          const iData = Array.isArray(iRaw) ? iRaw : (iRaw?.data && Array.isArray(iRaw.data)) ? iRaw.data : [];
+          if (iData.length > 0) {
             setIncidents(
               iData.map((i: any) => ({
                 id: i.id,

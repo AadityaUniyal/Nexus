@@ -118,16 +118,8 @@ class LocationService:
         provider = get_location_provider()
         results = await provider.geocode(query, limit=1)
         if not results:
-            loc = ResolvedLocation(
-                id=f"res-{uuid.uuid4().hex[:8]}",
-                display_name=query.title(),
-                latitude=latitude or 30.3165,
-                longitude=longitude or 78.0322,
-                type=result_type,
-                provider="nexus-fallback",
-            )
-        else:
-            loc = results[0]
+            raise EntityNotFoundException("Location", query)
+        loc = results[0]
 
         _cache_set(cache_key, loc.model_dump(), ttl_seconds=86400)
         return loc
@@ -180,12 +172,21 @@ class LocationService:
         sources: List[Coordinate],
         targets: List[Coordinate],
         mode: str = "drive",
+        options: Optional[Dict[str, Any]] = None,
     ) -> RouteMatrixResult:
         if len(sources) > 10 or len(targets) > 10:
             raise NexusException(code="MATRIX_TOO_LARGE", message="Matrix dimension exceeds maximum limit of 10x10.")
 
-        matrix_hash = hashlib.sha256(f"{len(sources)}:{len(targets)}:{mode}".encode("utf-8")).hexdigest()[:16]
-        cache_key = f"matrix:{matrix_hash}"
+        provider = get_location_provider()
+        provider_name = getattr(provider, "provider_name", None) or type(provider).__name__
+
+        # Deterministic canonical serialization of all sources, targets, and options
+        sorted_sources = sorted([(round(c.latitude, 5), round(c.longitude, 5), c.id or "") for c in sources])
+        sorted_targets = sorted([(round(c.latitude, 5), round(c.longitude, 5), c.id or "") for c in targets])
+        sorted_options = sorted(options.items()) if options else []
+        canonical_matrix_payload = f"provider={provider_name};mode={mode};src={sorted_sources};tgt={sorted_targets};options={sorted_options}"
+        matrix_hash = hashlib.sha256(canonical_matrix_payload.encode("utf-8")).hexdigest()
+        cache_key = f"nexus:route_matrix:{matrix_hash}"
 
         cached = _cache_get(cache_key)
         if cached is not None:
@@ -195,7 +196,6 @@ class LocationService:
         _METRICS["matrix_requests"] += 1
         _METRICS["estimated_credits"] += (len(sources) * len(targets))
 
-        provider = get_location_provider()
         res = await provider.route_matrix(sources, targets, mode=mode)
         _cache_set(cache_key, res.model_dump(), ttl_seconds=1800)
         return res

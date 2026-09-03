@@ -2,7 +2,10 @@ import asyncio
 import uuid
 import random
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.session import async_session_factory
+from sqlalchemy import select
+from app.db.session import async_session_factory, engine
+from app.db.base import Base
+import app.models  # Ensure all models are registered on Base.metadata
 from app.models.user import Workspace, User, WorkspaceMembership
 from app.models.operations import Warehouse, Vehicle, Route, Order
 from app.models.incidents import Incident, IncidentTimeline
@@ -11,10 +14,20 @@ from app.models.system import Notification, AuditLog, PipelineHealth, Operationa
 from app.core.security import get_password_hash
 
 async def seed_database():
+    print("[*] Creating tables if not exist in PostgreSQL Neon...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     print("[*] Seeding deterministic NEXUS operational database...")
     random.seed(42)
 
     async with async_session_factory() as session:
+        # Check if already seeded
+        ws_check = await session.execute(select(Workspace).where(Workspace.id == "ws-continental-fleet-01"))
+        if ws_check.scalars().first():
+            print("[+] Database already seeded with ws-continental-fleet-01. Skipping.")
+            return
+
         # 1. Create Workspace
         ws = Workspace(
             id="ws-continental-fleet-01",
@@ -174,6 +187,48 @@ async def seed_database():
         p2 = PipelineHealth(id="pipe-2", source_name="Azure Event Hubs Gateway", source_type="AZURE_HUB", status="HEALTHY", latency_ms=12, throughput_per_sec=980, records_today=840000)
         p3 = PipelineHealth(id="pipe-3", source_name="Microsoft Fabric OneLake Sync", source_type="FABRIC_LAKE", status="HEALTHY", latency_ms=310, throughput_per_sec=420, records_today=410000)
         session.add_all([p1, p2, p3])
+
+        # 8. Operational Orders
+        orders_data = [
+            ("ord-5001", "ORD-2026-5001", "AeroTech Propulsion Systems", "Denver Terminal Bay 4", "CRITICAL", "IN_TRANSIT", 12500.0, "2026-08-30T18:00:00Z", "v-104", "NX-104"),
+            ("ord-5002", "ORD-2026-5002", "BioPharma ColdChain Logistics", "Denver Mountain Relay", "HIGH", "IN_TRANSIT", 8400.0, "2026-08-30T20:30:00Z", "v-104", "NX-104"),
+            ("ord-5003", "ORD-2026-5003", "Apex Semiconductor Corp", "Dallas Freight Center", "NORMAL", "IN_TRANSIT", 4200.0, "2026-08-31T06:00:00Z", "v-101", "NX-101"),
+            ("ord-5004", "ORD-2026-5004", "Continental Battery Systems", "Chicago Hub Central", "STANDARD", "IN_TRANSIT", 6100.0, "2026-08-31T12:00:00Z", "v-102", "NX-102"),
+            ("ord-5005", "ORD-2026-5005", "Precision Robotics GmbH", "Denver Terminal Bay 1", "HIGH", "DELAYED", 9800.0, "2026-08-30T16:00:00Z", "v-104", "NX-104"),
+        ]
+        for o_id, o_num, cust, dest, prio, stat, cost, dline, v_id, v_code in orders_data:
+            ord_obj = Order(
+                id=o_id,
+                order_number=o_num,
+                customer_name=cust,
+                destination=dest,
+                priority=prio,
+                status=stat,
+                total_cost=cost,
+                deadline=dline,
+                vehicle_id=v_id,
+                vehicle_code=v_code,
+                workspace_id=ws.id,
+            )
+            session.add(ord_obj)
+
+        # 9. Initial Notifications
+        notifs_data = [
+            ("notif-1", "CRITICAL", "Severe Blizzard Alert on I-80 Pass", "Route RT-CHI-DEN-01 blocked. 14 orders affected including AeroTech critical shipment.", "/incidents/inc-849201", False),
+            ("notif-2", "ATTENTION", "Thermal Unit Drift on NX-TRK-109", "Auxiliary condenser temperature deviation (+3.2°C) detected on Volvo VNR Electric.", "/incidents/inc-849201", False),
+            ("notif-3", "SIMULATION", "Simulation Ready: I-70 Detour Analysis", "Scenario SIM-SCENARIO-901 shows 135 mins net time recovery with 94% recommendation score.", "/simulations/sim-901", True),
+        ]
+        for n_id, n_type, title, msg, link, read_status in notifs_data:
+            n_obj = Notification(
+                id=n_id,
+                workspace_id=ws.id,
+                type=n_type,
+                title=title,
+                message=msg,
+                deep_link=link,
+                read=read_status,
+            )
+            session.add(n_obj)
 
         await session.commit()
     print("[+] Deterministic seed successfully applied.")

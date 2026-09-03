@@ -7,12 +7,31 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, ArrowRight } from 'lucide-react';
-import { INITIAL_SIMULATIONS, SimulationItem } from '@/lib/mock-data';
+import { SimulationItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { formatDateTime } from '@/lib/utils';
 import { FadeIn } from '@/components/motion';
 
 export default function AdminSimulationsPage() {
-  const [sims] = React.useState<SimulationItem[]>(INITIAL_SIMULATIONS);
+  const [sims, setSims] = React.useState<SimulationItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    dataProvider.getSimulations()
+      .then((data) => {
+        if (mounted) setSims(data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch simulations:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <AppShell>

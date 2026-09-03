@@ -1,7 +1,11 @@
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field, ConfigDict
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_
+from app.db.session import get_db
+from app.models.incidents import Incident
 from app.services.ai_service import ai_service
 from app.schemas.system import AiBriefingResponse
 from app.core.config import settings
@@ -9,18 +13,28 @@ from app.core.config import settings
 router = APIRouter(prefix="/ai", tags=["AI Intelligence"])
 
 class RcaRequest(BaseModel):
-    incident_code: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    incident_code: str = Field(..., alias="incidentCode")
     title: str
     severity: str
-    delay_mins: int
-    vehicle_code: Optional[str] = "NX-TRK-104"
+    delay_mins: int = Field(..., alias="delayMins")
+    vehicle_code: Optional[str] = Field("NX-TRK-104", alias="vehicleCode")
 
 class SimulationExplainRequest(BaseModel):
-    simulation_code: str
-    route_type: str
-    time_saved_mins: int
-    cost_delta_usd: float
-    sla_breach_risk_pct: float
+    model_config = ConfigDict(populate_by_name=True)
+
+    simulation_code: str = Field(..., alias="simulationCode")
+    route_type: str = Field(..., alias="routeType")
+    time_saved_mins: int = Field(..., alias="timeSavedMins")
+    cost_delta_usd: float = Field(..., alias="costDeltaUsd")
+    sla_breach_risk_pct: float = Field(..., alias="slaBreachRiskPct")
+
+class AiExplainRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    incident_id: Optional[str] = Field(None, alias="incidentId")
+    context: Optional[str] = None
 
 @router.get("/health")
 async def get_ai_health():
@@ -36,6 +50,29 @@ async def generate_briefing(context: Optional[str] = None):
         model=settings.GROQ_MODEL,
         generated_at=datetime.now(timezone.utc).isoformat(),
     )
+
+@router.post("/explain")
+async def explain_ai(
+    req: AiExplainRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Generate executive AI analysis/explanation for an incident or operational context."""
+    incident_id = req.incident_id
+    context_desc = req.context or ""
+    if incident_id:
+        stmt = select(Incident).where(or_(Incident.id == incident_id, Incident.code == incident_id))
+        res = await db.execute(stmt)
+        inc = res.scalars().first()
+        if inc:
+            context_desc = f"Incident {inc.code}: {inc.title}. Severity: {inc.severity}, Delay: {inc.delay_minutes} mins, Affected Entity: {inc.affected_entity_name}. {context_desc}"
+
+    explanation = await ai_service.generate_operational_briefing(context_summary=context_desc or "Operational incident impact evaluation")
+    return {
+        "explanation": explanation,
+        "incidentId": incident_id,
+        "model": settings.GROQ_MODEL,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+    }
 
 @router.post("/rca")
 async def generate_rca(req: RcaRequest):
@@ -59,3 +96,4 @@ async def explain_simulation(req: SimulationExplainRequest):
         sla_breach_risk_pct=req.sla_breach_risk_pct,
     )
     return {"explanation": explanation, "model": settings.GROQ_MODEL}
+

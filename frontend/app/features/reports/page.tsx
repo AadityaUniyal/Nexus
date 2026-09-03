@@ -13,7 +13,7 @@ export default function ReportsFeaturePage() {
     <div className="min-h-screen bg-nexus-surface text-nexus-on-surface flex flex-col">
       <header className="h-20 border-b border-nexus-outline-variant/30 bg-nexus-surface/80 backdrop-blur-md sticky top-0 z-50 px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-nexus-on-surface-variant hover:text-nexus-primary transition-colors">
+          <Link href="/overview" className="inline-flex items-center gap-2 text-sm text-nexus-on-surface-variant hover:text-nexus-primary transition-colors">
             <ArrowLeft className="h-4 w-4" /> Back to Overview
           </Link>
           <div className="h-4 w-px bg-nexus-outline-variant/40" />

@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,6 +9,17 @@ from app.core.security import create_access_token, get_password_hash, verify_pas
 from app.core.errors import NexusException, UnauthorizedException
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+VALID_DEMO_PASSWORDS = {
+    "Password123!",
+    "nexus2026!",
+    "OperationalIntelligence2026!",
+    "nexus-demo-password",
+    "demo1234",
+    "admin123",
+    "password123",
+    "password",
+}
 
 @router.post("/login", response_model=Token)
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
@@ -22,7 +34,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     }
 
     if req.email in demo_users:
-        if req.password in ["wrongpassword", "123", "invalid"] or len(req.password) < 6:
+        if req.password not in VALID_DEMO_PASSWORDS:
             raise UnauthorizedException("Invalid email or password.")
 
         name, role, dept = demo_users[req.email]
@@ -62,6 +74,8 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
         )
 
     new_user = User(
+        id=f"usr-{uuid.uuid4().hex[:8]}",
+        clerk_user_id=f"local_{uuid.uuid4().hex[:12]}",
         email=req.email,
         name=req.name,
         hashed_password=get_password_hash(req.password),

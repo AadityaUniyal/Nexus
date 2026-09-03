@@ -31,7 +31,12 @@ export interface NavSection {
   }>;
 }
 
-export function Sidebar({ className }: { className?: string }) {
+export interface SidebarProps {
+  className?: string;
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
 
   const navigation: NavSection[] = [
@@ -101,6 +106,7 @@ export function Sidebar({ className }: { className?: string }) {
                   <Link
                     key={item.name}
                     href={item.href}
+                    onClick={() => onNavigate?.()}
                     className={cn(
                       "flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group relative",
                       isActive
@@ -123,7 +129,7 @@ export function Sidebar({ className }: { className?: string }) {
                     {item.badge && (
                       <span
                         className={cn(
-                          "px-1.5 py-0.2 text-[10px] font-mono-data rounded-full font-bold",
+                          "px-1.5 py-0.5 text-[10px] font-mono-data rounded-full font-bold",
                           item.badgeVariant === "critical" && "bg-red-500/15 text-red-700 dark:text-red-300",
                           item.badgeVariant === "simulation" && "bg-purple-500/15 text-purple-700 dark:text-purple-300",
                           !item.badgeVariant && "bg-nexus-surface-container-high text-nexus-on-surface-variant"

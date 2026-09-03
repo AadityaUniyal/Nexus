@@ -7,16 +7,40 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, CheckCircle2, AlertTriangle, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
-import { INITIAL_NOTIFICATIONS } from "@/lib/mock-data";
+import { NotificationItem } from "@/lib/mock-data";
+import { dataProvider } from "@/lib/data-provider";
 import { formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { FadeIn, StaggerContainer, StaggerItem, TactileCard } from "@/components/ui/motion-animations";
 
 export default function NotificationsPage() {
   const { toast } = useToast();
-  const [notifications, setNotifications] = React.useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = React.useState<NotificationItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const markAllRead = () => {
+  React.useEffect(() => {
+    let mounted = true;
+    dataProvider.getNotifications()
+      .then((data) => {
+        if (mounted) setNotifications(data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch notifications:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const markAllRead = async () => {
+    try {
+      await fetch('/api/v1/notifications/read-all', { method: 'POST' });
+    } catch {
+      // ignore
+    }
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     toast({
       title: "Notifications Cleared",
@@ -25,7 +49,12 @@ export default function NotificationsPage() {
     });
   };
 
-  const toggleRead = (id: string) => {
+  const toggleRead = async (id: string) => {
+    try {
+      await dataProvider.markNotificationRead(id);
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
+    }
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
     );

@@ -7,9 +7,10 @@ import time
 from typing import Any, Dict, Optional, Callable, Awaitable
 
 class EntityCache:
-    def __init__(self, default_ttl_seconds: float = 30.0):
+    def __init__(self, default_ttl_seconds: float = 30.0, max_size: int = 1000):
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._default_ttl = default_ttl_seconds
+        self._max_size = max_size
 
     def get(self, key: str) -> Optional[Any]:
         entry = self._cache.get(key)
@@ -21,6 +22,11 @@ class EntityCache:
         return entry["data"]
 
     def set(self, key: str, data: Any, ttl_seconds: Optional[float] = None) -> None:
+        # Enforce bounded cache size: evict oldest entry if at capacity
+        if len(self._cache) >= self._max_size and key not in self._cache:
+            oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k].get("cached_at", 0))
+            del self._cache[oldest_key]
+
         ttl = ttl_seconds if ttl_seconds is not None else self._default_ttl
         self._cache[key] = {
             "data": data,

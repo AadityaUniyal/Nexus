@@ -8,14 +8,41 @@ import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { INITIAL_VEHICLES, INITIAL_WAREHOUSES } from '@/lib/mock-data';
+import { VehicleItem, WarehouseItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn } from '@/components/motion';
 
 export default function AdminAssetsPage() {
   const [search, setSearch] = React.useState('');
+  const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getVehicles(),
+      dataProvider.getWarehouses(),
+    ])
+      .then(([vList, wList]) => {
+        if (mounted) {
+          setVehicles(vList);
+          setWarehouses(wList);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch assets:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const allAssets = [
-    ...INITIAL_VEHICLES.map((v) => ({
+    ...vehicles.map((v) => ({
       id: v.id,
       code: v.code,
       name: v.model,
@@ -23,7 +50,7 @@ export default function AdminAssetsPage() {
       status: v.status,
       details: `${v.speedKmh} km/h · ${v.batteryPct}% battery`,
     })),
-    ...INITIAL_WAREHOUSES.map((w) => ({
+    ...warehouses.map((w) => ({
       id: w.id,
       code: w.code,
       name: w.name,

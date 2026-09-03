@@ -7,6 +7,7 @@ import { useAvatarStore } from '@/lib/avatar-store';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/lib/utils';
 
 export function VoiceCompanionWidget({ className = '' }: { className?: string }) {
   const [isListening, setIsListening] = useState(false);
@@ -136,7 +137,7 @@ export function VoiceCompanionWidget({ className = '' }: { className?: string })
   };
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 font-sans select-none ${className}`}>
+    <div className={cn("fixed bottom-20 right-4 sm:bottom-6 sm:right-28 z-40 flex flex-col items-end gap-2 font-sans select-none", className)}>
       {/* Transcript & Response Bubble */}
       <AnimatePresence>
         {(expanded || transcript || lastResponse) && (

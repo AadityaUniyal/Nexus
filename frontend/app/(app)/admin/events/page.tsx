@@ -6,12 +6,31 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Radio } from 'lucide-react';
-import { INITIAL_EVENTS, OperationalEventItem } from '@/lib/mock-data';
+import { OperationalEventItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { formatDateTime } from '@/lib/utils';
 import { FadeIn } from '@/components/motion';
 
 export default function AdminEventsPage() {
-  const [events] = React.useState<OperationalEventItem[]>(INITIAL_EVENTS);
+  const [events, setEvents] = React.useState<OperationalEventItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    dataProvider.getEvents()
+      .then((data) => {
+        if (mounted) setEvents(data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch operational events:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <AppShell>

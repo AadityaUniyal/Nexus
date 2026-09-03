@@ -11,13 +11,13 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { AlertTriangle, Plus, Sparkles, Clock, ArrowRight, ShieldAlert, RefreshCw } from "lucide-react";
-import { INITIAL_INCIDENTS, IncidentItem } from "@/lib/mock-data";
+import { IncidentItem } from "@/lib/mock-data";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 
 export default function IncidentCenterPage() {
   const { toast } = useToast();
-  const [incidents, setIncidents] = React.useState<IncidentItem[]>(INITIAL_INCIDENTS);
+  const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
   const [filterSeverity, setFilterSeverity] = React.useState<string>("ALL");
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -34,9 +34,10 @@ export default function IncidentCenterPage() {
       const res = await fetch("/api/v1/incidents");
       if (res.ok) {
         const json = await res.json();
-        if (Array.isArray(json) && json.length > 0) {
+        const list = Array.isArray(json) ? json : (json?.data && Array.isArray(json.data)) ? json.data : [];
+        if (list.length > 0) {
           setIncidents(
-            json.map((i: any) => ({
+            list.map((i: any) => ({
               id: i.id,
               code: i.code,
               title: i.title,

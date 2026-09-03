@@ -6,6 +6,9 @@ from sqlalchemy.ext.asyncio import (
 )
 from app.core.config import settings
 
+import sys
+from sqlalchemy.pool import NullPool
+
 # Create async engine with robust, low-latency pool configuration
 engine_kwargs = {
     "echo": False,
@@ -14,7 +17,9 @@ engine_kwargs = {
     "pool_recycle": 300,
 }
 
-if "sqlite" not in settings.DATABASE_URL.lower():
+if "pytest" in sys.modules:
+    engine_kwargs["poolclass"] = NullPool
+elif "sqlite" not in settings.DATABASE_URL.lower():
     engine_kwargs.update({
         "pool_size": 10,
         "max_overflow": 20,

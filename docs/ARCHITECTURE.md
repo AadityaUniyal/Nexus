@@ -57,7 +57,7 @@ sequenceDiagram
 ## 3. Module Responsibilities
 
 ### 1. `frontend/`
-- **App Router (`frontend/app/`)**: 72 static and server-rendered routes covering public landing stories, marketing deep-dives, authentication, 5-step workspace onboarding, live operations (vehicles, warehouses, routes, orders), incident management, what-if simulations, and full administration.
+- **App Router (`frontend/app/`)**: 57 static and server-rendered routes covering public landing stories, marketing deep-dives, authentication, 5-step workspace onboarding, live operations (vehicles, warehouses, routes, orders), incident management, what-if simulations, and full administration.
 - **Motion System (`frontend/components/motion/`)**: Tactile spring physics, 0.985 scale interactions, masked reveals, and `useReducedMotion` system compliance.
 - **3D Spatial Systems (`frontend/components/world/` & `avatar/`)**:
   - `Avatar3D`: 9 emotional mood states with interactive cursor gaze tracking and spring physics.
@@ -65,8 +65,8 @@ sequenceDiagram
 
 ### 2. `backend/`
 - **FastAPI Gateway (`backend/app/main.py`)**: Root routing, CORS middleware, rate limiting, request timing tracking (`X-Request-ID`), and standardized error formatting.
-- **Auth & RBAC (`backend/app/auth/`)**: Clerk session token decoding, JWKS public key cache, Svix webhook signature verification, and 15-permission RBAC enforcement across 5 operator roles.
-- **Deterministic Simulation Engine (`backend/app/services/simulation_engine.py`)**: Mathematical what-if calculation analyzing time saved, cost deltas, and SLA breach risks without relying on black-box heuristics.
+- **Auth & RBAC (`backend/app/auth/`)**: Salted bcrypt password verification, Clerk session token decoding, JWKS public key cache, Svix webhook signature verification, and 15-permission RBAC enforcement across 5 operator roles.
+- **Deterministic Simulation Engine (`backend/app/services/simulation_engine.py`)**: Authoritative mathematical what-if calculation analyzing time saved, cost deltas, and SLA breach risks.
 - **Transactional Outbox Worker (`backend/app/workers/worker.py`)**: Asynchronously processes queued outbox rows to generate user notifications and publish SSE events.
 
 ### 3. `database/`
@@ -74,8 +74,11 @@ sequenceDiagram
 - **Optimistic Concurrency**: `version: int` columns on high-concurrency entities to reject stale state mutations.
 
 ### 4. `tests/`
-- **Backend Tests (`tests/backend/`)**:
-  - `test_auth_security.py`: Password hashing, JWT token lifecycle, and RBAC matrix.
+- **Backend Tests (`tests/backend/`)**: 65 automated tests across 14 modules:
+  - `test_auth_security.py` & `test_user_and_auth_lifecycle.py`: Bcrypt hashing, token lifecycle, 401 unauthenticated enforcement, and RBAC matrix.
+  - `test_admin_and_governance.py`: Telemetry pipeline and administrative governance.
   - `test_incident_service.py`: Incident state transition rules (`DETECTED` -> `RESOLVED`).
-  - `test_simulation_engine.py`: Deterministic rerouting and cost evaluation formulas.
+  - `test_simulation_engine.py`: Deterministic rerouting and aerodynamic cost evaluation formulas.
+  - `test_adversarial_challenge.py`: Boundary conditions, malformed payloads, and invalid transition handling.
+  - `test_full_operational_vertical_slice.py`: End-to-end operational lifecycle integration.
   - `test_webhooks_and_concurrency.py`: Clerk webhook signature checks and idempotency.

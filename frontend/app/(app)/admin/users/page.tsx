@@ -8,13 +8,32 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
-import { Users, Search, Shield, ArrowRight } from 'lucide-react';
-import { INITIAL_USERS, UserItem } from '@/lib/mock-data';
+import { Users, Shield, Search, ArrowRight } from 'lucide-react';
+import { UserItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn } from '@/components/motion';
 
 export default function AdminUsersPage() {
   const [search, setSearch] = React.useState('');
-  const [users] = React.useState<UserItem[]>(INITIAL_USERS);
+  const [users, setUsers] = React.useState<UserItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    dataProvider.getUsers()
+      .then((data) => {
+        if (mounted) setUsers(data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch users:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filtered = users.filter(
     (u) =>

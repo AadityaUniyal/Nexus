@@ -10,15 +10,12 @@ import { StatusLed } from "@/components/ui/status-led";
 import { Input } from "@/components/ui/input";
 import { Truck, Building2, Route as RouteIcon, Package, Search, Sparkles, SlidersHorizontal, ArrowUpRight } from "lucide-react";
 import {
-  INITIAL_VEHICLES,
-  INITIAL_WAREHOUSES,
-  INITIAL_ROUTES,
-  INITIAL_ORDERS,
   VehicleItem,
   WarehouseItem,
   RouteItem,
   OrderItem,
 } from "@/lib/mock-data";
+import { dataProvider } from "@/lib/data-provider";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 
@@ -26,10 +23,38 @@ export default function OperationsPage() {
   const [activeTab, setActiveTab] = React.useState("vehicles");
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  const [vehicles, setVehicles] = React.useState<VehicleItem[]>(INITIAL_VEHICLES);
-  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>(INITIAL_WAREHOUSES);
-  const [routes, setRoutes] = React.useState<RouteItem[]>(INITIAL_ROUTES);
-  const [orders, setOrders] = React.useState<OrderItem[]>(INITIAL_ORDERS);
+  const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
+  const [routes, setRoutes] = React.useState<RouteItem[]>([]);
+  const [orders, setOrders] = React.useState<OrderItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getVehicles(),
+      dataProvider.getWarehouses(),
+      dataProvider.getRoutes(),
+      dataProvider.getOrders(),
+    ])
+      .then(([v, w, r, o]) => {
+        if (mounted) {
+          setVehicles(v);
+          setWarehouses(w);
+          setRoutes(r);
+          setOrders(o);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch operations data:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const tabs = [
     { id: "vehicles", label: "Fleet Vehicles", count: vehicles.length, icon: <Truck className="h-4 w-4" /> },

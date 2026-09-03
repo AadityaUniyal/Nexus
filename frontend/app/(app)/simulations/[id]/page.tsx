@@ -18,9 +18,13 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
-import { INITIAL_SIMULATIONS, SimulationItem } from "@/lib/mock-data";
+import { SimulationItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+
+import { dataProvider } from "@/lib/data-provider";
+import { useAvatarStore } from "@/lib/avatar-store";
+import { tactileAudio } from "@/lib/sound-effects";
 
 export default function SimulationDetailPage() {
   const params = useParams();
@@ -28,46 +32,42 @@ export default function SimulationDetailPage() {
   const { toast } = useToast();
   const simId = params?.id as string;
 
-  const [simulation, setSimulation] = React.useState<SimulationItem | null>(() => {
-    return (
-      INITIAL_SIMULATIONS.find((s) => s.id === simId || s.code === simId) ||
-      INITIAL_SIMULATIONS[0]
-    );
-  });
-
+  const [simulation, setSimulation] = React.useState<SimulationItem | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const [isApplying, setIsApplying] = React.useState(false);
 
+  React.useEffect(() => {
+    async function loadSim() {
+      try {
+        const found = await dataProvider.getSimulation(simId);
+        if (found) setSimulation(found);
+      } catch {}
+    }
+    if (simId) loadSim();
+  }, [simId]);
+
   const handleApplyDecision = async () => {
+    if (!simulation) return;
     setIsApplying(true);
+    useAvatarStore.getState().triggerEvent("SIMULATION_RUNNING");
+
     try {
-      const res = await fetch(`/api/v1/simulations/${simulation?.id}/apply-decision`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actorName: "Sarah Chen" }),
+      const applied = await dataProvider.applyDecision(simulation.id, "Sarah Chen");
+      setSimulation(applied);
+      useAvatarStore.getState().triggerEvent("DECISION_APPLIED");
+      tactileAudio.playSuccessChord();
+
+      toast({
+        title: "Decision Applied Transactionally",
+        message: `Scenario ${applied.code} committed to live PostgreSQL dispatch. Vehicle NX-104 rerouted.`,
+        type: "success",
       });
-      const json = await res.json();
-      if (json.data) {
-        setSimulation(json.data);
-        toast({
-          title: "Decision Applied Transactionally",
-          message: `Scenario ${json.data.code} applied to live fleet dispatch.`,
-          type: "success",
-        });
-      }
-    } catch {
-      if (simulation) {
-        setSimulation({
-          ...simulation,
-          status: "APPLIED",
-          appliedAt: new Date().toISOString(),
-          appliedBy: "Sarah Chen",
-        });
-        toast({
-          title: "Decision Applied",
-          message: "Updated live dispatch model.",
-          type: "success",
-        });
-      }
+    } catch (err: any) {
+      toast({
+        title: "Application Error",
+        message: err?.message || "Failed to apply decision transactionally.",
+        type: "critical",
+      });
     } finally {
       setIsApplying(false);
     }

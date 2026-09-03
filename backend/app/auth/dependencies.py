@@ -1,12 +1,13 @@
 from typing import Optional, Callable
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.db.session import get_db
 from app.auth.clerk_jwt import verify_clerk_token
 from app.auth.principal import RequestPrincipal, RoleEnum, PermissionEnum, ROLE_PERMISSIONS_MAP
 from app.models.user import User, Workspace
 from app.core.errors import UnauthenticatedException, ForbiddenException
+from app.core.config import settings
 
 async def get_current_principal(
     authorization: Optional[str] = Header(None),
@@ -16,18 +17,7 @@ async def get_current_principal(
     Extracts and verifies the Clerk JWT bearer token, builds the RequestPrincipal.
     """
     if not authorization or not authorization.startswith("Bearer "):
-        # In local development without auth header, provide a fallback admin principal
-        return RequestPrincipal(
-            nexus_user_id="usr-sarah-104",
-            clerk_user_id="user_clerk_sarah_104",
-            email="sarah.chen@nexus.continental",
-            display_name="Sarah Chen",
-            workspace_id="ws-continental-fleet-01",
-            role=RoleEnum.ADMINISTRATOR,
-            permissions=ROLE_PERMISSIONS_MAP[RoleEnum.ADMINISTRATOR],
-            onboarding_completed=True,
-            is_active=True
-        )
+        raise UnauthenticatedException("Bearer token required to access operational resources")
 
     token = authorization.split(" ")[1]
     claims = await verify_clerk_token(token)
@@ -36,20 +26,30 @@ async def get_current_principal(
     display_name = claims.get("name") or "Operational User"
 
     # Query local user or create default if not yet synced by webhook
-    stmt = select(User).where(User.email == email)
+    stmt = select(User).where(or_(User.email == email, User.id == clerk_user_id, User.clerk_user_id == clerk_user_id))
     result = await db.execute(stmt)
     user = result.scalars().first()
 
-    role = RoleEnum.OPERATIONS_MANAGER
-    if user:
+    claim_role = claims.get("role")
+    role = None
+    if claim_role:
         try:
-            role = RoleEnum(user.role)
+            role = RoleEnum(claim_role.upper())
         except Exception:
-            role = RoleEnum.OPERATIONS_MANAGER
+            role = None
+
+    if user:
+        if not role:
+            try:
+                role = RoleEnum(user.role)
+            except Exception:
+                role = RoleEnum.OPERATIONS_MANAGER
         nexus_user_id = user.id
         workspace_id = user.workspace_id or "ws-continental-fleet-01"
         is_active = user.is_active
     else:
+        if not role:
+            role = RoleEnum.OPERATIONS_MANAGER
         nexus_user_id = f"usr-{clerk_user_id[:8]}"
         workspace_id = "ws-continental-fleet-01"
         is_active = True

@@ -40,6 +40,7 @@ class RouteMatrixRequest(BaseModel):
     sources: List[Coordinate]
     targets: List[Coordinate]
     mode: str = "drive"
+    options: Optional[Dict[str, Any]] = None
 
 class SetWorkspaceLocationRequest(BaseModel):
     location: ResolvedLocation
@@ -105,6 +106,7 @@ async def calculate_route_matrix(
         sources=req.sources,
         targets=req.targets,
         mode=req.mode,
+        options=req.options,
     )
 
 @router.get("/places", response_model=List[PlaceItem])

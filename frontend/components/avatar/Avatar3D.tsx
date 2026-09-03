@@ -8,6 +8,9 @@ export type AvatarMood =
   | 'IDLE'
   | 'WELCOME'
   | 'LOADING'
+  | 'LISTENING'
+  | 'THINKING'
+  | 'SPEAKING'
   | 'SUCCESS'
   | 'WARNING'
   | 'CRITICAL'
@@ -142,13 +145,15 @@ export function Avatar3D({
     const eyeGeometry = new THREE.SphereGeometry(0.12, 24, 24);
     const eyeMaterial = new THREE.MeshBasicMaterial({ color: eyeColor });
 
+    const eyeGroup = new THREE.Group();
+
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
     leftEye.position.set(-0.32, 0.28, 0.88);
-    avatarGroup.add(leftEye);
+    eyeGroup.add(leftEye);
 
     const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
     rightEye.position.set(0.32, 0.28, 0.88);
-    avatarGroup.add(rightEye);
+    eyeGroup.add(rightEye);
 
     // Eye glints (friendly lifelike reflections)
     const glintGeometry = new THREE.SphereGeometry(0.035, 12, 12);
@@ -156,11 +161,13 @@ export function Avatar3D({
 
     const leftGlint = new THREE.Mesh(glintGeometry, glintMaterial);
     leftGlint.position.set(-0.29, 0.32, 0.96);
-    avatarGroup.add(leftGlint);
+    eyeGroup.add(leftGlint);
 
     const rightGlint = new THREE.Mesh(glintGeometry, glintMaterial);
     rightGlint.position.set(0.35, 0.32, 0.96);
-    avatarGroup.add(rightGlint);
+    eyeGroup.add(rightGlint);
+
+    avatarGroup.add(eyeGroup);
 
     // Tactile Antenna / Telemetry sensor stalk
     const antennaStalkGeom = new THREE.CylinderGeometry(0.03, 0.05, 0.45, 16);
@@ -204,10 +211,15 @@ export function Avatar3D({
 
     window.addEventListener('mousemove', handleMouseMove);
 
-    // Animation loop
+    // Animation loop with off-screen pause via IntersectionObserver
     const clock = new THREE.Clock();
+    let isVisible = true;
 
     const animate = () => {
+      if (!isVisible) {
+        animFrameRef.current = null;
+        return;
+      }
       animFrameRef.current = requestAnimationFrame(animate);
       const elapsed = clock.getElapsedTime();
 
@@ -219,6 +231,24 @@ export function Avatar3D({
 
       // Mood-specific micro physics
       switch (mood) {
+        case 'LISTENING':
+          avatarGroup.position.y = Math.sin(elapsed * 3) * 0.06;
+          eyeGroup.scale.set(1.15, 1.15, 1.15);
+          beaconMat.emissiveIntensity = 0.8 + Math.sin(elapsed * 5) * 0.4;
+          halo.rotation.z = elapsed * 1.5;
+          break;
+        case 'THINKING':
+          avatarGroup.position.y = Math.sin(elapsed * 2) * 0.06;
+          avatarGroup.rotation.y += Math.sin(elapsed * 2) * 0.04;
+          beaconMat.emissiveIntensity = 0.5 + Math.sin(elapsed * 4) * 0.3;
+          halo.rotation.z = elapsed * 2.2;
+          break;
+        case 'SPEAKING':
+          avatarGroup.position.y = Math.sin(elapsed * 4) * 0.08;
+          eyeGroup.scale.y = 0.85 + Math.sin(elapsed * 7) * 0.25;
+          beaconMat.emissiveIntensity = 0.9 + Math.sin(elapsed * 7) * 0.3;
+          halo.rotation.z = elapsed * 1.8;
+          break;
         case 'LOADING':
           avatarGroup.rotation.y += 0.03;
           avatarGroup.position.y = Math.sin(elapsed * 4) * 0.15;
@@ -261,12 +291,24 @@ export function Avatar3D({
       renderer.render(scene, camera);
     };
 
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (isVisible && !animFrameRef.current) {
+        animate();
+      }
+    }, { threshold: 0.1 });
+
+    if (container) {
+      observer.observe(container);
+    }
+
     animate();
 
     const handleResize = () => {
-      if (!container) return;
+      if (!container || !camera || !renderer) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -275,6 +317,7 @@ export function Avatar3D({
     window.addEventListener('resize', handleResize);
 
     return () => {
+      observer.disconnect();
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);

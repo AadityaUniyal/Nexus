@@ -22,7 +22,8 @@ import {
   RefreshCw,
   CheckCircle2,
 } from "lucide-react";
-import { INITIAL_USERS, INITIAL_AUDIT_LOGS, INITIAL_PIPELINE, UserItem, AuditLogItem, PipelineHealthItem } from "@/lib/mock-data";
+import { UserItem, AuditLogItem, PipelineHealthItem } from "@/lib/mock-data";
+import { dataProvider } from "@/lib/data-provider";
 import { formatDateTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 
@@ -30,9 +31,35 @@ export default function AdminPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = React.useState("users");
 
-  const [users, setUsers] = React.useState<UserItem[]>(INITIAL_USERS);
-  const [auditLogs, setAuditLogs] = React.useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS);
-  const [pipeline, setPipeline] = React.useState<PipelineHealthItem[]>(INITIAL_PIPELINE);
+  const [users, setUsers] = React.useState<UserItem[]>([]);
+  const [auditLogs, setAuditLogs] = React.useState<AuditLogItem[]>([]);
+  const [pipeline, setPipeline] = React.useState<PipelineHealthItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getUsers(),
+      dataProvider.getAuditLogs(),
+      dataProvider.getPipelineHealth(),
+    ])
+      .then(([u, a, p]) => {
+        if (mounted) {
+          setUsers(u);
+          setAuditLogs(a);
+          setPipeline(p);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch admin data:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
   const [newUserName, setNewUserName] = React.useState("");

@@ -50,47 +50,54 @@ def run_deterministic_simulation(
     Advanced mathematical physics and predictive simulation engine for NEXUS.
     Calculates exact delay recovery, aerodynamic/rolling energy consumption, SLA survival risk, and Pareto score.
     """
-    route_type = variables.alternateRouteType or "I-70_SOUTH_DETOUR"
-    speed_factor = 1.0 + (variables.speedDeltaPct / 100.0)
-    fuel_rate = variables.fuelCostPerKm or 0.42
+    route_type = getattr(variables, "alternate_route_type", None) or getattr(variables, "alternateRouteType", "I-70_SOUTH_DETOUR")
+    speed_delta = getattr(variables, "speed_delta_pct", None) if getattr(variables, "speed_delta_pct", None) is not None else getattr(variables, "speedDeltaPct", 0.0)
+    speed_factor = 1.0 + (speed_delta / 100.0)
+    fuel_rate = getattr(variables, "fuel_cost_per_km", None) or getattr(variables, "fuelCostPerKm", 0.42)
     env_factor = calculate_environmental_factor("SEVERE_BLIZZARD", 65.0)
 
-    distance_km = base.totalDistanceKm
-    duration_mins = base.avgDurationMins
-    delay_mins = base.currentDelayMins
+    base_dist = getattr(base, "total_distance_km", None) or getattr(base, "totalDistanceKm", 1620.0)
+    base_dur = getattr(base, "avg_duration_mins", None) or getattr(base, "avgDurationMins", 940)
+    base_delay = getattr(base, "current_delay_mins", None) if getattr(base, "current_delay_mins", None) is not None else getattr(base, "currentDelayMins", 180)
+    base_cost = getattr(base, "base_cost_usd", None) or getattr(base, "baseCostUsd", 1450.0)
+    orders_cnt = getattr(base, "orders_count", None) or getattr(base, "ordersCount", 14)
+
+    distance_km = base_dist
+    duration_mins = base_dur
+    delay_mins = base_delay
     sigma_mins = 25.0
     insights: List[str] = []
 
     if route_type == "I-70_SOUTH_DETOUR":
         # +84.5 km, avoids high blizzard pass, saves 135 mins of blizzard delay
-        distance_km = base.totalDistanceKm + 84.5
-        duration_mins = round((base.avgDurationMins + 55) / speed_factor)
-        delay_mins = max(0, round(base.currentDelayMins * 0.22))
+        distance_km = base_dist + 84.5
+        duration_mins = round((base_dur + 55) / speed_factor)
+        delay_mins = max(0, round(base_delay * 0.22))
         sigma_mins = 12.0
         insights.append("I-70 Southern corridor bypasses high-altitude blizzard zones near Cheyenne Pass.")
         insights.append("Low risk of auxiliary refrigeration disruption with steady highway speeds.")
 
     elif route_type == "US-40_NORTH_DETOUR":
         # +138 km, secondary roads, saves 80 mins
-        distance_km = base.totalDistanceKm + 138.0
-        duration_mins = round((base.avgDurationMins + 105) / speed_factor)
-        delay_mins = max(0, round(base.currentDelayMins * 0.45))
+        distance_km = base_dist + 138.0
+        duration_mins = round((base_dur + 105) / speed_factor)
+        delay_mins = max(0, round(base_delay * 0.45))
         sigma_mins = 20.0
         insights.append("Secondary arterial routing with moderate mountain grade elevation.")
 
     elif route_type == "TRANSFER_TO_RELAY":
         # Splits load at closest hub
-        distance_km = base.totalDistanceKm + 18.0
-        duration_mins = round(base.avgDurationMins * 0.82)
-        delay_mins = max(0, round(base.currentDelayMins * 0.12))
+        distance_km = base_dist + 18.0
+        duration_mins = round(base_dur * 0.82)
+        delay_mins = max(0, round(base_delay * 0.12))
         sigma_mins = 9.0
         insights.append("Dual dispatch relay transfers high-priority consignments to secondary fast carrier.")
         insights.append("Reduced gross vehicle weight yields 14.8% energy reduction.")
 
     else:  # WAIT_AND_HOLD
-        distance_km = base.totalDistanceKm
-        duration_mins = base.avgDurationMins + base.currentDelayMins + 75
-        delay_mins = base.currentDelayMins + 75
+        distance_km = base_dist
+        duration_mins = base_dur + base_delay + 75
+        delay_mins = base_delay + 75
         sigma_mins = 45.0
         insights.append("Holding pattern incurs severe SLA penalty clauses on priority shipments.")
 
@@ -98,11 +105,12 @@ def run_deterministic_simulation(
     avg_speed = min(105.0, (distance_km / (duration_mins / 60.0)) * speed_factor * env_factor)
     energy = calculate_energy_dynamics(distance_km, max(25.0, avg_speed))
 
-    dispatch_surcharge = 145.0 if variables.priorityReordering else 0.0
+    priority_reord = getattr(variables, "priority_reordering", None) if getattr(variables, "priority_reordering", None) is not None else getattr(variables, "priorityReordering", False)
+    dispatch_surcharge = 145.0 if priority_reord else 0.0
     cost = round(distance_km * fuel_rate * 1.85 + energy["fuel_surcharge"] + dispatch_surcharge, 2)
-    cost_delta = round(cost - base.baseCostUsd, 2)
+    cost_delta = round(cost - base_cost, 2)
 
-    total_baseline_time = base.avgDurationMins + base.currentDelayMins
+    total_baseline_time = base_dur + base_delay
     total_simulated_time = duration_mins + delay_mins
     time_saved = max(0, total_baseline_time - total_simulated_time)
 
@@ -111,7 +119,7 @@ def run_deterministic_simulation(
     prob_on_time = _normal_cdf(buffer_mins, 0.0, sigma_mins)
     sla_risk = round(max(1.0, min(99.0, (1.0 - prob_on_time) * 100.0)), 1)
 
-    orders_at_risk = math.ceil(base.ordersCount * (sla_risk / 100.0)) if sla_risk > 35 else math.ceil(base.ordersCount * 0.08)
+    orders_at_risk = math.ceil(orders_cnt * (sla_risk / 100.0)) if sla_risk > 35 else math.ceil(orders_cnt * 0.08)
 
     # Multi-objective Pareto Decision Scoring (0 - 100)
     time_score = min(100.0, (time_saved / 120.0) * 100.0)

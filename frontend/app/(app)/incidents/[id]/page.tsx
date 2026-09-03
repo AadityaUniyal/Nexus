@@ -19,7 +19,8 @@ import {
   FileText,
   User,
 } from "lucide-react";
-import { INITIAL_INCIDENTS, IncidentItem } from "@/lib/mock-data";
+import { IncidentItem } from "@/lib/mock-data";
+import { dataProvider } from "@/lib/data-provider";
 import { formatCurrency, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 
@@ -39,15 +40,55 @@ export default function IncidentDetailPage() {
   const { toast } = useToast();
   const incidentId = params?.id as string;
 
-  const [incident, setIncident] = React.useState<IncidentItem | null>(() => {
-    return INITIAL_INCIDENTS.find((i) => i.id === incidentId || i.code === incidentId) || INITIAL_INCIDENTS[0];
-  });
-
+  const [incident, setIncident] = React.useState<IncidentItem | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
 
-  const currentStepIdx = STATE_STEPS.indexOf(incident?.status as any) !== -1
-    ? STATE_STEPS.indexOf(incident?.status as any)
+  React.useEffect(() => {
+    let mounted = true;
+    dataProvider.getIncident(incidentId)
+      .then((inc) => {
+        if (mounted) setIncident(inc);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch incident details:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [incidentId]);
+
+  const currentStepIdx = incident && STATE_STEPS.indexOf(incident.status as any) !== -1
+    ? STATE_STEPS.indexOf(incident.status as any)
     : 2;
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="p-8 font-mono text-sm text-nexus-on-surface-variant">
+          Loading incident details...
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!incident) {
+    return (
+      <AppShell>
+        <div className="p-8 space-y-4 font-mono text-sm">
+          <p className="text-nexus-on-surface">Incident '{incidentId}' was not found.</p>
+          <Link href="/incidents">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              <ArrowLeft className="h-4 w-4" /> Back to Incidents
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   const handleAdvanceStatus = async (nextStatus: IncidentItem["status"]) => {
     setIsUpdating(true);
@@ -62,8 +103,9 @@ export default function IncidentDetailPage() {
         }),
       });
       const json = await res.json();
-      if (json.data) {
-        setIncident(json.data);
+      const incData = json.data || json;
+      if (incData && incData.id) {
+        setIncident(incData);
         toast({
           title: "Incident State Advanced",
           message: `Status updated to ${nextStatus}.`,

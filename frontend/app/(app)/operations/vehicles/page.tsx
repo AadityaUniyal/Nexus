@@ -9,13 +9,24 @@ import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
 import { Truck, Search, ArrowRight } from 'lucide-react';
-import { INITIAL_VEHICLES, VehicleItem } from '@/lib/mock-data';
+import { VehicleItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn } from '@/components/motion';
 
 export default function VehiclesListPage() {
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('ALL');
-  const [vehicles] = React.useState<VehicleItem[]>(INITIAL_VEHICLES);
+  const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const data = await dataProvider.getVehicles();
+        if (data && data.length > 0) setVehicles(data);
+      } catch {}
+    }
+    load();
+  }, []);
 
   const filtered = vehicles.filter((v) => {
     const matchSearch =

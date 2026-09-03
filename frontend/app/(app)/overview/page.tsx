@@ -25,15 +25,11 @@ import {
   Globe2,
 } from "lucide-react";
 import {
-  INITIAL_WAREHOUSES,
-  INITIAL_VEHICLES,
-  INITIAL_ROUTES,
-  INITIAL_INCIDENTS,
-  INITIAL_EVENTS,
   VehicleItem,
   WarehouseItem,
   IncidentItem,
   OperationalEventItem,
+  RouteItem,
 } from "@/lib/mock-data";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -49,113 +45,41 @@ import {
 import { InteractiveWorldMap } from "@/components/world/InteractiveWorldMap";
 import { motion, AnimatePresence } from "motion/react";
 import { Map as MapIcon, Box } from "lucide-react";
+import { dataProvider } from "@/lib/data-provider";
+import { NexusPulse } from "@/components/ui/nexus-pulse";
 
 export default function OverviewPage() {
   const { toast } = useToast();
-  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>(INITIAL_WAREHOUSES);
-  const [vehicles, setVehicles] = React.useState<VehicleItem[]>(INITIAL_VEHICLES);
-  const [routes, setRoutes] = React.useState(INITIAL_ROUTES);
-  const [incidents, setIncidents] = React.useState<IncidentItem[]>(INITIAL_INCIDENTS);
-  const [events, setEvents] = React.useState<OperationalEventItem[]>(INITIAL_EVENTS);
+  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
+  const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+  const [routes, setRoutes] = React.useState<RouteItem[]>([]);
+  const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
+  const [events, setEvents] = React.useState<OperationalEventItem[]>([]);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [worldView, setWorldView] = React.useState<"3D" | "GIS">("3D");
   const [briefing, setBriefing] = React.useState<string>(
     "Operations situation normal with 2 active anomalies flagged. Vehicle NX-TRK-104 is holding near Cheyenne Summit due to an I-80 corridor blizzard warning. Simulation SIM-SCENARIO-901 indicates an active I-70 detour will recover 135 minutes with 94% confidence. Fleet utilization is at 80% across 6 primary fulfillment superhubs."
   );
 
-  // Fetch live state from backend on mount and setup live event bus listeners
+  // Fetch live state directly from authoritative dataProvider (PostgreSQL backed)
   React.useEffect(() => {
     async function loadLiveTelemetry() {
       try {
-        const [vRes, wRes, iRes] = await Promise.all([
-          fetch('/api/v1/operations/vehicles').catch(() => null),
-          fetch('/api/v1/operations/warehouses').catch(() => null),
-          fetch('/api/v1/incidents').catch(() => null),
+        const [vData, wData, iData, rData] = await Promise.all([
+          dataProvider.getVehicles(),
+          dataProvider.getWarehouses(),
+          dataProvider.getIncidents(),
+          dataProvider.getRoutes(),
         ]);
 
-        if (vRes && vRes.ok) {
-          const vData = await vRes.json();
-          if (Array.isArray(vData) && vData.length > 0) {
-            setVehicles(
-              vData.map((v: any) => ({
-                id: v.id,
-                code: v.code,
-                name: v.name,
-                model: v.model || "Class-8 EV Hauler",
-                driverName: v.driver_name || v.driverName || "Fleet Pilot",
-                driverPhone: v.driver_phone || v.driverPhone || "+1 (555) 019-2834",
-                capacityKg: v.capacity_kg || v.capacityKg || 22000,
-                currentLoadKg: v.current_load_kg || v.currentLoadKg || 17800,
-                status: (v.status || "IN_TRANSIT") as any,
-                lat: v.current_lat || v.lat || 41.1400,
-                lng: v.current_lng || v.lng || -104.8202,
-                heading: v.heading || 90,
-                speedKmh: v.speed_kmh || v.speedKmh || 68.5,
-                batteryPct: v.battery_pct || v.batteryPct || 78,
-                healthScore: v.health_score || v.healthScore || 94,
-                currentRouteId: v.current_route_id || v.currentRouteId || null,
-                currentRouteName: v.current_route_name || v.currentRouteName || "Active Corridor",
-              }))
-            );
-          }
-        }
-
-        if (wRes && wRes.ok) {
-          const wData = await wRes.json();
-          if (Array.isArray(wData) && wData.length > 0) {
-            setWarehouses(
-              wData.map((w: any) => ({
-                id: w.id,
-                code: w.code,
-                name: w.name,
-                city: w.city,
-                state: w.state,
-                lat: w.lat,
-                lng: w.lng,
-                capacityUnits: w.capacity_units || w.capacityUnits || 15000,
-                currentUnits: w.current_units || w.currentUnits || 12000,
-                dockCount: w.dock_count || w.dockCount || 12,
-                activeDocks: w.active_docks || w.activeDocks || 8,
-                efficiencyPct: w.efficiency_pct || w.efficiencyPct || 95.0,
-                status: (w.status || "OPERATIONAL") as any,
-                createdAt: w.created_at || w.createdAt || new Date().toISOString(),
-              }))
-            );
-          }
-        }
-
-        if (iRes && iRes.ok) {
-          const iData = await iRes.json();
-          if (Array.isArray(iData) && iData.length > 0) {
-            setIncidents(
-              iData.map((i: any) => ({
-                id: i.id,
-                code: i.code,
-                title: i.title,
-                severity: (i.severity || "HIGH") as any,
-                status: (i.status || "DETECTED") as any,
-                category: i.category || "WEATHER",
-                summary: i.summary || i.title,
-                affectedEntityType: (i.affected_entity_type || i.affectedEntityType || "VEHICLE") as any,
-                affectedEntityId: i.affected_entity_id || i.affectedEntityId || "v-104",
-                affectedEntityName: i.affected_entity_name || i.affectedEntityName || "Vehicle NX-TRK-104",
-                rootCause: i.root_cause || i.rootCause || "Severe atmospheric blizzard obstacle",
-                aiAnalysis: i.ai_analysis || i.aiAnalysis || "Deterministic detour calculation recommended.",
-                potentialImpact: i.potential_impact || i.potentialImpact || "SLA breach risk +180 mins",
-                costEstimate: i.cost_estimate || i.costEstimate || 2500,
-                ordersAffected: i.orders_affected || i.affected_orders_count || 14,
-                delayMinutes: i.delay_minutes || i.delayMinutes || 180,
-                createdAt: i.created_at || i.createdAt || new Date().toISOString(),
-                timeline: i.timeline || [],
-              }))
-            );
-          }
-        }
-      } catch {
-        // Fallback to local deterministic state
+        if (vData && vData.length > 0) setVehicles(vData);
+        if (wData && wData.length > 0) setWarehouses(wData);
+        if (iData && iData.length > 0) setIncidents(iData);
+        if (rData && rData.length > 0) setRoutes(rData);
+      } catch (err) {
+        console.warn("[Overview] Using cached operational state:", err);
       }
     }
-
     loadLiveTelemetry();
 
     // Listen to live decision application and voice simulation events
@@ -454,14 +378,14 @@ export default function OverviewPage() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom Grid: Active Fleet Overview & Recent Telemetry Events */}
+        {/* Bottom Grid: Active Fleet Overview & NEXUS Pulse Live Narrative */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Active Fleet List */}
           <Card>
             <CardHeader>
               <div>
                 <CardTitle>Fleet Telemetry Watch</CardTitle>
-                <CardDescription>Real-time vehicle status and assigned routes</CardDescription>
+                <CardDescription>Real-time vehicle status and assigned routes · PostgreSQL Synced</CardDescription>
               </div>
               <Link href="/operations" className="text-xs font-semibold text-nexus-secondary font-mono-data hover:underline">
                 View All Vehicles
@@ -499,39 +423,8 @@ export default function OverviewPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Event Stream */}
-          <Card>
-            <CardHeader>
-              <div>
-                <CardTitle>Live Event Stream</CardTitle>
-                <CardDescription>Automated IoT and sensor telemetry bus</CardDescription>
-              </div>
-              <Link href="/intelligence" className="text-xs font-semibold text-nexus-secondary font-mono-data hover:underline">
-                Pattern View
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {events.map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="p-3 rounded-lg bg-nexus-surface-container/50 border border-nexus-outline-variant/20 flex items-start gap-3 text-xs"
-                  >
-                    <div className="mt-0.5">
-                      <StatusLed status={ev.severity} size="sm" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-nexus-on-surface font-medium">{ev.message}</p>
-                      <div className="flex items-center justify-between text-[10px] font-mono-data text-nexus-on-surface-variant mt-1">
-                        <span>Type: {ev.eventType}</span>
-                        <span>{formatRelativeTime(ev.occurredAt)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* NEXUS Pulse: What Changed? Live Narrative Feed */}
+          <NexusPulse />
         </div>
       </FadeIn>
     </AppShell>

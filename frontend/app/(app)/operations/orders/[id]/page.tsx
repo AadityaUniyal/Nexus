@@ -16,7 +16,8 @@ import {
   Building2,
   CheckCircle2,
 } from 'lucide-react';
-import { INITIAL_ORDERS, INITIAL_VEHICLES, INITIAL_WAREHOUSES } from '@/lib/mock-data';
+import { OrderItem, VehicleItem, WarehouseItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { FadeIn, SpringCard } from '@/components/motion';
 
@@ -24,9 +25,63 @@ export default function OrderDetailPage() {
   const params = useParams();
   const orderId = params.id as string;
 
-  const order = INITIAL_ORDERS.find((o) => o.id === orderId) || INITIAL_ORDERS[0];
-  const vehicle = INITIAL_VEHICLES.find((v) => v.id === order.vehicleId);
-  const warehouse = INITIAL_WAREHOUSES.find((w) => w.id === order.warehouseId);
+  const [order, setOrder] = React.useState<OrderItem | null>(null);
+  const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getOrder(orderId),
+      dataProvider.getVehicles(),
+      dataProvider.getWarehouses(),
+    ])
+      .then(([ord, vList, wList]) => {
+        if (mounted) {
+          setOrder(ord);
+          setVehicles(vList);
+          setWarehouses(wList);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch order details:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [orderId]);
+
+  const vehicle = order ? vehicles.find((v) => v.id === order.vehicleId) : null;
+  const warehouse = order ? warehouses.find((w) => w.id === order.warehouseId) : null;
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="p-8 font-mono text-sm text-nexus-on-surface-variant">
+          Loading order details...
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!order) {
+    return (
+      <AppShell>
+        <div className="p-8 space-y-4 font-mono text-sm">
+          <p className="text-nexus-on-surface">Order '{orderId}' was not found.</p>
+          <Link href="/operations/orders">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              <ArrowLeft className="h-4 w-4" /> Back to Orders
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

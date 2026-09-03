@@ -14,6 +14,15 @@ async def lifespan(app: FastAPI):
     # Startup actions
     print(f"[*] Starting {settings.PROJECT_NAME} v{settings.VERSION}")
     print(f"[*] API Documentation available at /docs")
+    try:
+        from app.db.session import engine
+        from app.db.base import Base
+        import app.models  # ensure models registered
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print(f"[*] PostgreSQL database schemas verified.")
+    except Exception as e:
+        print(f"[!] Warning: Database schema check error: {e}")
     yield
     # Shutdown actions
     print(f"[*] Shutting down {settings.PROJECT_NAME}")
@@ -98,7 +107,25 @@ async def health_live():
 
 @app.get("/health/ready")
 async def health_ready():
-    return {"status": "READY", "database": "CONNECTED", "redis": "NOMINAL", "timestamp": time.time()}
+    from sqlalchemy import text
+    from app.db.session import engine
+    db_status = "DISCONNECTED"
+    is_ready = False
+    try:
+        async with engine.connect() as conn:
+            res = await conn.execute(text("SELECT 1"))
+            if res.scalar() == 1:
+                db_status = "CONNECTED"
+                is_ready = True
+    except Exception as e:
+        db_status = f"UNAVAILABLE ({type(e).__name__})"
+
+    return {
+        "status": "READY" if is_ready else "DEGRADED",
+        "database": db_status,
+        "redis": "NOT_CONFIGURED" if "localhost" in settings.REDIS_URL else "CONFIGURED",
+        "timestamp": time.time(),
+    }
 
 @app.get("/")
 async def root():

@@ -6,42 +6,50 @@ import { Sidebar } from "./Sidebar";
 import { Drawer } from "@/components/ui/drawer";
 import { CommandMenu } from "@/components/ui/command-menu";
 import { VoiceCompanionWidget } from "@/components/voice/VoiceCompanionWidget";
+import { dataProvider } from "@/lib/data-provider";
+import { realtimeClient } from "@/lib/realtime-client";
 import { formatRelativeTime } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = React.useState(false);
-  const [notifications, setNotifications] = React.useState([
-    {
-      id: "notif-1",
-      type: "CRITICAL",
-      title: "Severe Blizzard Alert on I-80 Pass",
-      message: "Route RT-CHI-DEN-01 blocked. 14 orders affected including AeroTech critical shipment.",
-      deepLink: "/incidents/inc-8041",
-      createdAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-      read: false,
-    },
-    {
-      id: "notif-2",
-      type: "ATTENTION",
-      title: "Thermal Unit Drift on NX-TRK-109",
-      message: "Auxiliary condenser temperature deviation (+3.2°C) detected.",
-      deepLink: "/incidents/inc-8042",
-      createdAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-      read: false,
-    },
-    {
-      id: "notif-3",
-      type: "SIMULATION",
-      title: "Simulation Ready: I-70 Detour Analysis",
-      message: "Scenario SIM-SCENARIO-901 shows 135 mins net time recovery.",
-      deepLink: "/simulations/sim-901",
-      createdAt: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+
+  // Fetch initial notifications from dataProvider
+  React.useEffect(() => {
+    async function loadNotifications() {
+      try {
+        const notifs = await dataProvider.getNotifications();
+        setNotifications(notifs);
+      } catch {
+        // graceful fallback
+      }
+    }
+    loadNotifications();
+
+    // Subscribe to live SSE events from backend
+    const unsubscribe = realtimeClient.subscribePulse((pulseItem) => {
+      const newNotif = {
+        id: pulseItem.id,
+        type: pulseItem.severity,
+        title: pulseItem.title,
+        message: pulseItem.message,
+        deepLink: pulseItem.changeContext?.entityType === "INCIDENT"
+          ? `/incidents/${pulseItem.changeContext.entityId}`
+          : pulseItem.changeContext?.entityType === "SIMULATION"
+          ? `/simulations/${pulseItem.changeContext.entityId}`
+          : "/overview",
+        createdAt: pulseItem.timestamp,
+        read: false,
+      };
+      setNotifications((prev) => [newNotif, ...prev.slice(0, 24)]);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Global Cmd+K keyboard shortcut listener
   React.useEffect(() => {
@@ -61,18 +69,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  const handleNotificationClick = async (notifId: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notifId ? { ...n, read: true } : n))
+    );
+    try {
+      await dataProvider.markNotificationRead(notifId);
+    } catch {}
+  };
+
   return (
     <div className="min-h-screen bg-nexus-surface flex flex-col">
       <Navbar
         unreadCount={unreadCount}
         onOpenNotifications={() => setNotificationsOpen(true)}
         onOpenCommandMenu={() => setCommandMenuOpen(true)}
+        onOpenMobileMenu={() => setMobileNavOpen(true)}
       />
 
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar className="hidden md:flex" />
+        <Sidebar className="hidden md:flex shrink-0" />
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto w-full">
           {children}
         </main>
       </div>
@@ -82,6 +100,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         isOpen={commandMenuOpen}
         onClose={() => setCommandMenuOpen(false)}
       />
+
+      {/* Mobile Navigation Drawer */}
+      <Drawer
+        isOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        title="Navigation"
+        subtitle="NEXUS Operations Command"
+        side="left"
+        width="sm"
+      >
+        <Sidebar
+          onNavigate={() => setMobileNavOpen(false)}
+          className="w-full border-r-0 min-h-0 p-0 bg-transparent"
+        />
+      </Drawer>
 
       {/* Voice Copilot Companion Widget */}
       <VoiceCompanionWidget />
@@ -102,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="text-xs font-semibold text-nexus-secondary hover:underline font-mono-data"
+                className="text-xs font-mono-data text-nexus-secondary hover:underline"
               >
                 Mark all as read
               </button>
@@ -110,54 +143,66 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="space-y-3">
-            {notifications.map((notif) => {
-              const icons = {
-                CRITICAL: <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />,
-                ATTENTION: <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />,
-                SIMULATION: <Sparkles className="h-4 w-4 text-purple-600 shrink-0" />,
-                SUCCESS: <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />,
-                INFO: <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />,
-              };
-
-              return (
+            {notifications.length === 0 ? (
+              <div className="text-center py-8 text-nexus-on-surface-variant text-xs">
+                No active notifications
+              </div>
+            ) : (
+              notifications.map((n) => (
                 <div
-                  key={notif.id}
-                  className={`p-4 rounded-xl border transition-all ${
-                    notif.read
-                      ? "bg-nexus-surface-lowest/70 border-nexus-outline-variant/30 opacity-80"
-                      : "bg-nexus-surface-lowest border-nexus-outline-variant shadow-tactile"
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n.id)}
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    n.read
+                      ? "bg-nexus-surface-container-lowest/40 border-nexus-outline-variant/20 opacity-70"
+                      : "bg-nexus-surface-container-lowest border-nexus-outline-variant shadow-tactile"
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    {icons[notif.type as keyof typeof icons]}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-bold text-nexus-on-surface">{notif.title}</h4>
+                    <div className="mt-0.5 shrink-0">
+                      {n.type === "CRITICAL" && (
+                        <AlertCircle className="h-4 w-4 text-nexus-error" />
+                      )}
+                      {n.type === "ATTENTION" && (
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      )}
+                      {n.type === "SIMULATION" && (
+                        <Sparkles className="h-4 w-4 text-purple-600" />
+                      )}
+                      {n.type === "SUCCESS" && (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      )}
+                      {n.type === "INFO" && (
+                        <CheckCircle2 className="h-4 w-4 text-nexus-secondary" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-nexus-on-surface">
+                          {n.title}
+                        </span>
                         <span className="text-[10px] font-mono-data text-nexus-on-surface-variant">
-                          {formatRelativeTime(notif.createdAt)}
+                          {formatRelativeTime(n.createdAt)}
                         </span>
                       </div>
-                      <p className="text-xs text-nexus-on-surface-variant mt-1 leading-relaxed">
-                        {notif.message}
+                      <p className="text-xs text-nexus-on-surface-variant leading-relaxed">
+                        {n.message}
                       </p>
-
-                      {notif.deepLink && (
-                        <div className="mt-2.5">
-                          <Link
-                            href={notif.deepLink}
-                            onClick={() => setNotificationsOpen(false)}
-                            className="inline-flex items-center text-xs font-semibold text-nexus-secondary hover:text-emerald-700 font-mono-data gap-1"
-                          >
-                            <span>Inspect Entity</span>
-                            <ArrowRight className="h-3 w-3" />
-                          </Link>
-                        </div>
+                      {n.deepLink && (
+                        <Link
+                          href={n.deepLink}
+                          onClick={() => setNotificationsOpen(false)}
+                          className="inline-flex items-center gap-1 text-[11px] font-mono-data text-nexus-secondary hover:underline pt-1"
+                        >
+                          <span>Investigate anomaly</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </Link>
                       )}
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </div>
       </Drawer>

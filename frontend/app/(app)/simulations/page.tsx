@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Sparkles, Plus, ArrowRight, CheckCircle2, TrendingUp, Layers, RefreshCw } from "lucide-react";
-import { INITIAL_SIMULATIONS, SimulationItem } from "@/lib/mock-data";
+import { SimulationItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 export default function SimulationsPage() {
-  const [simulations, setSimulations] = React.useState<SimulationItem[]>(INITIAL_SIMULATIONS);
+  const [simulations, setSimulations] = React.useState<SimulationItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
   const fetchSimulations = React.useCallback(async () => {
@@ -21,9 +21,10 @@ export default function SimulationsPage() {
       const res = await fetch("/api/v1/simulations");
       if (res.ok) {
         const json = await res.json();
-        if (Array.isArray(json) && json.length > 0) {
+        const list = Array.isArray(json) ? json : (json?.data && Array.isArray(json.data)) ? json.data : [];
+        if (list.length > 0) {
           setSimulations(
-            json.map((s: any) => ({
+            list.map((s: any) => ({
               id: s.id,
               code: s.code || `SIM-${s.id.slice(-4)}`,
               title: s.title || "Deterministic Reroute Scenario",

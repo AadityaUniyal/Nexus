@@ -1,8 +1,8 @@
 # NEXUS — Enterprise Autonomous Logistics & Spatial Intelligence Platform
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![Backend Tests](https://img.shields.io/badge/tests-30%2F30%20passed-success.svg)
-![Next.js](https://img.shields.io/badge/frontend-78%20routes%20compiled-blue.svg)
+![Backend Tests](https://img.shields.io/badge/tests-65%2F65%20passed-success.svg)
+![Next.js](https://img.shields.io/badge/frontend-57%20routes%20compiled-blue.svg)
 ![AI Engine](https://img.shields.io/badge/groq-llama--3.3--70b-purple.svg)
 ![Voice Copilot](https://img.shields.io/badge/voice-pipecat--ai%201.8-orange.svg)
 ![Weather Engine](https://img.shields.io/badge/weather-open--meteo%20free-cyan.svg)
@@ -121,8 +121,7 @@ nexus/
 │   ├── app/
 │   │   ├── (auth)/                      # Split-Screen 3D Login, Signup, Password Recovery
 │   │   ├── (onboarding)/                # Welcome, Role Selection, Workspace, Environment Setup
-│   │   ├── (app)/                       # Core Views (Overview, Live World, Sim, Admin)
-│   │   └── api/v1/                      # Client-Side Route Handlers
+│   │   └── (app)/                       # Core Views (Overview, Live World, Sim, Admin)
 │   ├── components/
 │   │   ├── avatar/                      # 3D Procedural Companion Avatar & Global Sliding Widget
 │   │   ├── brand/                       # 3D WebGL Hero & 7-Stage Scrollytelling Journey
@@ -142,10 +141,14 @@ nexus/
 ├── tests/                               # Comprehensive Automated Test Suites
 │   └── backend/
 │       ├── test_admin_and_governance.py # RBAC, Audit Ledger & Telemetry Pipeline Tests
+│       ├── test_adversarial_challenge.py# Boundary, Error & Invalid State Rejection Tests
 │       ├── test_ai_service.py           # Groq AI Inference, RCA & Briefing Tests
 │       ├── test_auth_security.py        # Password Hashing, JWT Verification & Access Control
+│       ├── test_challenger_m1.py        # Dynamic Baseline & Route Optimization Tests
+│       ├── test_full_operational_vertical_slice.py # End-to-End Operational Lifecycle Integration
 │       ├── test_incident_service.py     # Incident State Transitions & Severity Escalation
 │       ├── test_location_service.py     # Geoapify Geocoding, Routing & Multi-Tier Caching
+│       ├── test_remediation_regression.py # Regression & Edge Case Validation Suite
 │       ├── test_simulation_engine.py    # Aerodynamic Energy & Delay Recovery Calculation Tests
 │       ├── test_user_and_auth_lifecycle.py # Wrong Password 401 Rejection & Demo Authentication
 │       ├── test_voice_agent.py          # Spoken Command Tool Calling & Spatial Navigation
@@ -187,9 +190,9 @@ NEXUS is thoroughly tested across both frontend and backend layers:
 
 | Layer | Command | Status | Description |
 | :--- | :--- | :--- | :--- |
-| **Backend Test Suite** | `cd backend && python -m pytest` | **30/30 Passed** | Auth lifecycle, RBAC, Groq AI, Pipecat voice bot, Open-Meteo weather & simulations |
-| **Frontend Type Check** | `cd frontend && npx tsc --noEmit` | **0 Errors** | Strict TypeScript compilation across all 78 routes |
-| **Production Build** | `cd frontend && npm run build` | **78/78 Compiled** | Production bundle generation and static page optimization |
+| **Backend Test Suite** | `cd backend && python -m pytest` | **65/65 Passed** | Auth lifecycle, RBAC, Groq AI, Pipecat voice bot, Open-Meteo weather & simulations |
+| **Frontend Type Check** | `cd frontend && npx tsc --noEmit` | **0 Errors** | Strict TypeScript compilation across all 57 routes |
+| **Production Build** | `cd frontend && npm run build` | **57/57 Compiled** | Production bundle generation and static page optimization |
 
 ---
 
@@ -224,7 +227,7 @@ cd ..
 
 ### 3. Run Automated Tests
 ```bash
-# Run backend pytest suite (30/30 tests)
+# Run backend pytest suite (65/65 tests)
 cd backend && python -m pytest ../tests/backend && cd ..
 
 # Run frontend TypeScript type-check

@@ -5,13 +5,32 @@ import Link from 'next/link';
 import { AppShell } from '@/components/layout/AppShell';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { ShieldCheck, Search } from 'lucide-react';
-import { INITIAL_AUDIT_LOGS, AuditLogItem } from '@/lib/mock-data';
+import { AuditLogItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { formatDateTime } from '@/lib/utils';
 import { FadeIn } from '@/components/motion';
 
 export default function AdminAuditPage() {
-  const [logs] = React.useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS);
+  const [logs, setLogs] = React.useState<AuditLogItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState('');
+
+  React.useEffect(() => {
+    let mounted = true;
+    dataProvider.getAuditLogs()
+      .then((data) => {
+        if (mounted) setLogs(data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch audit logs:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filtered = logs.filter(
     (l) =>

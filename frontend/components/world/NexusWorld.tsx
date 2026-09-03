@@ -7,6 +7,7 @@ import { Maximize2, RotateCcw, Sparkles, Navigation, Layers, ShieldAlert } from 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { disposeThreeScene } from "@/lib/three-utils";
 
 export interface NexusWorldProps {
   warehouses: WarehouseItem[];
@@ -336,10 +337,15 @@ export function NexusWorld({
     window.addEventListener("mouseup", handleMouseUp);
     renderer.domElement.addEventListener("wheel", handleWheel, { passive: false });
 
-    // Animation Loop
+    // Animation Loop with off-screen pause via IntersectionObserver
     let clock = new THREE.Clock();
+    let isVisible = true;
 
     const animate = () => {
+      if (!isVisible) {
+        animFrameRef.current = null;
+        return;
+      }
       animFrameRef.current = requestAnimationFrame(animate);
       const elapsed = clock.getElapsedTime();
 
@@ -353,12 +359,24 @@ export function NexusWorld({
       renderer.render(scene, camera);
     };
 
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (isVisible && !animFrameRef.current) {
+        animate();
+      }
+    }, { threshold: 0.1 });
+
+    if (container) {
+      observer.observe(container);
+    }
+
     animate();
 
     const handleResize = () => {
-      if (!container) return;
+      if (!container || !camera || !renderer) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -367,6 +385,7 @@ export function NexusWorld({
     window.addEventListener("resize", handleResize);
 
     return () => {
+      observer.disconnect();
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
@@ -375,7 +394,14 @@ export function NexusWorld({
         rendererRef.current.domElement.removeEventListener("click", handleClick);
         rendererRef.current.domElement.removeEventListener("mousedown", handleMouseDown);
         rendererRef.current.domElement.removeEventListener("wheel", handleWheel);
+      }
+      if (sceneRef.current) {
+        disposeThreeScene(sceneRef.current);
+        sceneRef.current.clear();
+      }
+      if (rendererRef.current) {
         rendererRef.current.dispose();
+        rendererRef.current.forceContextLoss?.();
       }
       if (container) container.innerHTML = "";
     };

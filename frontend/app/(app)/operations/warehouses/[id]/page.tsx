@@ -14,16 +14,69 @@ import {
   Activity,
   TrendingUp,
 } from 'lucide-react';
-import { INITIAL_WAREHOUSES, INITIAL_ORDERS } from '@/lib/mock-data';
+import { WarehouseItem, OrderItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn, SpringCard } from '@/components/motion';
 
 export default function WarehouseDetailPage() {
   const params = useParams();
   const warehouseId = params.id as string;
 
-  const warehouse = INITIAL_WAREHOUSES.find((w) => w.id === warehouseId) || INITIAL_WAREHOUSES[0];
-  const originOrders = INITIAL_ORDERS.filter((o) => o.warehouseId === warehouse.id);
-  const utilPct = Math.round((warehouse.currentUnits / warehouse.capacityUnits) * 100);
+  const [warehouse, setWarehouse] = React.useState<WarehouseItem | null>(null);
+  const [orders, setOrders] = React.useState<OrderItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getWarehouses(),
+      dataProvider.getOrders(),
+    ])
+      .then(([wList, oList]) => {
+        if (mounted) {
+          const found = wList.find((w) => w.id === warehouseId);
+          setWarehouse(found || null);
+          setOrders(oList);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch warehouse details:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [warehouseId]);
+
+  const originOrders = warehouse ? orders.filter((o) => o.warehouseId === warehouse.id) : [];
+  const utilPct = warehouse ? Math.round((warehouse.currentUnits / warehouse.capacityUnits) * 100) : 0;
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="p-8 font-mono text-sm text-nexus-on-surface-variant">
+          Loading hub warehouse data...
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!warehouse) {
+    return (
+      <AppShell>
+        <div className="p-8 space-y-4 font-mono text-sm">
+          <p className="text-nexus-on-surface">Warehouse '{warehouseId}' was not found.</p>
+          <Link href="/operations/warehouses">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              <ArrowLeft className="h-4 w-4" /> Back to Warehouses
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

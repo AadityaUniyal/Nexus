@@ -50,6 +50,26 @@
   --color-critical: #ba1a1a;
   --color-simulation: #6344d4;
   --color-ai: #4f31a6;
+
+  /* Fluid Typography Scale (CSS Clamp) */
+  --font-size-display: clamp(2rem, 4vw, 4.25rem);
+  --font-size-heading: clamp(1.4rem, 2.4vw, 2.5rem);
+  --font-size-section: clamp(1.1rem, 1.6vw, 1.75rem);
+  --font-size-body: clamp(0.9rem, 0.95vw, 1.05rem);
+  --font-size-meta: clamp(0.75rem, 0.8vw, 0.85rem);
+
+  /* Surface & Depth Design Tokens */
+  --surface-base: var(--surface);
+  --surface-raised: var(--surface-container-low);
+  --surface-float: var(--surface-container-lowest);
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
+  --border-subtle: rgba(32, 35, 31, 0.08);
+  --shadow-soft: 0 4px 20px rgba(32, 35, 31, 0.035), 0 1px 3px rgba(32, 35, 31, 0.02);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
 }
 
 .dark {

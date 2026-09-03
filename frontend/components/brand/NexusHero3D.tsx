@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import * as THREE from 'three';
+import { disposeThreeScene } from '@/lib/three-utils';
 
 export interface NexusHero3DProps {
   currentStep?: number; // 0 to 6 representing the 7-step loop
@@ -214,16 +215,22 @@ export function NexusHero3D({
       if (!container || !renderer || !camera) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
 
-    // 10. Animation Loop
+    // 10. Animation Loop with off-screen pause via IntersectionObserver
     let clock = new THREE.Clock();
+    let isVisible = true;
 
     const animate = () => {
+      if (!isVisible) {
+        reqIdRef.current = null;
+        return;
+      }
       reqIdRef.current = requestAnimationFrame(animate);
       const elapsed = clock.getElapsedTime();
 
@@ -267,14 +274,33 @@ export function NexusHero3D({
       renderer.render(scene, camera);
     };
 
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (isVisible && !reqIdRef.current) {
+        animate();
+      }
+    }, { threshold: 0.1 });
+
+    if (container) {
+      observer.observe(container);
+    }
+
     animate();
 
     return () => {
+      observer.disconnect();
       if (reqIdRef.current) cancelAnimationFrame(reqIdRef.current);
       if (interactive) window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
-      renderer.dispose();
-      container.innerHTML = '';
+      if (sceneRef.current) {
+        disposeThreeScene(sceneRef.current);
+        sceneRef.current.clear();
+      }
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        rendererRef.current.forceContextLoss?.();
+      }
+      if (container) container.innerHTML = '';
     };
   }, [interactive]);
 

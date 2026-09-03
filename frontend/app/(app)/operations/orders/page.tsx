@@ -9,13 +9,24 @@ import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
 import { Package, Search, ArrowRight } from 'lucide-react';
-import { INITIAL_ORDERS, OrderItem } from '@/lib/mock-data';
+import { OrderItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { FadeIn } from '@/components/motion';
 
 export default function OrdersListPage() {
   const [search, setSearch] = React.useState('');
-  const [orders] = React.useState<OrderItem[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = React.useState<OrderItem[]>([]);
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const data = await dataProvider.getOrders();
+        if (data && data.length > 0) setOrders(data);
+      } catch {}
+    }
+    load();
+  }, []);
 
   const filtered = orders.filter(
     (o) =>

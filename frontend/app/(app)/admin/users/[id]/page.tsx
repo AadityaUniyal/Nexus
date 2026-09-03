@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from 'lucide-react';
-import { INITIAL_USERS, INITIAL_AUDIT_LOGS } from '@/lib/mock-data';
+import { UserItem, AuditLogItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { useToast } from '@/components/ui/toast';
 import { FadeIn, SpringCard } from '@/components/motion';
 
@@ -25,22 +26,58 @@ export default function AdminUserDetailPage() {
   const { toast } = useToast();
   const userId = params.id as string;
 
-  const [user, setUser] = React.useState(
-    () => INITIAL_USERS.find((u) => u.id === userId) || INITIAL_USERS[0]
-  );
-  const [role, setRole] = React.useState(user.role);
-  const userAudit = INITIAL_AUDIT_LOGS.filter((a) => a.actorName === user.name);
+  const [user, setUser] = React.useState<UserItem | null>(null);
+  const [role, setRole] = React.useState<string>('OPERATOR');
+  const [userAudit, setUserAudit] = React.useState<AuditLogItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const handleSave = () => {
-    setUser({ ...user, role });
-    toast({
-      title: 'Security Clearance Updated',
-      message: `Assigned new role ${role} to ${user.name}.`,
-      type: 'success',
-    });
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      dataProvider.getUser(userId),
+      dataProvider.getAuditLogs(),
+    ])
+      .then(([u, logs]) => {
+        if (mounted) {
+          setUser(u);
+          if (u) {
+            setRole(u.role);
+            setUserAudit(logs.filter((a) => a.actorName === u.name || a.entityId === u.id));
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch user details:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    try {
+      const updated = await dataProvider.updateUserRole(user.id, role);
+      setUser(updated);
+      toast({
+        title: 'Security Clearance Updated',
+        message: `Assigned new role ${role} to ${user.name}.`,
+        type: 'success',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Update Failed',
+        message: err?.message || 'Could not update user role.',
+        type: 'critical',
+      });
+    }
   };
 
   const toggleStatus = () => {
+    if (!user) return;
     setUser({ ...user, active: !user.active });
     toast({
       title: user.active ? 'Account Suspended' : 'Account Reactivated',
@@ -48,6 +85,31 @@ export default function AdminUserDetailPage() {
       type: user.active ? 'warning' : 'success',
     });
   };
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="p-8 font-mono text-sm text-nexus-on-surface-variant">
+          Loading user security clearance...
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AppShell>
+        <div className="p-8 space-y-4 font-mono text-sm">
+          <p className="text-nexus-on-surface">User '{userId}' was not found.</p>
+          <Link href="/admin/users">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              <ArrowLeft className="h-4 w-4" /> Back to User Directory
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

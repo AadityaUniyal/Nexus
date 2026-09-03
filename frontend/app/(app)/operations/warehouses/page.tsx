@@ -9,12 +9,23 @@ import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
 import { Building2, Search, ArrowRight } from 'lucide-react';
-import { INITIAL_WAREHOUSES, WarehouseItem } from '@/lib/mock-data';
+import { WarehouseItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn } from '@/components/motion';
 
 export default function WarehousesListPage() {
   const [search, setSearch] = React.useState('');
-  const [warehouses] = React.useState<WarehouseItem[]>(INITIAL_WAREHOUSES);
+  const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const data = await dataProvider.getWarehouses();
+        if (data && data.length > 0) setWarehouses(data);
+      } catch {}
+    }
+    load();
+  }, []);
 
   const filtered = warehouses.filter(
     (w) =>

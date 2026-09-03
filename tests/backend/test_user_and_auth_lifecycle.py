@@ -11,8 +11,8 @@ async def test_auth_login_wrong_password_denied():
             "email": "sarah.chen@nexus.ops",
             "password": "wrongpassword123!",
         })
-        # Should either succeed if demo or deny if strictly checked
-        assert res.status_code in [200, 401]
+        # Should strictly deny invalid password with 401 Unauthorized
+        assert res.status_code == 401
 
 @pytest.mark.asyncio
 async def test_auth_login_valid_demo():
@@ -28,12 +28,18 @@ async def test_auth_login_valid_demo():
         assert "access_token" in data
         assert data["user"]["role"] == "OPERATIONS_MANAGER"
 
+from app.core.security import create_access_token
+
 @pytest.mark.asyncio
 async def test_admin_governance_user_list():
     """Verify that admin user listing returns RBAC clearance profiles."""
     transport = ASGITransport(app=app)
+    admin_token = create_access_token(
+        subject="usr-admin-test",
+        extra_claims={"email": "admin@nexus.continental", "name": "Sarah Chen", "role": "ADMINISTRATOR"}
+    )
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        res = await client.get("/api/v1/admin/users")
+        res = await client.get("/api/v1/admin/users", headers={"Authorization": f"Bearer {admin_token}"})
         assert res.status_code == 200
         users = res.json()
         assert len(users) >= 4

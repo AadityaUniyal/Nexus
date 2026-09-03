@@ -17,9 +17,15 @@ export interface TabsProps {
   onChange: (id: string) => void;
   className?: string;
   variant?: "pill" | "line";
+  layoutId?: string;
 }
 
-export function Tabs({ tabs, activeTab, onChange, className, variant = "pill" }: TabsProps) {
+export function Tabs({ tabs, activeTab, onChange, className, variant = "pill", layoutId }: TabsProps) {
+  const generatedId = React.useId();
+  const activeLayoutId = layoutId || generatedId;
+  const lineLayoutId = `${activeLayoutId}-activeTabLine`;
+  const pillLayoutId = `${activeLayoutId}-activeTabPill`;
+
   if (variant === "line") {
     return (
       <div className={cn("flex border-b border-nexus-outline-variant/40 space-x-6", className)}>
@@ -52,7 +58,7 @@ export function Tabs({ tabs, activeTab, onChange, className, variant = "pill" }:
               )}
               {isActive && (
                 <motion.div
-                  layoutId="activeTabLine"
+                  layoutId={lineLayoutId}
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-nexus-primary"
                   transition={{ type: "spring", stiffness: 500, damping: 35 }}
                 />
@@ -86,7 +92,7 @@ export function Tabs({ tabs, activeTab, onChange, className, variant = "pill" }:
           >
             {isActive && (
               <motion.div
-                layoutId="activeTabPill"
+                layoutId={pillLayoutId}
                 className="absolute inset-0 bg-white rounded-lg border border-black/5 shadow-sm"
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
@@ -97,7 +103,7 @@ export function Tabs({ tabs, activeTab, onChange, className, variant = "pill" }:
               {typeof tab.count === "number" && (
                 <span
                   className={cn(
-                    "px-1.5 py-0.2 text-[10px] rounded-full font-mono-data",
+                    "px-1.5 py-0.5 text-[10px] rounded-full font-mono-data",
                     isActive
                       ? "bg-nexus-primary text-white"
                       : "bg-nexus-surface-container-high text-nexus-on-surface-variant"

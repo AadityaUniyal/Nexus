@@ -13,6 +13,7 @@ import {
   User,
   LogOut,
   Sliders,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusLed } from "@/components/ui/status-led";
@@ -23,12 +24,14 @@ export interface NavbarProps {
   unreadCount?: number;
   onOpenNotifications?: () => void;
   onOpenCommandMenu?: () => void;
+  onOpenMobileMenu?: () => void;
 }
 
 export function Navbar({
   unreadCount = 2,
   onOpenNotifications,
   onOpenCommandMenu,
+  onOpenMobileMenu,
 }: NavbarProps) {
   const pathname = usePathname();
   const [currentTime, setCurrentTime] = React.useState<string>("");
@@ -45,7 +48,16 @@ export function Navbar({
   return (
     <header className="h-16 border-b border-nexus-outline-variant/30 bg-nexus-surface/80 backdrop-blur-md sticky top-0 z-40 px-6 flex items-center justify-between">
       {/* Left: Brand Identity & Workspace Switcher */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 sm:gap-6">
+        <button
+          type="button"
+          onClick={onOpenMobileMenu}
+          className="md:hidden p-1.5 -ml-1 rounded-lg text-nexus-on-surface-variant hover:text-nexus-on-surface hover:bg-nexus-surface-container transition-colors"
+          aria-label="Open Navigation Menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
         <Link href="/overview" className="flex items-center gap-2.5 group">
           <div className="h-8 w-8 rounded-lg bg-nexus-primary-container flex items-center justify-center text-white shadow-tactile group-hover:scale-105 transition-transform">
             <span className="font-bold text-sm tracking-tighter">NX</span>

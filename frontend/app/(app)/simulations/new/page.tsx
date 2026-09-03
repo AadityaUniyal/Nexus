@@ -10,10 +10,58 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Sparkles, ArrowLeft, CheckCircle2 } from "lucide-react";
-import { runDeterministicSimulation, BaseMetricsSnapshot, SimulationVariables } from "@/lib/simulation-engine";
 import { MatrixScenarioVisualizer, VehicleCandidate } from "@/components/simulation/MatrixScenarioVisualizer";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+
+export interface SimulationVariables {
+  vehicleId?: string;
+  currentRouteId?: string;
+  alternateRouteType?: string;
+  speedDeltaPct?: number;
+  fuelCostPerKm?: number;
+  priorityReordering?: boolean;
+}
+
+export interface BaseMetricsSnapshot {
+  totalDistanceKm: number;
+  avgDurationMins: number;
+  currentDelayMins: number;
+  ordersCount: number;
+  totalOrderValue: number;
+  baseCostUsd: number;
+}
+
+export interface SimulationResultMetrics {
+  totalDistanceKm: number;
+  totalDurationMins: number;
+  projectedDelayMins: number;
+  netTimeSavedMins: number;
+  totalCostUsd: number;
+  costDeltaUsd: number;
+  slaBreachRiskPct: number;
+  ordersAtRisk: number;
+  recommendationScore: number;
+  verdict: string;
+  insights: string[];
+}
+
+const DEFAULT_METRICS: SimulationResultMetrics = {
+  totalDistanceKm: 1705.0,
+  totalDurationMins: 985,
+  projectedDelayMins: 45,
+  netTimeSavedMins: 135,
+  totalCostUsd: 1530.70,
+  costDeltaUsd: 80.70,
+  slaBreachRiskPct: 12.0,
+  ordersAtRisk: 1,
+  recommendationScore: 94,
+  verdict: "HIGHLY_RECOMMENDED",
+  insights: [
+    "Corridor diversion via I-70 South Bypass restores +135 minutes of transit margin.",
+    "Dynamic SLA Priority preserves on-time delivery for high-value consignments.",
+  ],
+};
 
 const CANDIDATE_VEHICLES: VehicleCandidate[] = [
   {
@@ -64,6 +112,7 @@ function SimulationBuilderContent() {
   const [fuelCostPerKm, setFuelCostPerKm] = React.useState<number>(0.42);
   const [priorityReordering, setPriorityReordering] = React.useState<boolean>(true);
   const [isExecuting, setIsExecuting] = React.useState<boolean>(false);
+  const [computedResult, setComputedResult] = React.useState<SimulationResultMetrics>(DEFAULT_METRICS);
 
   // Baseline data snapshot
   const baseSnapshot: BaseMetricsSnapshot = React.useMemo(() => ({
@@ -75,16 +124,47 @@ function SimulationBuilderContent() {
     baseCostUsd: 1450.0,
   }), []);
 
-  // Computed deterministic simulation result in real-time
-  const computedResult = React.useMemo(() => {
-    const vars: SimulationVariables = {
-      vehicleId: vehicleIdParam,
-      alternateRouteType,
-      speedDeltaPct,
-      fuelCostPerKm,
-      priorityReordering,
+  // Query authoritative backend physics engine on parameter change
+  React.useEffect(() => {
+    let active = true;
+    const evaluateOnBackend = async () => {
+      try {
+        const res = await fetch("/api/v1/simulations/evaluate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            baseSnapshot,
+            variables: {
+              vehicleId: vehicleIdParam,
+              alternateRouteType,
+              speedDeltaPct,
+              fuelCostPerKm,
+              priorityReordering,
+            },
+          }),
+        });
+        if (res.ok && active) {
+          const data = await res.json();
+          setComputedResult({
+            totalDistanceKm: data.totalDistanceKm ?? data.total_distance_km,
+            totalDurationMins: data.totalDurationMins ?? data.total_duration_mins,
+            projectedDelayMins: data.projectedDelayMins ?? data.projected_delay_mins,
+            netTimeSavedMins: data.netTimeSavedMins ?? data.net_time_saved_mins,
+            totalCostUsd: data.totalCostUsd ?? data.total_cost_usd,
+            costDeltaUsd: data.costDeltaUsd ?? data.cost_delta_usd,
+            slaBreachRiskPct: data.slaBreachRiskPct ?? data.sla_breach_risk_pct,
+            ordersAtRisk: data.ordersAtRisk ?? data.orders_at_risk,
+            recommendationScore: data.recommendationScore ?? data.recommendation_score,
+            verdict: data.verdict,
+            insights: data.insights || [],
+          });
+        }
+      } catch {
+        // Keep current evaluated state on transient network error
+      }
     };
-    return runDeterministicSimulation(baseSnapshot, vars);
+    evaluateOnBackend();
+    return () => { active = false; };
   }, [baseSnapshot, vehicleIdParam, alternateRouteType, speedDeltaPct, fuelCostPerKm, priorityReordering]);
 
   const handleRunScenario = async () => {
@@ -106,22 +186,26 @@ function SimulationBuilderContent() {
           },
         }),
       });
-      const json = await res.json();
-      if (json.data) {
-        toast({
-          title: `Simulation ${json.data.code} Created`,
-          message: "Evaluated deterministic scenario model.",
-          type: "simulation",
-        });
-        router.push(`/simulations/${json.data.id}`);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || err.detail || "Simulation execution failed on backend authority.");
       }
-    } catch {
+
+      const json = await res.json();
+      const simData = json.data || json;
       toast({
-        title: "Simulation Executed",
-        message: "Saved in operational memory.",
+        title: `Simulation ${simData.code || "Scenario"} Evaluated`,
+        message: "Evaluated deterministic scenario model on backend authority.",
         type: "simulation",
       });
-      router.push("/simulations");
+      router.push(`/simulations/${simData.id}`);
+    } catch (err: any) {
+      toast({
+        title: "Simulation Execution Failed",
+        message: err.message || "Backend simulation authority could not complete scenario evaluation.",
+        type: "critical",
+      });
     } finally {
       setIsExecuting(false);
     }

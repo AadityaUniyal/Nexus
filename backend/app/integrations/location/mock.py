@@ -129,22 +129,6 @@ class MockLocationProvider(LocationProvider):
                     )
                 )
 
-        if not results:
-            results.append(
-                LocationAutocompleteItem(
-                    id=f"loc-{uuid.uuid4().hex[:8]}",
-                    label=f"{query.title()}, Operational Zone",
-                    secondary_label="Regional Logistics Terminal",
-                    latitude=30.3165,
-                    longitude=78.0322,
-                    type="city",
-                    country="Global",
-                    country_code="gl",
-                    city=query.title(),
-                    confidence=0.90,
-                )
-            )
-
         return results[:limit]
 
     async def geocode(self, query: str, limit: int = 1) -> List[ResolvedLocation]:
@@ -169,21 +153,7 @@ class MockLocationProvider(LocationProvider):
                         provider="mock",
                     )
                 ]
-        return [
-            ResolvedLocation(
-                id=f"res-{uuid.uuid4().hex[:8]}",
-                display_name=f"{query.title()}, Operational Node",
-                formatted_address=f"{query.title()}, Operational Logistics Node",
-                latitude=30.3165,
-                longitude=78.0322,
-                country="Global",
-                country_code="gl",
-                city=query.title(),
-                type="city",
-                confidence=0.85,
-                provider="mock",
-            )
-        ]
+        return []
 
     async def reverse_geocode(
         self,

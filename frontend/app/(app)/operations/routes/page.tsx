@@ -9,12 +9,23 @@ import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
 import { Route as RouteIcon, Search, ArrowRight } from 'lucide-react';
-import { INITIAL_ROUTES, RouteItem } from '@/lib/mock-data';
+import { RouteItem } from '@/lib/mock-data';
+import { dataProvider } from '@/lib/data-provider';
 import { FadeIn } from '@/components/motion';
 
 export default function RoutesListPage() {
   const [search, setSearch] = React.useState('');
-  const [routes] = React.useState<RouteItem[]>(INITIAL_ROUTES);
+  const [routes, setRoutes] = React.useState<RouteItem[]>([]);
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const data = await dataProvider.getRoutes();
+        if (data && data.length > 0) setRoutes(data);
+      } catch {}
+    }
+    load();
+  }, []);
 
   const filtered = routes.filter(
     (r) =>

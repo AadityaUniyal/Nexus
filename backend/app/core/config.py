@@ -1,4 +1,5 @@
 import os
+import secrets
 from typing import List, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -7,7 +8,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "NEXUS Operational Intelligence Platform"
     VERSION: str = "2.0.0"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "nexus_super_secret_jwt_signing_key_production_ready_2026")
+    SECRET_KEY: str = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     APP_ENV: str = os.getenv("APP_ENV", "development")
