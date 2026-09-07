@@ -28,9 +28,11 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-    # Groq AI
+    # Dual-Provider AI Subsystem (Groq Primary + Gemini Fallback)
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     # Geoapify & Location Provider Subsystem
     GEOAPIFY_API_KEY: str = os.getenv("GEOAPIFY_API_KEY", "")
@@ -50,13 +52,46 @@ class Settings(BaseSettings):
     AZURE_CLIENT_SECRET: str = os.getenv("AZURE_CLIENT_SECRET", "")
     FABRIC_WORKSPACE_ID: str = os.getenv("FABRIC_WORKSPACE_ID", "")
 
+    # Email & Verification Configuration
+    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.example.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "noreply@nexus.platform")
+    EMAIL_VERIFICATION_ENABLED: bool = os.getenv("EMAIL_VERIFICATION_ENABLED", "false").lower() == "true"
+
+    # Weather Cache Configuration (Redis / Memory)
+    WEATHER_CACHE_TTL_SECONDS: int = int(os.getenv("WEATHER_CACHE_TTL_SECONDS", "1800"))
+
     # CORS
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
     CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
-        "http://127.0.0.1:8000"
+        "http://127.0.0.1:8000",
     ]
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_url(cls, v: str) -> str:
+        if not v:
+            return v
+        if v.startswith("postgresql://"):
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if "sslmode=require" in v and "ssl=" not in v:
+            v = v.replace("sslmode=require", "ssl=require")
+        return v
+
+    @field_validator("SECRET_KEY", mode="after")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        app_env = os.getenv("APP_ENV", "development").lower()
+        if app_env == "production" and not os.getenv("SECRET_KEY"):
+            raise ValueError(
+                "CRITICAL SECURITY ERROR: SECRET_KEY environment variable MUST be explicitly set in production mode!"
+            )
+        return v
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

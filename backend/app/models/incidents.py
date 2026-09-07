@@ -18,21 +18,25 @@ class Incident(Base, TimestampMixin):
     affected_entity_id: Mapped[str] = mapped_column(String(64), nullable=False)
     affected_entity_name: Mapped[str] = mapped_column(String(255), nullable=False)
     
+    vehicle_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("vehicles.id", ondelete="SET NULL"), nullable=True, index=True)
+    vehicle: Mapped[Optional["app.models.operations.Vehicle"]] = relationship("app.models.operations.Vehicle")
+    
     delay_minutes: Mapped[int] = mapped_column(Integer, default=0)
     cost_estimate: Mapped[float] = mapped_column(Float, default=0.0)
     root_cause: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ai_analysis: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
 
-    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     workspace: Mapped["app.models.user.Workspace"] = relationship("app.models.user.Workspace", back_populates="incidents")
     timeline: Mapped[List["IncidentTimeline"]] = relationship("IncidentTimeline", back_populates="incident", cascade="all, delete-orphan")
+    simulations: Mapped[List["app.models.simulations.Simulation"]] = relationship("app.models.simulations.Simulation", back_populates="incident")
 
 class IncidentTimeline(Base, TimestampMixin):
     __tablename__ = "incident_timelines"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    incident_id: Mapped[str] = mapped_column(String(64), ForeignKey("incidents.id"), nullable=False)
+    incident_id: Mapped[str] = mapped_column(String(64), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False, index=True)
     incident: Mapped["Incident"] = relationship("Incident", back_populates="timeline")
     
     status: Mapped[str] = mapped_column(String(64), nullable=False)

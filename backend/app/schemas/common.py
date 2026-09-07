@@ -13,7 +13,8 @@ class StandardErrorResponse(BaseModel):
     error: StandardErrorDetail
 
 class PaginatedResponse(BaseModel, Generic[T]):
-    items: List[T]
+    data: List[T]
     total: int
-    page: int = 1
-    pageSize: int = 50
+    page: int
+    limit: int
+    pages: int

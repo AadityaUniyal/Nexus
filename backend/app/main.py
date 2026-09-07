@@ -1,3 +1,4 @@
+import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -9,23 +10,25 @@ from app.core.errors import NexusException
 from app.api.v1.api import api_router
 from app.api.v1.endpoints import webhooks
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("nexus")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup actions
-    print(f"[*] Starting {settings.PROJECT_NAME} v{settings.VERSION}")
-    print(f"[*] API Documentation available at /docs")
+    logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}")
+    logger.info("API Documentation available at /docs")
     try:
         from app.db.session import engine
         from app.db.base import Base
         import app.models  # ensure models registered
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        print(f"[*] PostgreSQL database schemas verified.")
+        logger.info("Run 'alembic upgrade head' to apply migrations")
+        logger.info("PostgreSQL database schemas verified.")
     except Exception as e:
-        print(f"[!] Warning: Database schema check error: {e}")
+        logger.warning(f"Warning: Database schema check error: {e}")
     yield
     # Shutdown actions
-    print(f"[*] Shutting down {settings.PROJECT_NAME}")
+    logger.info(f"Shutting down {settings.PROJECT_NAME}")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -39,19 +42,23 @@ app = FastAPI(
 
 from app.core.rate_limit import RateLimitMiddleware
 
+cors_origins = settings.CORS_ORIGINS
+if settings.FRONTEND_URL and settings.FRONTEND_URL not in cors_origins:
+    cors_origins.append(settings.FRONTEND_URL)
+
 # Set CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.add_middleware(RateLimitMiddleware)
 
-# Custom Request Timing & Logging Middleware
+# Custom Request Timing, Security Headers & Logging Middleware
 @app.middleware("http")
-async def add_process_time_and_request_id(request: Request, call_next):
+async def add_process_time_and_security_headers(request: Request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
     start_time = time.time()
@@ -61,6 +68,15 @@ async def add_process_time_and_request_id(request: Request, call_next):
     process_time = (time.time() - start_time) * 1000
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Process-Time-Ms"] = f"{process_time:.2f}"
+    
+    # OWASP Security Headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if settings.APP_ENV == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 # Global Exception Handler for Nexus Exceptions

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://nexus-backend.onrender.com/api/v1/:path*"
+    }
+  ]
+}

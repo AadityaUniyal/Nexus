@@ -17,10 +17,25 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setIsLoading(false);
+      setSent(true);
+      toast({
+        title: 'Recovery Link Dispatched',
+        message: data.message || 'Check your enterprise email for reset credentials.',
+        type: 'info',
+      });
+    } catch {
       setIsLoading(false);
       setSent(true);
       toast({
@@ -28,7 +43,7 @@ export default function ForgotPasswordPage() {
         message: 'Check your enterprise email for reset credentials.',
         type: 'info',
       });
-    }, 700);
+    }
   };
 
   return (

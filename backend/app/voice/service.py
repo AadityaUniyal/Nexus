@@ -1,23 +1,61 @@
 import json
+import logging
 from typing import Dict, Any, Optional
+import httpx
 from groq import AsyncGroq
 from app.core.config import settings
 from app.voice.schemas import VoiceCommandRequest, VoiceCommandResponse, VoiceToolCall
 from app.voice.tools import VOICE_TOOLS_SPEC, execute_voice_tool
 
+logger = logging.getLogger("nexus.voice")
+
 class VoiceAgentService:
     def __init__(self):
-        self.api_key = settings.GROQ_API_KEY
-        self.model = settings.GROQ_MODEL
+        self.groq_api_key = settings.GROQ_API_KEY
+        self.groq_model = settings.GROQ_MODEL
+        self.gemini_api_key = settings.GEMINI_API_KEY
+        self.gemini_model = settings.GEMINI_MODEL
+
         self.client = None
-        if self.api_key:
+        if self.groq_api_key:
             try:
-                self.client = AsyncGroq(api_key=self.api_key)
+                self.client = AsyncGroq(api_key=self.groq_api_key)
             except Exception:
                 self.client = None
 
+    async def _call_gemini_voice(self, transcript: str, system_prompt: str) -> Optional[str]:
+        """Secondary fallback LLM for conversational voice response via Google Gemini REST API."""
+        if not self.gemini_api_key:
+            return None
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model}:generateContent?key={self.gemini_api_key}"
+        payload = {
+            "system_instruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"parts": [{"text": transcript}]}],
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 200,
+            }
+        }
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                res = await client.post(url, json=payload)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        parts = candidates[0]["content"].get("parts", [])
+                        if parts and "text" in parts[0]:
+                            text = parts[0]["text"].strip()
+                            if text:
+                                logger.info("Successfully generated voice response via Gemini fallback.")
+                                return text
+        except Exception as e:
+            logger.warning(f"Gemini voice failover error: {e}")
+        return None
+
     async def process_spoken_command(self, req: VoiceCommandRequest) -> VoiceCommandResponse:
-        """Process spoken operator query using Groq tool calling."""
+        """Process spoken operator query using Groq tool calling with Gemini secondary failover."""
         fallback_speech = "NEXUS tactical dispatch standing by. Please state your command."
         
         if not req.transcript:
@@ -33,14 +71,9 @@ class VoiceAgentService:
             "Keep your verbal responses concise, crisp, and tactical (1-2 sentences maximum)."
         )
 
-        candidate_models = [
-            self.model,
-            "llama-3.3-70b-versatile",
-            "llama-3.1-70b-versatile",
-            "llama3-70b-8192",
-            "llama3-8b-8192",
-        ]
+        candidate_models = [self.groq_model, "llama-3.3-70b-versatile"] if self.groq_model != "llama-3.3-70b-versatile" else ["llama-3.3-70b-versatile"]
 
+        # 1. Try Groq Primary
         if self.client:
             for model_name in candidate_models:
                 try:
@@ -82,10 +115,20 @@ class VoiceAgentService:
                         confidence=0.95,
                     )
 
-                except Exception:
-                    continue
+                except Exception as e:
+                    logger.warning(f"Groq voice completion error: {e}. Initiating Gemini fallback...")
+                    break
 
-        # Deterministic regex / intent fallback
+        # 2. Try Gemini Secondary Fallback for conversation
+        gemini_speech = await self._call_gemini_voice(req.transcript, system_prompt)
+        if gemini_speech:
+            return VoiceCommandResponse(
+                speech_response=gemini_speech,
+                action_type="CONVERSATION",
+                confidence=0.90,
+            )
+
+        # 3. Deterministic regex / intent fallback
         t_low = req.transcript.lower()
         if "fly" in t_low or "map" in t_low or "chicago" in t_low or "dehradun" in t_low or "denver" in t_low:
             loc = "Dehradun" if "dehradun" in t_low else "Denver" if "denver" in t_low else "Chicago"

@@ -35,4 +35,14 @@ async def test_ai_simulation_explanation():
 async def test_ai_health():
     health = await ai_service.health_check()
     assert "status" in health
-    assert health["provider"] == "groq"
+    assert "active_provider" in health
+    assert "providers" in health
+    assert "groq" in health["providers"]
+    assert "gemini" in health["providers"]
+
+@pytest.mark.asyncio
+async def test_ai_gemini_fallback():
+    # Verify fallback method handles prompt execution without crashing
+    res = await ai_service._call_gemini_fallback("ping", max_tokens=2, temperature=0.0)
+    # Returns string if key valid, or None if unconfigured - must not raise exception
+    assert res is None or isinstance(res, str)

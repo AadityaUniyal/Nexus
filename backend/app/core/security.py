@@ -7,24 +7,30 @@ from app.core.config import settings
 
 import bcrypt
 
+def _preprocess_password(password: str) -> bytes:
+    """Pre-process password using SHA-256 digest to safely normalize strings of any length without UTF-8 slicing errors."""
+    return hashlib.sha256(password.encode("utf-8")).digest()
+
 def get_password_hash(password: str) -> str:
-    """Generate salted bcrypt hash for password storage (truncated safely to 72 bytes)."""
-    pw_bytes = password.encode("utf-8")[:72]
+    """Generate salted bcrypt hash for password storage using SHA-256 pre-hashing."""
+    pw_bytes = _preprocess_password(password)
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(pw_bytes, salt).decode("utf-8")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password against bcrypt hash, with fallback verification for legacy SHA256 hashes."""
-    if hashed_password and (hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$")):
-        try:
-            pw_bytes = plain_password.encode("utf-8")[:72]
-            return bcrypt.checkpw(pw_bytes, hashed_password.encode("utf-8"))
-        except Exception:
-            return False
-    # Legacy SHA-256 fallback support
-    salt = settings.SECRET_KEY[:16]
-    legacy_hash = hashlib.sha256(f"{salt}{plain_password}".encode("utf-8")).hexdigest()
-    return hmac.compare_digest(legacy_hash, hashed_password)
+    """Verify password against bcrypt hash."""
+    if not hashed_password or not (hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$")):
+        return False
+    try:
+        pw_bytes = _preprocess_password(plain_password)
+        # Check preprocessed hash
+        if bcrypt.checkpw(pw_bytes, hashed_password.encode("utf-8")):
+            return True
+        # Fallback check for legacy raw passwords (pre-SHA-256)
+        raw_bytes = plain_password.encode("utf-8")[:72]
+        return bcrypt.checkpw(raw_bytes, hashed_password.encode("utf-8"))
+    except Exception:
+        return False
 
 def create_access_token(
     subject: Union[str, Any],

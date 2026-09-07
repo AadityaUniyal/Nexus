@@ -31,6 +31,28 @@ class TacticalAudioEngine {
     this.soundEnabled = enabled;
   }
 
+  /** Generic sound dispatcher helper */
+  public play(soundType: string = 'click') {
+    switch (soundType) {
+      case 'ping':
+      case 'telemetry':
+        this.playTelemetryPing();
+        break;
+      case 'success':
+      case 'chord':
+        this.playSuccessChord();
+        break;
+      case 'alert':
+      case 'critical':
+        this.playCriticalAlert();
+        break;
+      case 'click':
+      default:
+        this.playClick();
+        break;
+    }
+  }
+
   /** Subtle tactile button click feedback */
   public playClick() {
     if (!this.soundEnabled) return;

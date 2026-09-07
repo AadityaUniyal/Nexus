@@ -65,4 +65,18 @@ class UserRead(UserBase):
     id: str
     workspace_id: str = Field(..., alias="workspaceId")
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., alias="newPassword")
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class AuthMessageResponse(BaseModel):
+    status: str = "SUCCESS"
+    message: str
+
 Token.model_rebuild()

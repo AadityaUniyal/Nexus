@@ -62,6 +62,12 @@ export interface NexusDataProvider {
   getUser(id: string): Promise<UserItem | null>;
   updateUserRole(id: string, role: string): Promise<UserItem>;
   getEvents(): Promise<OperationalEventItem[]>;
+  submitContact(data: any): Promise<void>;
+  submitFeedback(data: any): Promise<void>;
+  getProfile(): Promise<any>;
+  updateProfile(data: any): Promise<any>;
+  getSettings(): Promise<any>;
+  updateSettings(data: any): Promise<any>;
 }
 
 const BACKEND_URL =
@@ -742,6 +748,42 @@ export class ApiNexusDataProvider implements NexusDataProvider {
     }
     return [];
   }
+
+  async submitContact(data: any): Promise<void> {
+    await this.fetchApi("/api/v1/contact", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async submitFeedback(data: any): Promise<void> {
+    await this.fetchApi("/api/v1/feedback", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProfile(): Promise<any> {
+    return this.fetchApi("/api/v1/me/profile");
+  }
+
+  async updateProfile(data: any): Promise<any> {
+    return this.fetchApi("/api/v1/me/profile", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSettings(): Promise<any> {
+    return this.fetchApi("/api/v1/me/settings");
+  }
+
+  async updateSettings(data: any): Promise<any> {
+    return this.fetchApi("/api/v1/me/settings", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 /**
@@ -904,6 +946,30 @@ export class MockNexusDataProvider implements NexusDataProvider {
 
   async getEvents(): Promise<OperationalEventItem[]> {
     return [...INITIAL_EVENTS];
+  }
+
+  async submitContact(data: any): Promise<void> {
+    return Promise.resolve();
+  }
+
+  async submitFeedback(data: any): Promise<void> {
+    return Promise.resolve();
+  }
+
+  async getProfile(): Promise<any> {
+    return Promise.resolve({});
+  }
+
+  async updateProfile(data: any): Promise<any> {
+    return Promise.resolve(data);
+  }
+
+  async getSettings(): Promise<any> {
+    return Promise.resolve({});
+  }
+
+  async updateSettings(data: any): Promise<any> {
+    return Promise.resolve(data);
   }
 }
 

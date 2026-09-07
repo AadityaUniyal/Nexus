@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusLed } from "@/components/ui/status-led";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { formatDateTime } from "@/lib/utils";
 import { TelemetryStreamController } from "./TelemetryStreamController";
 
@@ -123,6 +124,9 @@ export function Navbar({
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-600 ring-2 ring-nexus-surface" />
           )}
         </button>
+
+        {/* Theme Toggle Button */}
+        <ThemeToggle />
 
         {/* User Profile Menu */}
         <div className="relative">

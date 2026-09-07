@@ -21,6 +21,8 @@ export interface NexusPulseItem {
 class RealtimeClient {
   private eventSource: EventSource | null = null;
   private reconnectTimeout: any = null;
+  private heartbeatTimeout: any = null;
+  private reconnectAttempts = 0;
   private pulseListeners: Set<(item: NexusPulseItem) => void> = new Set();
   private pulseHistory: NexusPulseItem[] = [];
   private isConnected = false;
@@ -31,14 +33,21 @@ class RealtimeClient {
     }
   }
 
-  private initConnection() {
+  private resetHeartbeatWatchdog() {
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+    }
+    // If no SSE pulse/ping is received within 45 seconds, reconnect stream safely
+    this.heartbeatTimeout = setTimeout(() => {
+      console.warn("[NEXUS Realtime] SSE Heartbeat watchdog timeout. Reconnecting...");
+      this.initConnection();
+    }, 45000);
+  }
+
+  public initConnection() {
     if (typeof window === "undefined" || typeof EventSource === "undefined") return;
 
-    if (this.eventSource) {
-      try {
-        this.eventSource.close();
-      } catch {}
-    }
+    this.disconnect();
 
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
     const streamUrl = `${backendUrl}/api/v1/realtime/stream`;
@@ -48,35 +57,57 @@ class RealtimeClient {
 
       this.eventSource.onopen = () => {
         this.isConnected = true;
+        this.reconnectAttempts = 0;
+        this.resetHeartbeatWatchdog();
         console.log("[NEXUS Realtime] SSE connection established to:", streamUrl);
       };
 
       this.eventSource.onmessage = (e) => {
+        this.resetHeartbeatWatchdog();
         try {
           const payload = JSON.parse(e.data);
           this.handleIncomingEvent(payload);
         } catch (err) {
-          console.error("[NEXUS Realtime] Error parsing event:", err);
+          console.error("[NEXUS Realtime] Error parsing event payload:", err);
         }
       };
 
       this.eventSource.onerror = () => {
         this.isConnected = false;
-        if (this.eventSource) {
-          this.eventSource.close();
-          this.eventSource = null;
-        }
-        // Attempt reconnect in 5 seconds
+        this.disconnect();
+
+        // Calculate exponential backoff retry delay (1s, 2s, 4s, 8s, up to 30s)
+        const delay = Math.min(30000, Math.pow(2, this.reconnectAttempts) * 1000);
+        this.reconnectAttempts++;
+
         if (!this.reconnectTimeout) {
           this.reconnectTimeout = setTimeout(() => {
             this.reconnectTimeout = null;
             this.initConnection();
-          }, 5000);
+          }, delay);
         }
       };
     } catch (err) {
-      console.warn("[NEXUS Realtime] Could not connect to SSE stream:", err);
+      console.warn("[NEXUS Realtime] Could not initialize SSE stream:", err);
     }
+  }
+
+  public disconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
+    if (this.eventSource) {
+      try {
+        this.eventSource.close();
+      } catch {}
+      this.eventSource = null;
+    }
+    this.isConnected = false;
   }
 
   private handleIncomingEvent(msg: { type: string; timestamp: string; data?: any }) {

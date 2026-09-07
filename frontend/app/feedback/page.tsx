@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar3D } from '@/components/avatar/Avatar3D';
 import { FadeIn, SpringCard } from '@/components/motion';
+import { useToast } from '@/components/ui/toast';
+import { dataProvider } from '@/lib/data-provider';
 
 export default function FeedbackPage() {
+  const { toast } = useToast();
   const [submitted, setSubmitted] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [form, setForm] = React.useState({
@@ -22,14 +25,19 @@ export default function FeedbackPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await fetch('/api/v1/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      await dataProvider.submitFeedback(form);
+      setSubmitted(true);
+      toast({
+        title: 'Feedback Submitted',
+        message: 'Thank you for your feedback.',
+        type: 'success'
       });
-      setSubmitted(true);
-    } catch {
-      setSubmitted(true);
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        message: 'Failed to submit feedback.',
+        type: 'critical'
+      });
     } finally {
       setLoading(false);
     }

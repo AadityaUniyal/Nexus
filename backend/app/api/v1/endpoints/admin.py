@@ -298,7 +298,7 @@ async def test_integration_provider(
     if provider_clean in ["geoapify", "location", "maps"]:
         loc = get_location_provider()
         return await loc.health_check()
-    elif provider_clean in ["groq", "ai", "groq_ai"]:
+    elif provider_clean in ["groq", "gemini", "ai", "groq_ai", "llm"]:
         return await ai_service.health_check()
     elif provider_clean in ["azure", "azure_iot", "iot"]:
         return {"provider": "azure_iot", "status": "HEALTHY", "latencyMs": 28, "testedAt": datetime.now(timezone.utc).isoformat()}

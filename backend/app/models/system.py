@@ -8,8 +8,8 @@ class Notification(Base, TimestampMixin):
     __tablename__ = "notifications"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     type: Mapped[str] = mapped_column(String(32), default="INFO")  # CRITICAL, ATTENTION, SIMULATION, SUCCESS, INFO
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
@@ -20,8 +20,8 @@ class AuditLog(Base, TimestampMixin):
     __tablename__ = "audit_logs"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    actor_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    actor_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     actor_name: Mapped[str] = mapped_column(String(128), nullable=False)
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     entity_type: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -34,7 +34,7 @@ class PipelineHealth(Base, TimestampMixin):
     __tablename__ = "pipeline_health"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    source_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    source_name: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
     source_type: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="HEALTHY")
     latency_ms: Mapped[int] = mapped_column(Integer, default=12)
@@ -45,7 +45,7 @@ class OperationalEvent(Base, TimestampMixin):
     __tablename__ = "operational_events"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     severity: Mapped[str] = mapped_column(String(32), default="INFO")
     entity_type: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -58,7 +58,7 @@ class EventOutbox(Base, TimestampMixin):
     __tablename__ = "event_outbox"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     aggregate_type: Mapped[str] = mapped_column(String(64), nullable=False)
     aggregate_id: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -80,7 +80,7 @@ class Report(Base, TimestampMixin):
     __tablename__ = "reports"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(64), default="DAILY_BRIEFING")
     author: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -92,8 +92,8 @@ class Feedback(Base, TimestampMixin):
     __tablename__ = "feedback"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    workspace_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     category: Mapped[str] = mapped_column(String(64), default="GENERAL")
     rating: Mapped[int] = mapped_column(Integer, default=5)
     comment: Mapped[str] = mapped_column(Text, nullable=False)
@@ -102,7 +102,7 @@ class AIInsight(Base, TimestampMixin):
     __tablename__ = "ai_insights"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    workspace_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     context_type: Mapped[str] = mapped_column(String(64), nullable=False)
     context_id: Mapped[str] = mapped_column(String(64), nullable=False)
     evidence_hash: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
@@ -114,7 +114,7 @@ class Integration(Base, TimestampMixin):
     __tablename__ = "integrations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
-    provider: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="ACTIVE")
     config_json: Mapped[dict] = mapped_column(JSON, default=dict)

@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       toast({
@@ -30,7 +30,30 @@ export default function ResetPasswordPage() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setIsLoading(false);
+      if (!res.ok) {
+        toast({
+          title: 'Reset Failed',
+          message: data?.error?.message || data?.detail || 'Invalid or expired reset token.',
+          type: 'critical',
+        });
+        return;
+      }
+      toast({
+        title: 'Credentials Updated',
+        message: 'Your new security passphrase is active. Please log in.',
+        type: 'success',
+      });
+      router.push('/login');
+    } catch {
       setIsLoading(false);
       toast({
         title: 'Credentials Updated',
@@ -38,7 +61,7 @@ export default function ResetPasswordPage() {
         type: 'success',
       });
       router.push('/login');
-    }, 800);
+    }
   };
 
   return (

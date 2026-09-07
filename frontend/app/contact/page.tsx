@@ -7,9 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar3D } from '@/components/avatar/Avatar3D';
 import { FadeIn, SpringCard } from '@/components/motion';
+import { useToast } from '@/components/ui/toast';
+import { dataProvider } from '@/lib/data-provider';
 
 export default function ContactPage() {
+  const { toast } = useToast();
   const [submitted, setSubmitted] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const [form, setForm] = React.useState({
     name: '',
     email: '',
@@ -18,9 +22,26 @@ export default function ContactPage() {
     message: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    try {
+      await dataProvider.submitContact(form);
+      setSubmitted(true);
+      toast({
+        title: 'Message Sent',
+        message: 'Your advisory request has been submitted.',
+        type: 'success'
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        message: 'Failed to send message.',
+        type: 'critical'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -179,8 +200,8 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  <Button type="submit" variant="primary" className="w-full gap-2">
-                    <Send className="h-4 w-4" /> Request Systems Consultation
+                  <Button type="submit" variant="primary" className="w-full gap-2" disabled={loading}>
+                    <Send className="h-4 w-4" /> {loading ? 'Submitting...' : 'Request Systems Consultation'}
                   </Button>
                 </form>
               </SpringCard>

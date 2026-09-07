@@ -22,8 +22,9 @@ class Warehouse(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(64), default="OPERATIONAL")
     version: Mapped[int] = mapped_column(Integer, default=1)
 
-    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     workspace: Mapped["Workspace"] = relationship("app.models.user.Workspace", back_populates="warehouses")
+    orders: Mapped[List["Order"]] = relationship("Order", back_populates="warehouse")
 
 class Vehicle(Base, TimestampMixin):
     __tablename__ = "vehicles"
@@ -41,10 +42,10 @@ class Vehicle(Base, TimestampMixin):
     health_score: Mapped[int] = mapped_column(Integer, default=95)
     version: Mapped[int] = mapped_column(Integer, default=1)
     
-    current_route_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("routes.id"), nullable=True)
+    current_route_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("routes.id", ondelete="SET NULL"), nullable=True, index=True)
     current_route_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
-    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     workspace: Mapped["Workspace"] = relationship("app.models.user.Workspace", back_populates="vehicles")
     orders: Mapped[List["Order"]] = relationship("Order", back_populates="vehicle")
 
@@ -54,9 +55,9 @@ class Route(Base, TimestampMixin):
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    origin_warehouse_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    origin_warehouse_id: Mapped[str] = mapped_column(String(64), ForeignKey("warehouses.id", ondelete="CASCADE"), nullable=False, index=True)
     origin_warehouse_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    dest_warehouse_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    dest_warehouse_id: Mapped[str] = mapped_column(String(64), ForeignKey("warehouses.id", ondelete="CASCADE"), nullable=False, index=True)
     dest_warehouse_name: Mapped[str] = mapped_column(String(255), nullable=False)
     distance_km: Mapped[float] = mapped_column(Float, nullable=False)
     avg_duration_mins: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -64,8 +65,9 @@ class Route(Base, TimestampMixin):
     waypoints: Mapped[dict] = mapped_column(JSON, default=list)
     version: Mapped[int] = mapped_column(Integer, default=1)
 
-    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     workspace: Mapped["Workspace"] = relationship("app.models.user.Workspace", back_populates="routes")
+    orders: Mapped[List["Order"]] = relationship("Order", back_populates="route")
 
 class Order(Base, TimestampMixin):
     __tablename__ = "orders"
@@ -80,8 +82,15 @@ class Order(Base, TimestampMixin):
     deadline: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, default=1)
     
-    vehicle_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("vehicles.id"), nullable=True)
+    warehouse_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("warehouses.id", ondelete="SET NULL"), nullable=True, index=True)
+    warehouse: Mapped[Optional["Warehouse"]] = relationship("Warehouse", back_populates="orders")
+    
+    route_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("routes.id", ondelete="SET NULL"), nullable=True, index=True)
+    route: Mapped[Optional["Route"]] = relationship("Route", back_populates="orders")
+    
+    vehicle_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("vehicles.id", ondelete="SET NULL"), nullable=True, index=True)
     vehicle: Mapped[Optional["Vehicle"]] = relationship("Vehicle", back_populates="orders")
     vehicle_code: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
-    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    workspace: Mapped["Workspace"] = relationship("app.models.user.Workspace", back_populates="orders")

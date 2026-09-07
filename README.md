@@ -1,273 +1,366 @@
-# NEXUS — Enterprise Autonomous Logistics & Spatial Intelligence Platform
+<div align="center">
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![Backend Tests](https://img.shields.io/badge/tests-65%2F65%20passed-success.svg)
-![Next.js](https://img.shields.io/badge/frontend-61%20routes%20compiled-blue.svg)
-![FastAPI](https://img.shields.io/badge/fastapi-0.115%2B%20(Python%203.13)-009688.svg)
-![AI Engine](https://img.shields.io/badge/groq-llama--3.3--70b-purple.svg)
-![Voice Copilot](https://img.shields.io/badge/voice-pipecat--ai%201.8-orange.svg)
-![Weather Engine](https://img.shields.io/badge/weather-open--meteo%20free-cyan.svg)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+# 🌐 NEXUS — Autonomous Logistics & Spatial Intelligence Command
 
-**NEXUS** is an enterprise-grade Autonomous Logistics Command, Spatial Intelligence, and What-If Simulation platform. Designed for freight forwarders, fleet dispatchers, and operations directors, NEXUS combines real-time situational awareness, predictive detour modeling, deterministic aerodynamic energy calculations, automated incident Root Cause Analysis (RCA), and a hands-free tactical voice copilot.
+### *Enterprise What-If Simulation Platform · Dual AI Engine · 3D Spatial GIS · Tactical Voice Copilot*
+
+[![Build Status](https://img.shields.io/badge/build-passing-00e599.svg?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/AadityaUniyal/Nexus)
+[![Backend Tests](https://img.shields.io/badge/pytest-66%2F66%20passed-success.svg?style=for-the-badge&logo=python&logoColor=white)](tests)
+[![Next.js 15](https://img.shields.io/badge/next.js-v15.1%20(78%20routes)-000000.svg?style=for-the-badge&logo=nextdotjs&logoColor=white)](frontend)
+[![FastAPI](https://img.shields.io/badge/fastapi-v0.115%2B-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](backend)
+[![Database](https://img.shields.io/badge/database-Neon%20Cloud%20PostgreSQL-00e599.svg?style=for-the-badge&logo=postgresql&logoColor=white)](database)
+[![Primary AI](https://img.shields.io/badge/primary%20AI-Groq%20LLaMA%203.3--70B-f55036.svg?style=for-the-badge)](backend/app/services/ai_service.py)
+[![Failover AI](https://img.shields.io/badge/failover%20AI-Google%20Gemini%202.5--Flash-4285F4.svg?style=for-the-badge&logo=googlegemini&logoColor=white)](backend/app/services/ai_service.py)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
+
+<br/>
+
+[**Live Interactive Demo**](#-quickstart--local-development) • [**System Architecture**](#-system-architecture) • [**Operational Flow**](#-end-to-end-operational-workflow) • [**Vercel Deploy**](#-vercel-deployment-guide)
+
+</div>
+
+---
+
+## 📑 Table of Contents
+- [🏛️ System Architecture](#-system-architecture)
+- [🔄 End-to-End Operational Workflow](#-end-to-end-operational-workflow)
+- [✨ Core Capabilities & Feature Deep-Dive](#-core-capabilities--feature-deep-dive)
+- [🧮 Deterministic Simulation Physics Engine](#-deterministic-simulation-physics-engine)
+- [🤖 Dual-Engine AI Subsystem (Groq + Gemini Failover)](#-dual-engine-ai-subsystem-groq--gemini-failover)
+- [📂 Monorepo Repository Structure](#-monorepo-repository-structure)
+- [🔑 Environment Setup](#-environment-setup)
+- [🧪 Automated Test Verification Metrics](#-automated-test-verification-metrics)
+- [🚀 Quickstart & Local Development](#-quickstart--local-development)
+- [🌐 Vercel Deployment Guide](#-vercel-deployment-guide)
 
 ---
 
 ## 🏛️ System Architecture
 
-NEXUS is engineered as a clean 4-tier monorepo designed for high throughput, sub-second decision-making, and strict role-based governance:
+NEXUS is engineered as a zero-downtime, sub-second 4-tier monorepo designed for high-tempo freight dispatching, hazard monitoring, and deterministic What-If simulation modeling:
 
 ```
                                 ┌────────────────────────────────────────────────────────┐
-                                │                    OPERATOR / CLIENT                   │
-                                │        Tactile HUD · 3D Companion Avatar · Voice       │
+                                │                   OPERATOR / DISPATCHER                │
+                                │   Tactile HUD · 3D Companion Avatar · Tactical Voice   │
                                 └───────────────────────────┬────────────────────────────┘
                                                             │ (HTTPS / WSS / SSE)
                                                             ▼
                                 ┌────────────────────────────────────────────────────────┐
                                 │             NEXT.JS 15 FRONTEND (APP ROUTER)           │
-                                │ • 61 Strict TypeScript Routes                          │
-                                │ • MapLibre GL 3D Vector GIS with Weather Polygon Layers│
-                                │ • Resilient Data-Provider with Standalone Fallback     │
-                                │ • Real-Time SSE Stream Watchdog & Latency Monitor      │
-                                │ • Push-to-Talk Tactical Voice Controller               │
-                                │ • Procedural Web Audio Synthesizer & Dynamic Themes    │
+                                │ • 78 Compiled Production Routes                        │
+                                │ • MapLibre GL 3D Vector GIS & Open-Meteo Radar Layers  │
+                                │ • Health-Aware Resilient Data Provider (`lib/`)        │
+                                │ • Real-Time SSE Stream Watchdog & Auto-Reconnect       │
+                                │ • 4-Channel Procedural 3D Companion Avatar             │
+                                │ • Tactical Push-to-Talk Voice Controller               │
                                 └───────────────────────────┬────────────────────────────┘
                                                             │ (REST / WebSockets / SSE)
                                                             ▼
                                 ┌────────────────────────────────────────────────────────┐
                                 │             FASTAPI ASYNCHRONOUS BACKEND               │
-                                │ • RBAC Governance & Session Security                   │
-                                │ • Geoapify Multi-Tier Geocoding, Routing & Matrix Cache│
+                                │ • Dual-Engine AI (Groq LLaMA-3.3 + Gemini 2.5 Failover)│
+                                │ • Geoapify Multi-Tier Geocoding & Routing Cache        │
                                 │ • Open-Meteo Road Weather & Blizzard Hazard Engine     │
-                                │ • Deterministic Aerodynamic Simulation Physics Engine  │
-                                │ • Native Pipecat AI Voice Pipeline & Frame Processor   │
-                                │ • Groq LLaMA-3.3-70B Tool Caller (Sub-400ms Inference) │
+                                │ • Aerodynamic Physics & SLA Probability Engine         │
+                                │ • Pipecat AI Voice Pipeline & Function Calling Router │
                                 └───────────────────────────┬────────────────────────────┘
                                                             │
-                       ┌────────────────────────────────────┴────────────────────────────────────┐
-                       ▼                                                                         ▼
-┌──────────────────────────────────────────────┐              ┌──────────────────────────────────────────────┐
-│       POSTGRESQL & PRISMA ORM / SQLALCHEMY   │              │     MICROSOFT FABRIC & IOT INGESTION         │
-│ • Optimistic Concurrency Locking (version)   │              │ • High-Throughput Vehicle Telemetry Ingest   │
-│ • Multi-Tenant Workspace Partitions          │              │ • Delta Lake Historical Analytics            │
-│ • Immutable Audit Logs & Event Outbox Queue  │              │ • Real-time Stream Processing                │
-└──────────────────────────────────────────────┘              └──────────────────────────────────────────────┘
+                        ┌───────────────────────────────────┴───────────────────────────────────┐
+                        ▼                                                                       ▼
+ ┌──────────────────────────────────────────────┐              ┌──────────────────────────────────────────────┐
+ │       NEON CLOUD POSTGRESQL & ALEMBIC        │              │     MICROSOFT FABRIC & IOT INGESTION         │
+ │ • 26 Fully Connected Relational Tables (FKs) │              │ • High-Throughput Vehicle Telemetry Ingest   │
+ │ • Optimistic Concurrency Control (version)   │              │ • Delta Lake Historical Analytics            │
+ │ • Multi-Tenant Workspace Partitions          │              │ • Real-time Stream Processing                │
+ └──────────────────────────────────────────────┘              └──────────────────────────────────────────────┘
+```
+
+### 🔁 Real-Time State Mutation & Event Flow Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operator as Operator / Dispatcher
+    participant UI as Next.js 15 App Shell
+    participant DP as Data Provider (lib/data-provider.ts)
+    participant API as FastAPI Gateway
+    participant AI as Dual AI Engine (Groq / Gemini)
+    participant DB as Neon Cloud PostgreSQL
+    participant SSE as Realtime SSE Broadcaster
+    participant Avatar as 3D Companion Avatar
+
+    Operator->>UI: Triggers Spoken Voice Command / UI Simulation Click
+    UI->>AI: Parse Intent & Tool Call ("Simulate I-70 Detour on NX-104")
+    AI-->>UI: Executed Tool Calling JSON Payload
+    UI->>DP: POST /api/v1/simulations/run
+    DP->>API: Validates JWT Bearer & RBAC Clearance
+    API->>API: Executes Deterministic Physics & SLA CDF Math
+    API->>DB: Mutates Entity with Optimistic Concurrency Check (version=version+1)
+    DB-->>API: Transaction Committed
+    API->>SSE: Broadcasts Operational Event to Event Stream
+    SSE-->>UI: SSE Event Received (Sub-50ms)
+    UI->>Avatar: Shift Mood State (SIMULATING -> SUCCESS)
+    UI-->>Operator: Render Dynamic 3D Spline, Pareto Score & Spoken Audio Feedback
 ```
 
 ---
 
 ## 🔄 End-to-End Operational Workflow
 
-NEXUS operates as a continuous closed-loop operational cycle:
+NEXUS operates as a continuous closed-loop operational intelligence cycle:
 
 ```mermaid
 flowchart TD
-    A["1. Operator Onboarding & Workspace Setup"] -->|"Selects Base Hub & Modality"| B["2. Dynamic Spatial GIS Initialized"]
-    B -->|"Ingests Real-Time IoT GPS & Telemetry"| C["3. Continuous Anomaly Monitoring"]
-    C -->|"Detects Blizzard Impasse / Crosswind Hazard"| D["4. Incident Flagged & 3D Avatar Shifts to CRITICAL"]
-    D -->|"Operator: 'Simulate I-70 detour on NX-104'"| E["5. Pipecat Voice Agent & Groq Tool Calling"]
-    E -->|"Executes Mathematical Simulation Engine"| F["6. Pareto Trade-Off Optimization"]
-    F -->|"Time Saved: +135m · Cost: +$45 · SLA Risk: 4.2%"| G["7. Executive Rationale & RCA Generated"]
-    G -->|"Operator Approves Spoken / Button Decision"| H["8. Atomic Decision Lock & Immutable Audit Log"]
+    A["1. Dynamic Operator Onboarding"] -->|"Selects Hub Coordinates & Freight Modality"| B["2. Dynamic 3D Spatial GIS Initialized"]
+    B -->|"Ingests Real-Time GPS & Battery SOC Splines"| C["3. Continuous Hazard & Anomaly Monitoring"]
+    C -->|"Open-Meteo Flags Blizzard / High Crosswinds"| D["4. Incident Created & 3D Avatar Shifts to CRITICAL"]
+    D -->|"Operator Spoken Command: 'Simulate Detour for Vehicle NX-104'"| E["5. Pipecat AI & Dual Engine Tool Calling"]
+    E -->|"Runs Mathematical Physics & SLA Breach CDF Model"| F["6. Multi-Objective Pareto Trade-Off Optimization"]
+    F -->|"Time Saved: +135m · Cost: +$45 · SLA Breach Risk: 4.2%"| G["7. Automated Root Cause Analysis (RCA)"]
+    G -->|"Operator Approves Spoken / Button Decision"| H["8. Atomic Decision Lock & Audit Ledger Entry"]
     H -->|"Broadcasts Real-Time State Mutation via SSE"| B
 ```
 
-### 1. Dynamic Onboarding & Hub Initialization (Zero Hardcoding)
-* Operators configure their organization scope, industry modality (Cold Chain, Freight Forwarding, Hazardous, Last-Mile), and primary distribution hub via **Geoapify Place Autocomplete**.
-* The platform dynamically anchors the MapLibre 3D GIS viewport, warehouse cluster markers, and weather radar to the chosen coordinates.
+---
 
-### 2. Live Spatial World & Hazard Tracking
-* Live vehicle GPS telemetry, speed, heading, and battery state-of-charge (SoC) stream across the vector map.
-* **Open-Meteo Meteorological Engine** projects active blizzard polygons, road icing warnings, and high-crosswind hazard zones onto highway corridors.
+## ✨ Core Capabilities & Feature Deep-Dive
 
-### 3. Tactical Voice Copilot (Pipecat AI & Groq LLaMA-3.3-70B)
-* Operators use hands-free natural voice commands via the floating HUD companion.
-* Spoken utterances are parsed by **Groq LLaMA-3.3-70B** with sub-400ms function calling, executing physical UI actions:
-  * *"Fly map to Denver hub"* → Map camera swoops to the coordinates.
-  * *"Simulate I-70 detour on vehicle NX-104"* → Runs mathematical What-If physics simulation.
-  * *"Filter vehicles below 30% battery"* → Highlights low-charge haulers.
-  * *"Resolve incident INC-7402"* → Transitions incident state and logs resolution timeline.
+<details>
+<summary><b>1. 🗺️ Dynamic 3D GIS & Meteorological Hazard Layers</b> (Click to Expand)</summary>
 
-### 4. Deterministic Simulation Physics Engine
-* Evaluates alternative corridors using exact physical equations:
-  * **Aerodynamic Drag**: $F_{\text{aero}} = \frac{1}{2} \rho C_d A v^2$
-  * **Rolling Resistance**: $F_{\text{roll}} = C_r m g$
-  * **Mechanical Power**: $P = (F_{\text{aero}} + F_{\text{roll}}) \cdot v$
-  * **SLA Survival Risk Probability**: Normal CDF integral of scheduled delivery buffers:
-    $$P(\text{Breach}) = 1 - \Phi\left(\frac{T_{\text{deadline}} - T_{\text{estimated}}}{\sigma}\right)$$
-  * **Multi-Objective Pareto Decision Scoring** (0 – 100) balancing delay delta, energy expense, and reliability.
+<br/>
 
-### 5. Resilient Data Provider & Real-Time SSE Streaming
-* **Unified Data-Provider (`frontend/lib/data-provider.ts`)**: Direct backend API connectivity with health-aware fallback guarantees that UI views never break even in decoupled preview environments.
-* **SSE Realtime Client (`frontend/lib/realtime-client.ts`)**: Server-Sent Events via `/api/v1/stream/events` and `/api/v1/stream/notifications` with heartbeat watchdog and automated reconnection.
+- **MapLibre GL Vector Graphics**: Renders high-frame-rate 3D vector maps with smooth camera swoop transitions.
+- **Open-Meteo Meteorological Radar**: Projects real-time blizzard hazard polygons, road icing warnings, and high-crosswind hazard corridors over active freight routes.
+- **Debounced Geoapify Place Search**: Autocomplete geocoding with multi-tier Redis/in-memory TTL caching for instant spatial positioning.
 
-### 6. Atomic Decision Execution & Immutable Governance
-* Approved route diversions and fleet re-assignments are committed using **optimistic concurrency locking (`version: int`)** to prevent race conditions (`HTTP 409 SIMULATION_STALE`).
-* Every action is stamped into the immutable cryptographic audit ledger with actor ID, timestamp, and metadata diffs.
+</details>
+
+<details>
+<summary><b>2. 🤖 4-Channel Continuous Procedural 3D Companion Avatar</b> (Click to Expand)</summary>
+
+<br/>
+
+The 3D Companion Avatar ([Avatar3D.tsx](file:///c:/Users/HP/OneDrive/Desktop/nexus/frontend/components/avatar/Avatar3D.tsx)) operates **4 simultaneous procedural animation channels**:
+
+1. **Harmonic Levitation & Figure-8 Wobble**: Sinusoidal floating (`y = Math.sin(t * 1.8) * 0.09`) paired with figure-8 pitch & roll rotation.
+2. **Rhythmic Breathing & Beacon Pulse**: Mesh expansion (`1.0 + Math.sin(t * 2.2) * 0.025`) and glowing emissive beacon pulses.
+3. **Dual Counter-Rotating Orbital Rings & Particle Swarm**: Inner ring rotates clockwise, outer ring counter-clockwise with 36 orbiting spatial energy particles.
+4. **Organic Eye-Blink & Cursor Gaze**: Eyes and head damp smoothly toward mouse movement with organic eye-blinks.
+5. **Interactive 3D Gestures**: 360° click spin jump with tactile Web Audio sound synthesis, plus pointer-drag manual 360° spin rotation.
+
+</details>
+
+<details>
+<summary><b>3. ⚡ Dual-Engine AI Subsystem (Groq + Gemini Failover)</b> (Click to Expand)</summary>
+
+<br/>
+
+- **Primary Engine**: **Groq AI** (`llama-3.3-70b-versatile`) delivering sub-400ms operational briefings, Root Cause Analysis (RCA), and voice tool-calling intent execution.
+- **Secondary Failover Engine**: **Google Gemini AI** (`gemini-2.5-flash`) REST API failover automatically engaged if Groq hits rate limits (429), timeouts, or service interruptions.
+- **Zero-Downtime Guarantee**: Tertiary deterministic analytical engine ensures full platform functionality even if cloud APIs are offline.
+
+</details>
+
+<details>
+<summary><b>4. 🎙️ Hands-Free Tactical Voice Copilot (Pipecat AI)</b> (Click to Expand)</summary>
+
+<br/>
+
+- Natural language voice commands to control 3D camera viewports, triage severe incidents, run What-If simulations, and inspect fleet telemetry hands-free.
+- Integrated Web Audio waveform visualizer and tactile sound synthesizer.
+
+</details>
+
+<details>
+<summary><b>5. 🐘 Neon Cloud PostgreSQL Database & 26 Relational Tables</b> (Click to Expand)</summary>
+
+<br/>
+
+- 26 interconnected tables with foreign key constraints, cascade rules, and optimistic concurrency version locks (`version: int`).
+- Alembic migration pipeline (`alembic upgrade head`) and transaction outbox pattern for event reliability.
+
+</details>
 
 ---
 
-## 📁 Repository Directory Structure
+## 🧮 Deterministic Simulation Physics Engine
+
+NEXUS calculates What-If route diversions and energy consumption using exact physical equations:
+
+### 1. Aerodynamic Drag Force
+$$F_{\text{aero}} = \frac{1}{2} \rho C_d A v^2$$
+
+### 2. Rolling Resistance Force
+$$F_{\text{roll}} = C_r m g$$
+
+### 3. Total Required Mechanical Power
+$$P = (F_{\text{aero}} + F_{\text{roll}}) \cdot v$$
+
+### 4. SLA Breach Probability (Normal Cumulative Distribution)
+$$P(\text{Breach}) = 1 - \Phi\left(\frac{T_{\text{deadline}} - T_{\text{estimated}}}{\sigma}\right)$$
+
+### 5. Multi-Objective Pareto Decision Score
+$$\text{Score} = \alpha \cdot \Delta T_{\text{saved}} + \beta \cdot \Delta E_{\text{cost}} + \gamma \cdot (1 - P(\text{Breach}))$$
+
+---
+
+## 🤖 Dual-Engine AI Subsystem (Groq + Gemini Failover)
+
+```mermaid
+flowchart LR
+    Request["Incoming Operational Prompt / Voice Tool Call"] --> Primary{"1. Primary Provider: Groq LLaMA-3.3-70B"}
+    Primary -->|200-400ms Success| Result["Return AI Briefing / RCA / Tool Call JSON"]
+    Primary -->|Rate Limit 429 / Timeout / Quota Error| Failover{"2. Secondary Provider: Google Gemini 2.5-Flash"}
+    Failover -->|300-600ms Success| Result
+    Failover -->|API Outage| RuleEngine["3. Tertiary Provider: Deterministic Analytical Rule Engine"]
+    RuleEngine --> Result
+```
+
+---
+
+## 📂 Monorepo Repository Structure
 
 ```
 nexus/
-├── backend/                             # Python 3.13 FastAPI Backend
+├── backend/                             # Python 3.13 FastAPI Backend Service
+│   ├── alembic/                         # Alembic Versioned Migrations (Aad5e71dd967 Schema)
 │   ├── app/
-│   │   ├── api/v1/endpoints/            # REST & SSE Routers (Auth, Overview, Incidents, Sim, Ops, Location, World, Admin)
-│   │   ├── core/                        # Configuration, TTL Caching, Security, JWT, Error Handlers
-│   │   ├── db/                          # Database Session & Base Engine (PostgreSQL / SQLite)
-│   │   ├── integrations/                # Location (Geoapify) & Weather (Open-Meteo) Providers
-│   │   ├── models/                      # SQLAlchemy ORM Models (User, Workspace, Vehicle, Warehouse, Route, Order, Incident, Simulation, AuditLog)
-│   │   ├── schemas/                     # Pydantic DTOs & Validation Schemas
-│   │   ├── services/                    # Domain Services (AI, Location, Simulation Engine, Incidents)
-│   │   ├── voice/                       # Pipecat AI Framework Bot, Tools, and Frame Processors
-│   │   └── workers/                     # Transactional Outbox Background Worker
-│   ├── scripts/                         # Database Seeding & Verification Scripts
+│   │   ├── api/v1/                      # REST & SSE Endpoint Routers (Auth, Incidents, Sims, Ops, Admin)
+│   │   ├── core/                        # Neon Database Config, Security, JWT, Error Handlers
+│   │   ├── db/                          # AsyncPG Database Session & Base Engine
+│   │   ├── integrations/                # Location (Geoapify) & Weather (Open-Meteo) Service Providers
+│   │   ├── models/                      # SQLAlchemy ORM Models (26 Interconnected Tables)
+│   │   ├── schemas/                     # Pydantic DTO Schemas & Data Validation
+│   │   ├── services/                    # Dual AI Subsystem (Groq+Gemini), Physics Simulation Engine
+│   │   ├── voice/                       # Pipecat AI Framework Voice Agent & Frame Processors
+│   │   └── workers/                     # Background Outbox Queue Worker
+│   ├── scripts/                         # Database Seeding & Reset Scripts (seed_demo.py)
 │   ├── requirements.txt                 # Backend Python Dependencies
-│   └── pyproject.toml                   # Pytest & Tooling Configuration
+│   └── pyproject.toml                   # Pytest Tooling Configuration
 │
-├── frontend/                            # Next.js 15 App Router Frontend
+├── frontend/                            # Next.js 15 App Router Frontend Application
 │   ├── app/
 │   │   ├── (auth)/                      # Split-Screen 3D Login, Signup, Password Recovery
-│   │   ├── (onboarding)/                # Dynamic 5-Step Guided Setup (Role, Modality, Hub Picker)
-│   │   ├── (app)/                       # Core Operations (Overview, Live World, Operations, Incidents, Simulations, Admin)
-│   │   ├── features/                    # Interactive Features Explorer (8 Deep-Dive Sub-Pages)
-│   │   ├── contact/                     # Enterprise Support & Inquiries
-│   │   ├── faq/                         # Frequently Asked Questions
-│   │   └── feedback/                    # Operator Feedback Portal
+│   │   ├── (onboarding)/                # Guided 5-Step Operational Onboarding
+│   │   ├── (app)/                       # Core Workspace Pages (Overview, Live World, Operations, Sims, Admin)
+│   │   ├── features/                    # Interactive Feature Sub-Pages
+│   │   ├── contact/                     # Enterprise Support Page
+│   │   └── feedback/                    # Feedback Submission Modal
 │   ├── components/
-│   │   ├── avatar/                      # 3D Procedural Companion Avatar (9 Mood States) & Global Widget
-│   │   ├── brand/                       # 3D WebGL Hero & 7-Stage Scrollytelling Journey
-│   │   ├── layout/                      # AppShell, Navbar, Sidebar, Breadcrumbs
-│   │   ├── location/                    # Location Search & Picker with Debounced Autocomplete
-│   │   ├── map/                         # MapLibre 3D GIS Map, Route Renderers, and Hazard Polygons
-│   │   ├── motion/                      # SpringCard, FadeIn, StaggerList, NumberTransition
-│   │   ├── simulation/                  # What-If Scenario Builder & Matrix Visualizer
-│   │   ├── ui/                          # NexusPulse, StateViews, Glassmorphism Cards, Drawers & Modals
-│   │   └── voice/                       # Tactical Voice Controller & Web Audio Waveform Visualizer
-│   ├── lib/                             # Data-Provider, Realtime Client, Sound Synthesizer, State Stores
-│   ├── styles/                          # Color Tokens (tokens.css) & Global Styles
-│   ├── next.config.ts                   # Next.js Build & Header Optimizations
-│   ├── tailwind.config.ts               # Custom Color Tokens, Elevation & Animation Presets
-│   └── vercel.json                      # Vercel Deployment Configuration
+│   │   ├── avatar/                      # 3D Companion Avatar (4 Animation Channels + Gestures)
+│   │   ├── layout/                      # AppShell, Navbar with ThemeToggle, Sidebar, Breadcrumbs
+│   │   ├── map/                         # MapLibre 3D Vector Map & Open-Meteo Hazard Polygons
+│   │   ├── voice/                       # Tactical Voice HUD & Audio Waveform Visualizer
+│   │   └── ui/                          # NexusPulse, Glassmorphic Cards, StateViews, Modals
+│   ├── lib/                             # Resilient Data Provider, SSE Client, State Management
+│   ├── vercel.json                      # Vercel Frontend Configuration
+│   ├── next.config.ts                   # Next.js Optimization Config
+│   └── tailwind.config.ts               # Custom Color Tokens & Presets
 │
-├── database/                            # Database Layer & Migrations
-│   ├── prisma/
-│   │   └── schema.prisma                # PostgreSQL Database Schema
-│   └── migrations/                      # Versioned Schema Migrations
+├── database/                            # Database Layer
+│   └── prisma/
+│       └── schema.prisma                # Prisma ORM Database Schema
 │
-├── tests/                               # Comprehensive Automated Test Suites (65 Tests)
-│   └── backend/
-│       ├── test_admin_and_governance.py # RBAC, Audit Ledger & Telemetry Pipeline Tests
-│       ├── test_adversarial_challenge.py# Boundary, Error & Invalid State Rejection Tests
-│       ├── test_ai_service.py           # Groq AI Inference, RCA & Briefing Tests
-│       ├── test_auth_security.py        # Password Hashing, JWT Verification & Access Control
-│       ├── test_challenger_m1.py        # Dynamic Baseline & Route Optimization Tests
-│       ├── test_full_operational_vertical_slice.py # End-to-End Operational Lifecycle Integration
-│       ├── test_incident_service.py     # Incident State Transitions & Severity Escalation
-│       ├── test_location_service.py     # Geoapify Geocoding, Routing & Multi-Tier Caching
-│       ├── test_remediation_regression.py # Regression & Edge Case Validation Suite
-│       ├── test_simulation_engine.py    # Aerodynamic Energy & Delay Recovery Calculation Tests
-│       ├── test_user_and_auth_lifecycle.py # Wrong Password 401 Rejection & Demo Authentication
-│       ├── test_voice_agent.py          # Spoken Command Tool Calling & Spatial Navigation
-│       ├── test_weather_and_pipecat.py  # Open-Meteo Hazards & Native Pipecat Frame Processors
-│       └── test_webhooks_and_concurrency.py # Optimistic Locking & Webhook Dispatch Tests
+├── tests/                               # Comprehensive Test Suites (66 Tests)
+│   └── backend/                         # Pytest Suites (Auth, RBAC, Dual AI, Voice, Physics, DB)
 │
-├── docs/                                # Technical Architecture & Reference Documentation
-│   ├── ARCHITECTURE.md                  # Comprehensive Architectural Specification
-│   ├── DATABASE.md                      # Schema Definitions, Relations & Indexing Strategy
-│   └── DESIGN_SYSTEM.md                 # Warm Industrial Design System & Token Hierarchy
+├── docs/                                # Reference & System Specifications
+│   ├── ARCHITECTURE.md                  # Comprehensive Architecture Specification
+│   ├── DATABASE.md                      # Neon Schema Specifications & Relational ERD
+│   └── DESIGN_SYSTEM.md                 # Industrial Design Tokens & Canvas Specs
 │
+├── vercel.json                          # Monorepo Root Vercel Configuration
 ├── .env.example                         # Environment Variables Template
-├── .gitignore                           # Git Ignore Rules (Secrets & Build Artifacts Excluded)
+├── CONTRIBUTING.md                      # Contribution Guidelines & Code Standards
 ├── LICENSE                              # Open Source MIT License
 ├── package.json                         # Monorepo Workspace Scripts
-├── run.py                               # Concurrently Launcher for Frontend & Backend
+├── run.py                               # Concurrent Monorepo Orchestrator
 └── README.md                            # Master System Documentation
 ```
 
 ---
 
-## 🔒 Security, RBAC & Governance Standards
+## 🔑 Environment Setup
 
-| Role | Permissions | Access Scope |
-| :--- | :--- | :--- |
-| **ADMINISTRATOR** | Full Governance, RBAC Role Assignment, Pipeline Diagnostics, Audit Ledger Inspection | `/admin/*`, `/overview`, All Routes |
-| **OPERATIONS_MANAGER** | Fleet Command, Decision Authorization, Simulation Execution, Incident Triage | `/overview`, `/live-world`, `/operations/*`, `/simulations/*`, `/incidents/*` |
-| **ANALYST** | Historical Performance Analysis, Cost Optimization Modeling, Report Generation | `/overview`, `/features/analytics`, `/features/reports`, `/simulations` |
-| **OPERATOR** | Live Superhub Dispatch, Vehicle Telemetry Monitoring, Voice Commands | `/overview`, `/live-world`, `/operations/*`, `/notifications` |
+Create a `.env` file in the root directory (and copy to `backend/.env` and `frontend/.env.local`):
 
-### Security Guarantees:
-* **Secret Isolation**: All sensitive credentials (`GROQ_API_KEY`, `GEOAPIFY_API_KEY`, PostgreSQL credentials) reside strictly in server-side configuration and are never bundled into client scripts.
-* **Access Control Gating**: Frontend admin routes (`/admin/*`) are protected with tactical access-denied shields for unauthorized roles.
-* **Authentication Safeguards**: Passwords require $\ge 6$ characters with salted bcrypt hashing. Wrong credentials immediately yield HTTP 401 with visual and auditory error feedback.
-* **Optimistic Concurrency Control**: Entity version checks prevent race conditions during high-tempo incident triage.
+```ini
+# --- Neon Cloud PostgreSQL Database ---
+DATABASE_URL=postgresql+asyncpg://username:password@ep-your-database.neon.tech/neondb?sslmode=require
 
----
+# --- Dual AI Providers ---
+GROQ_API_KEY=gsk_your_groq_api_key_here
+GEMINI_API_KEY=AIzaSy_your_gemini_api_key_here
 
-## 🧪 Verification & Test Metrics
+# --- Location & Spatial Services ---
+GEOAPIFY_API_KEY=your_geoapify_key_here
 
-NEXUS is thoroughly tested across both backend and frontend layers:
+# --- Security & JWT ---
+SECRET_KEY=your_production_secret_key_32_chars_min
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
-| Layer | Command | Status | Description |
-| :--- | :--- | :--- | :--- |
-| **Backend Test Suite** | `cd backend && python -m pytest` | **65/65 Passed** | Auth lifecycle, RBAC, Groq AI, Pipecat voice bot, Open-Meteo weather, and physics simulations |
-| **Frontend Type Check** | `cd frontend && npx tsc --noEmit` | **0 Errors** | Strict TypeScript compilation across all 61 routes |
-| **Production Build** | `cd frontend && npm run build` | **61/61 Compiled** | Production bundle generation and static page optimization |
+# --- Frontend API Connectivity ---
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
 ---
 
-## 🚀 Getting Started
+## 🧪 Automated Test Verification Metrics
 
-### Prerequisites
-* **Node.js**: v18.17+ or v20+
-* **Python**: v3.11+ or v3.13+
-* **npm** or **pnpm**
+| Layer | Verification Command | Result / Status | Details |
+| :--- | :--- | :---: | :--- |
+| **Backend Test Suite** | `python run.py --test` | ✅ **66/66 Passed** | Auth, RBAC, Dual Groq+Gemini AI, Pipecat Voice, Open-Meteo Weather & Physics Engine |
+| **Frontend Type Check** | `cd frontend && npx tsc --noEmit` | ✅ **0 Errors** | Strict TypeScript compilation across all 78 routes |
+| **Production Build** | `python run.py --compile` | ✅ **78/78 Compiled** | Next.js App Router bundle generation & static optimization |
 
-### 1. Clone & Configure Environment
+---
+
+## 🚀 Quickstart & Local Development
+
+### 1. Clone Repository & Install Dependencies
 ```bash
 git clone https://github.com/AadityaUniyal/Nexus.git
 cd Nexus
 
-# Copy environment variables
-cp .env.example .env
-cp .env.example backend/.env
-cp .env.example frontend/.env.local
-```
-
-### 2. Install Dependencies
-```bash
-# Install root & frontend dependencies
+# Install frontend dependencies
 npm install
 
-# Install backend Python dependencies
+# Install backend dependencies
 cd backend
 pip install -r requirements.txt
 cd ..
 ```
 
-### 3. Run Automated Tests
+### 2. Apply Database Migrations
 ```bash
-# Run backend pytest suite (65/65 tests)
-cd backend && python -m pytest ../tests/backend && cd ..
-
-# Run frontend TypeScript type-check
-cd frontend && npx tsc --noEmit && cd ..
+cd backend
+alembic upgrade head
+cd ..
 ```
 
-### 4. Launch Development Servers
+### 3. Launch Development Monorepo
 ```bash
-# Option A: Start both concurrently from root
+# Launch backend and frontend concurrently
 python run.py
-
-# Option B: Run separately
-# Terminal 1 (Backend API on http://localhost:8000)
-cd backend && uvicorn app.main:app --reload --port 8000
-
-# Terminal 2 (Frontend App on http://localhost:3000)
-cd frontend && npm run dev
 ```
+- **Frontend HUD Console**: `http://localhost:3000`
+- **FastAPI Interactive Docs**: `http://localhost:8000/docs`
+
+---
+
+## 🌐 Vercel Deployment Guide
+
+Deploying NEXUS on Vercel takes less than 2 minutes:
+
+1. Push your repository branch to GitHub.
+2. Import the project in your Vercel Dashboard.
+3. Keep root configuration or set **Root Directory** to `frontend`.
+4. Configure Environment Variables in Vercel settings:
+   - `NEXT_PUBLIC_API_URL`: URL of your deployed FastAPI backend (e.g. `https://nexus-api.onrender.com`).
+5. Click **Deploy**! Vercel automatically builds all 78 App Router pages.
 
 ---
 

@@ -4,8 +4,19 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Avatar3D, AvatarMood } from '@/components/avatar/Avatar3D';
-import { NexusHero3D } from '@/components/brand/NexusHero3D';
+import type { AvatarMood } from '@/components/avatar/Avatar3D';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const Avatar3D = dynamic(() => import('@/components/avatar/Avatar3D').then(m => m.Avatar3D), {
+  ssr: false,
+  loading: () => <Skeleton className="w-full h-full min-h-[100px] min-w-[100px] rounded-full" />
+});
+
+const NexusHero3D = dynamic(() => import('@/components/brand/NexusHero3D').then(m => m.NexusHero3D), {
+  ssr: false,
+  loading: () => <Skeleton className="w-full h-full min-h-[300px] rounded-3xl" />
+});
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -47,54 +58,29 @@ export default function LoginPage() {
       return;
     }
 
-    // Explicit bad password check
-    if (password === 'wrongpassword' || password === '123' || password === 'invalid') {
-      setAvatarMood('ERROR');
-      tactileAudio.playCriticalAlert();
-      setErrorMessage('Authentication Denied: Invalid security credentials.');
-      toast({
-        title: 'Access Denied (401)',
-        message: 'The email or security passphrase you entered does not match.',
-        type: 'critical',
-      });
-      return;
-    }
-
     setIsLoading(true);
     setAvatarMood('LOADING');
     tactileAudio.playClick();
 
-    // Map role based on email
-    let userRole = 'OPERATIONS_MANAGER';
-    let userName = email.split('@')[0].replace('.', ' ');
-    userName = userName.charAt(0).toUpperCase() + userName.slice(1);
-    let dept = 'Central Fleet Operations';
-
-    if (email.includes('admin') || email.includes('marcus')) {
-      userRole = 'ADMINISTRATOR';
-      dept = 'Platform Governance & Security';
-    } else if (email.includes('elena') || email.includes('analyst')) {
-      userRole = 'ANALYST';
-      dept = 'Operational Analytics & Optimization';
-    } else if (email.includes('david') || email.includes('operator')) {
-      userRole = 'OPERATOR';
-      dept = 'Central Superhub Control';
-    }
-
-    const userData = {
-      id: `usr-${userRole.toLowerCase().slice(0, 3)}-1`,
-      email,
-      name: userName,
-      role: userRole,
-      department: dept,
-      workspace_id: 'ws-demo-1',
-    };
-
     try {
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Invalid email or password');
+      }
+
+      const data = await res.json();
+      
       // Save authenticated session state
       if (typeof window !== 'undefined') {
-        localStorage.setItem('nexus_user', JSON.stringify(userData));
-        localStorage.setItem('nexus_auth_token', 'nxtok_' + Date.now());
+        localStorage.setItem('nexus_user', JSON.stringify(data.user));
+        localStorage.setItem('nexus_auth_token', data.access_token);
       }
 
       setTimeout(() => {
@@ -103,21 +89,27 @@ export default function LoginPage() {
         tactileAudio.playSuccessChord();
         toast({
           title: 'Session Authenticated',
-          message: `Welcome to NEXUS Command, ${userName} (${userRole}).`,
+          message: `Welcome to NEXUS Command, ${data.user.name} (${data.user.role}).`,
           type: 'success',
         });
         setTimeout(() => {
-          if (userRole === 'ADMINISTRATOR') {
+          if (data.user.role === 'ADMINISTRATOR') {
             router.push('/admin');
           } else {
             router.push('/overview');
           }
         }, 500);
       }, 700);
-    } catch {
+    } catch (err: any) {
       setIsLoading(false);
       setAvatarMood('ERROR');
-      setErrorMessage('Unexpected authentication failure. Please retry.');
+      tactileAudio.playCriticalAlert();
+      setErrorMessage(err.message || 'Authentication Denied: Invalid security credentials.');
+      toast({
+        title: 'Access Denied',
+        message: 'The email or security passphrase you entered does not match.',
+        type: 'critical',
+      });
     }
   };
 
