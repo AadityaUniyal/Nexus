@@ -8,15 +8,50 @@ import asyncio
 from typing import Dict, Any, Optional
 from loguru import logger
 
-from pipecat.pipeline.pipeline import Pipeline
-from pipecat.frames.frames import (
-    Frame,
-    TextFrame,
-    LLMFullResponseStartFrame,
-    LLMFullResponseEndFrame,
-    EndFrame,
-)
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+try:
+    from pipecat.pipeline.pipeline import Pipeline
+    from pipecat.frames.frames import (
+        Frame,
+        TextFrame,
+        LLMFullResponseStartFrame,
+        LLMFullResponseEndFrame,
+        EndFrame,
+    )
+    from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+except ImportError:
+    class Frame:
+        pass
+
+    class TextFrame(Frame):
+        def __init__(self, text: str = ""):
+            self.text = text
+
+    class LLMFullResponseStartFrame(Frame):
+        pass
+
+    class LLMFullResponseEndFrame(Frame):
+        pass
+
+    class EndFrame(Frame):
+        pass
+
+    class FrameDirection:
+        DOWNSTREAM = "downstream"
+        UPSTREAM = "upstream"
+
+    class FrameProcessor:
+        def __init__(self):
+            pass
+
+        async def process_frame(self, frame: Any, direction: Any = None):
+            pass
+
+        async def push_frame(self, frame: Any, direction: Any = None):
+            pass
+
+    class Pipeline:
+        def __init__(self, processors: list):
+            self.processors = processors
 
 from app.core.config import settings
 from app.voice.tools import execute_voice_tool
@@ -29,7 +64,7 @@ class NexusDispatchProcessor(FrameProcessor):
     def __init__(self):
         super().__init__()
 
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
+    async def process_frame(self, frame: Frame, direction: FrameDirection = FrameDirection.DOWNSTREAM):
         await super().process_frame(frame, direction)
 
         if isinstance(frame, TextFrame):
