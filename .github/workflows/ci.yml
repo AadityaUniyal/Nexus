@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: '3.13'
       - run: pip install -r backend/requirements.txt
-      - run: cd backend && python -m pytest ../tests/backend -v
+      - run: cd backend && PYTHONPATH=. python -m pytest ../tests/backend -v
   frontend-build:
     runs-on: ubuntu-latest
     steps:
