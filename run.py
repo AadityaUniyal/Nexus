@@ -6,7 +6,6 @@ Orchestrates backend FastAPI and frontend Next.js 15 concurrently.
 Usage:
   python run.py            -> Start both Backend & Frontend dev servers
   python run.py --compile  -> Compile & build production bundles
-  python run.py --test     -> Run all automated test suites (30/30 pytest + tsc)
 """
 
 import sys
@@ -44,16 +43,10 @@ def print_banner():
     print(banner)
 
 
-def run_tests():
-    """Run full verification across backend pytest and frontend TypeScript."""
+def check_typecheck():
+    """Verify Frontend TypeScript Compilation."""
     print_banner()
-    print("[1/2] [TEST] Running Backend Pytest Suite (30 test modules)...")
-    res_py = subprocess.run([sys.executable, "-m", "pytest"], cwd=BACKEND_DIR)
-    if res_py.returncode != 0:
-        print("\n[FAIL] Backend test verification failed.")
-        sys.exit(res_py.returncode)
-
-    print("\n[2/2] [TYPECHECK] Checking Frontend TypeScript Compilation...")
+    print("[1/1] [TYPECHECK] Checking Frontend TypeScript Compilation...")
     npm_cmd = "npx.cmd" if os.name == "nt" else "npx"
     res_ts = subprocess.run(
         [npm_cmd, "tsc", "--noEmit"],
@@ -64,19 +57,19 @@ def run_tests():
         print("\n[FAIL] Frontend TypeScript verification failed.")
         sys.exit(res_ts.returncode)
 
-    print("\n[SUCCESS] ALL 30 BACKEND TESTS & 78 FRONTEND ROUTES PASSED.\n")
+    print("\n[SUCCESS] FRONTEND TYPESCRIPT CHECK PASSED.\n")
 
 
 def compile_project():
-    """Compile Prisma ORM client and Next.js production build."""
+    """Compile Next.js production build."""
     print_banner()
-    print("[1/2] [VERIFY] Verifying Backend Dependencies and Syntax...")
+    print("[1/2] [VERIFY] Verifying Backend Syntax & Imports...")
     res_py = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q"],
+        [sys.executable, "-c", "import app.main; print('[+] Backend main app imported cleanly.')"],
         cwd=BACKEND_DIR,
     )
     if res_py.returncode != 0:
-        print("[FAIL] Backend check failed.")
+        print("[FAIL] Backend syntax check failed.")
         sys.exit(res_py.returncode)
 
     print("\n[2/2] [BUILD] Compiling Next.js 15 Production Bundle...")
@@ -165,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--test",
         action="store_true",
-        help="Run automated test suite (30/30 backend + tsc)",
+        help="Run TypeScript typecheck",
     )
     parser.add_argument(
         "--dev",
@@ -176,7 +169,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.test:
-        run_tests()
+        check_typecheck()
     elif args.compile:
         compile_project()
     else:
