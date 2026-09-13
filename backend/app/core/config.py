@@ -81,6 +81,8 @@ class Settings(BaseSettings):
             v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
         if "sslmode=require" in v and "ssl=" not in v:
             v = v.replace("sslmode=require", "ssl=require")
+        if "neon.tech" in v and "ssl=" not in v and "sslmode=" not in v:
+            v = f"{v}&ssl=require" if "?" in v else f"{v}?ssl=require"
         return v
 
     @field_validator("SECRET_KEY", mode="after")

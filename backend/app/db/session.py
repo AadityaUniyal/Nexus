@@ -19,12 +19,23 @@ engine_kwargs = {
 
 if "pytest" in sys.modules:
     engine_kwargs["poolclass"] = NullPool
+elif "neon.tech" in settings.DATABASE_URL.lower():
+    # Neon Serverless PostgreSQL with built-in connection pooler
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 30,
+        "pool_recycle": 120,
+        "connect_args": {"ssl": True},
+    })
 elif "sqlite" not in settings.DATABASE_URL.lower():
     engine_kwargs.update({
         "pool_size": 10,
         "max_overflow": 20,
         "pool_timeout": 15,
     })
+    if "ssl=require" in settings.DATABASE_URL.lower() or "sslmode=require" in settings.DATABASE_URL.lower():
+        engine_kwargs["connect_args"] = {"ssl": True}
 
 engine = create_async_engine(
     settings.DATABASE_URL,
