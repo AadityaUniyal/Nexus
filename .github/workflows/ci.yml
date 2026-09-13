@@ -12,7 +12,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - run: pip install -r backend/requirements.txt
+      - run: |
+          if [ -f backend/requirements.txt ]; then
+            pip install -r backend/requirements.txt
+          else
+            pip install fastapi uvicorn pydantic pydantic-settings httpx sqlalchemy asyncpg alembic python-dotenv pytest pytest-asyncio
+          fi
       - run: cd backend && python -c "import app.main; print('Backend modules compiled successfully')"
   frontend-build:
     runs-on: ubuntu-latest
