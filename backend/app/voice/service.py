@@ -2,7 +2,10 @@ import json
 import logging
 from typing import Dict, Any, Optional
 import httpx
-from groq import AsyncGroq
+try:
+    from groq import AsyncGroq
+except ImportError:
+    AsyncGroq = None
 from app.core.config import settings
 from app.voice.schemas import VoiceCommandRequest, VoiceCommandResponse, VoiceToolCall
 from app.voice.tools import VOICE_TOOLS_SPEC, execute_voice_tool
