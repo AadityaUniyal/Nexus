@@ -96,11 +96,19 @@ INITIAL_SIMULATION_FIXTURE = {
 @router.get("", response_model=List[SimulationRead])
 async def list_simulations(
     workspace_id: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retrieve all executed What-If simulation scenarios directly from PostgreSQL."""
+    """Retrieve executed What-If simulation scenarios directly from PostgreSQL with pagination support."""
     ws = workspace_id or "ws-continental-fleet-01"
-    stmt = select(Simulation).where(Simulation.workspace_id == ws).order_by(Simulation.created_at.desc())
+    stmt = (
+        select(Simulation)
+        .where(Simulation.workspace_id == ws)
+        .order_by(Simulation.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
 
     result = await db.execute(stmt)
     sims = result.scalars().all()

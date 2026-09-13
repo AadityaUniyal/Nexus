@@ -25,11 +25,20 @@ router = APIRouter(prefix="/incidents", tags=["Incidents"])
 async def list_incidents(
     severity: str = Query(default="ALL"),
     workspace_id: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retrieve operational incidents directly from PostgreSQL with timelines."""
+    """Retrieve operational incidents directly from PostgreSQL with timelines and pagination support."""
     ws = workspace_id or "ws-continental-fleet-01"
-    stmt = select(Incident).options(selectinload(Incident.timeline)).order_by(Incident.created_at.desc()).where(Incident.workspace_id == ws)
+    stmt = (
+        select(Incident)
+        .options(selectinload(Incident.timeline))
+        .where(Incident.workspace_id == ws)
+        .order_by(Incident.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     if severity != "ALL":
         stmt = stmt.where(Incident.severity == severity.upper())
 

@@ -10,7 +10,14 @@ class TacticalAudioEngine {
   private soundEnabled: boolean = true;
 
   constructor() {
-    // Lazy initialize on first user interaction to comply with browser autoplay policies
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('nexus_sound_enabled');
+        if (stored !== null) {
+          this.soundEnabled = stored === 'true';
+        }
+      } catch (_) {}
+    }
   }
 
   private getContext(): AudioContext | null {
@@ -29,6 +36,15 @@ class TacticalAudioEngine {
 
   public setSoundEnabled(enabled: boolean) {
     this.soundEnabled = enabled;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nexus_sound_enabled', String(enabled));
+      } catch (_) {}
+    }
+  }
+
+  public isEnabled(): boolean {
+    return this.soundEnabled;
   }
 
   /** Generic sound dispatcher helper */
