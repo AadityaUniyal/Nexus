@@ -173,3 +173,67 @@ def run_deterministic_simulation(
         verdict=verdict,
         insights=insights,
     )
+
+def run_stochastic_simulation(
+    base: BaseMetricsSnapshot,
+    variables: SimulationVariables,
+    iterations: int = 500
+) -> Dict[str, Any]:
+    """
+    Monte Carlo stochastic simulation engine.
+    Executes N stochastic iterations over normal risk distributions to compute P10, P50, and P90 confidence bounds.
+    """
+    import random
+    det_res = run_deterministic_simulation(base, variables)
+    
+    delays: List[float] = []
+    costs: List[float] = []
+    sla_risks: List[float] = []
+
+    base_delay = det_res.projectedDelayMins
+    base_cost = det_res.totalCostUsd
+    base_sla = det_res.slaBreachRiskPct
+
+    for _ in range(max(50, min(2000, iterations))):
+        traffic_var = random.gauss(0.0, 8.5)
+        speed_var = random.gauss(0.0, 4.0)
+        fuel_var = random.gauss(0.0, 0.03)
+
+        iter_delay = max(0.0, base_delay + traffic_var)
+        iter_cost = max(0.0, base_cost * (1.0 + fuel_var + (traffic_var * 0.002)))
+        iter_sla = max(1.0, min(99.0, base_sla + (traffic_var * 0.4)))
+
+        delays.append(iter_delay)
+        costs.append(iter_cost)
+        sla_risks.append(iter_sla)
+
+    delays.sort()
+    costs.sort()
+    sla_risks.sort()
+
+    n = len(delays)
+    p10_idx = int(n * 0.10)
+    p50_idx = int(n * 0.50)
+    p90_idx = int(n * 0.90)
+
+    return {
+        "deterministic": det_res.model_dump(),
+        "stochastic_confidence": {
+            "iterations": n,
+            "delay_mins": {
+                "p10": round(delays[p10_idx], 1),
+                "p50": round(delays[p50_idx], 1),
+                "p90": round(delays[p90_idx], 1),
+            },
+            "cost_usd": {
+                "p10": round(costs[p10_idx], 2),
+                "p50": round(costs[p50_idx], 2),
+                "p90": round(costs[p90_idx], 2),
+            },
+            "sla_breach_risk_pct": {
+                "p10": round(sla_risks[p10_idx], 1),
+                "p50": round(sla_risks[p50_idx], 1),
+                "p90": round(sla_risks[p90_idx], 1),
+            },
+        }
+    }

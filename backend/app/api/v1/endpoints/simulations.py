@@ -34,6 +34,18 @@ async def evaluate_simulation_parameters(req: SimulationEvaluateRequest):
     """
     return run_deterministic_simulation(req.base_metrics, req.variables)
 
+@router.post("/evaluate-stochastic")
+async def evaluate_stochastic_simulation_parameters(
+    req: SimulationEvaluateRequest,
+    iterations: int = Query(default=500, ge=50, le=2000)
+):
+    """
+    Monte Carlo stochastic simulation endpoint.
+    Runs N risk iterations to compute P10, P50, and P90 percentile confidence bounds for delay, cost, and SLA survival.
+    """
+    from app.services.simulation_engine import run_stochastic_simulation
+    return run_stochastic_simulation(req.base_metrics, req.variables, iterations=iterations)
+
 INITIAL_SIMULATION_FIXTURE = {
     "id": "sim-901",
     "code": "SIM-SCENARIO-901",

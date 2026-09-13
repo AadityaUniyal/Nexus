@@ -83,3 +83,29 @@ def test_run_deterministic_simulation_relay():
 
     assert result.totalDistanceKm == 818.0
     assert result.netTimeSavedMins >= 0
+
+def test_stochastic_simulation_monte_carlo():
+    from app.services.simulation_engine import run_stochastic_simulation
+    base = BaseMetricsSnapshot(
+        totalDistanceKm=1000.0,
+        avgDurationMins=600,
+        currentDelayMins=120,
+        baseCostUsd=1200.0,
+        ordersCount=10,
+    )
+    vars = SimulationVariables(
+        alternateRouteType="I-70_SOUTH_DETOUR",
+        speedDeltaPct=10.0,
+        fuelCostPerKm=0.50,
+        priorityReordering=True,
+    )
+    res = run_stochastic_simulation(base, vars, iterations=100)
+
+    assert "deterministic" in res
+    assert "stochastic_confidence" in res
+    confidence = res["stochastic_confidence"]
+    assert confidence["iterations"] == 100
+    assert "p10" in confidence["delay_mins"]
+    assert "p50" in confidence["delay_mins"]
+    assert "p90" in confidence["delay_mins"]
+    assert confidence["delay_mins"]["p10"] <= confidence["delay_mins"]["p90"]
