@@ -153,7 +153,24 @@ class MockLocationProvider(LocationProvider):
                         provider="mock",
                     )
                 ]
-        return []
+        return [
+            ResolvedLocation(
+                id=f"loc-mock-{uuid.uuid4().hex[:8]}",
+                display_name=f"{query.title()}, Hub Region",
+                formatted_address=f"{query.title()}, Main Hub Way, United States",
+                latitude=39.7392,
+                longitude=-104.9903,
+                country="United States",
+                country_code="us",
+                region="Colorado",
+                city="Denver",
+                district="Denver County",
+                postcode="80202",
+                type="city",
+                confidence=0.9,
+                provider="mock",
+            )
+        ]
 
     async def reverse_geocode(
         self,
