@@ -24,7 +24,7 @@ jobs:
           if [ -f backend/requirements.txt ]; then
             pip install -r backend/requirements.txt
           else
-            pip install fastapi uvicorn pydantic email-validator pydantic-settings httpx sqlalchemy asyncpg alembic python-dotenv pytest pytest-asyncio
+            pip install fastapi uvicorn pydantic email-validator pydantic-settings httpx sqlalchemy asyncpg alembic python-dotenv "python-jose[cryptography]" bcrypt pytest pytest-asyncio
           fi
 
       - name: Run Pytest Test Suite
