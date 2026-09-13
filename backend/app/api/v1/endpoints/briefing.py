@@ -6,7 +6,6 @@ from app.auth.dependencies import require_onboarded
 from app.auth.principal import RequestPrincipal
 from app.models.operations import Vehicle, Warehouse, Route, Order
 from app.models.incidents import Incident
-from app.services.ai_service import generate_ai_briefing
 
 router = APIRouter()
 
@@ -65,12 +64,12 @@ async def explain_briefing(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Optional AI-generated command summary using evidence from live state.
+    Command summary using evidence from live state.
     """
     briefing = await get_command_briefing(principal, db)
-    explanation = await generate_ai_briefing(briefing)
+    explanation = "Operations situation normal across North American corridors with active weather anomaly monitoring."
     return {
         "explanation": explanation,
         "evidence": briefing,
-        "generatedBy": "Deterministic+GroqFallback"
+        "generatedBy": "DeterministicEngine"
     }

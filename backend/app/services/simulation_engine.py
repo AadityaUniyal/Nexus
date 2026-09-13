@@ -6,7 +6,10 @@ def _normal_cdf(x: float, mean: float, std_dev: float) -> float:
     """Standard normal cumulative distribution function (CDF)."""
     if std_dev <= 0:
         return 1.0 if x >= mean else 0.0
-    return 0.5 * (1.0 + math.erf((x - mean) / (std_dev * math.sqrt(2.0))))
+    try:
+        return 0.5 * (1.0 + math.erf((x - mean) / (std_dev * math.sqrt(2.0))))
+    except (ValueError, OverflowError):
+        return 0.5
 
 def calculate_environmental_factor(weather: str, traffic_pct: float = 25.0) -> float:
     weather_multipliers = {
@@ -16,13 +19,16 @@ def calculate_environmental_factor(weather: str, traffic_pct: float = 25.0) -> f
         "SEVERE_BLIZZARD": 0.28,
     }
     w_factor = weather_multipliers.get(weather, 0.90)
-    traffic_impedance = 1.0 - (traffic_pct / 100.0) * 0.45
+    traffic_pct_clamped = max(0.0, min(100.0, traffic_pct))
+    traffic_impedance = 1.0 - (traffic_pct_clamped / 100.0) * 0.45
     return max(0.15, w_factor * traffic_impedance)
 
 def calculate_energy_dynamics(distance_km: float, avg_speed_kmh: float, payload_kg: float = 16800.0) -> Dict[str, float]:
     """Calculates aerodynamic and rolling resistance work in kWh."""
-    total_weight = 13500.0 + payload_kg
-    v_mps = (avg_speed_kmh * 1000.0) / 3600.0
+    safe_distance = max(0.1, distance_km)
+    safe_speed = max(5.0, avg_speed_kmh)
+    total_weight = 13500.0 + max(0.0, payload_kg)
+    v_mps = (safe_speed * 1000.0) / 3600.0
     c_d = 0.46
     frontal_area = 8.8
     rho = 1.225
@@ -32,9 +38,9 @@ def calculate_energy_dynamics(distance_km: float, avg_speed_kmh: float, payload_
     f_roll = c_r * total_weight * 9.81
     total_force = f_aero + f_roll
 
-    work_joules = total_force * (distance_km * 1000.0)
+    work_joules = total_force * (safe_distance * 1000.0)
     propulsion_kwh = work_joules / 3.6e6
-    aux_kwh = 4.2 * (distance_km / max(10.0, avg_speed_kmh))
+    aux_kwh = 4.2 * (safe_distance / safe_speed)
     net_kwh = round(propulsion_kwh + aux_kwh, 1)
 
     return {

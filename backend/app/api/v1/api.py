@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
     admin,
-    ai,
     analytics,
     auth,
     briefing,
@@ -62,4 +61,4 @@ api_router.include_router(briefing.router, prefix="/briefing", tags=["briefing"]
 api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 api_router.include_router(contact.router, prefix="/contact", tags=["contact"])
 api_router.include_router(admin.router)
-api_router.include_router(ai.router)
+
