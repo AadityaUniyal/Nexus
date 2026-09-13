@@ -50,7 +50,16 @@ def _cache_get(key: str) -> Optional[Any]:
     _METRICS["cache_misses"] += 1
     return None
 
+def _cache_prune_expired():
+    """Prunes expired keys from the in-memory cache to prevent leaks."""
+    now = time.time()
+    expired = [k for k, v in _MEMORY_CACHE.items() if now >= v["expires_at"]]
+    for k in expired:
+        _MEMORY_CACHE.pop(k, None)
+
 def _cache_set(key: str, val: Any, ttl_seconds: int = 3600):
+    if len(_MEMORY_CACHE) > 500:
+        _cache_prune_expired()
     _MEMORY_CACHE[key] = {
         "val": val,
         "expires_at": time.time() + ttl_seconds,

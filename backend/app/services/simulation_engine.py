@@ -23,16 +23,31 @@ def calculate_environmental_factor(weather: str, traffic_pct: float = 25.0) -> f
     traffic_impedance = 1.0 - (traffic_pct_clamped / 100.0) * 0.45
     return max(0.15, w_factor * traffic_impedance)
 
-def calculate_energy_dynamics(distance_km: float, avg_speed_kmh: float, payload_kg: float = 16800.0) -> Dict[str, float]:
-    """Calculates aerodynamic and rolling resistance work in kWh."""
+def calculate_energy_dynamics(
+    distance_km: float,
+    avg_speed_kmh: float,
+    payload_kg: float = 16800.0,
+    vehicle_type: str = "SEMI_TRUCK"
+) -> Dict[str, float]:
+    """Calculates aerodynamic drag and rolling resistance work in kWh across vehicle modalities."""
     safe_distance = max(0.1, distance_km)
     safe_speed = max(5.0, avg_speed_kmh)
-    total_weight = 13500.0 + max(0.0, payload_kg)
+
+    # Modality specific drag (Cd), frontal area (A), rolling resistance (Cr), base mass (kg)
+    modality_specs = {
+        "SEMI_TRUCK": {"c_d": 0.46, "area": 8.8, "c_r": 0.007, "base_mass": 13500.0},
+        "VAN": {"c_d": 0.32, "area": 4.2, "c_r": 0.010, "base_mass": 2800.0},
+        "EV_DRONE": {"c_d": 0.25, "area": 1.1, "c_r": 0.002, "base_mass": 45.0},
+        "FREIGHT_TRAIN": {"c_d": 0.18, "area": 12.5, "c_r": 0.0015, "base_mass": 450000.0},
+    }
+    spec = modality_specs.get(vehicle_type.upper(), modality_specs["SEMI_TRUCK"])
+
+    total_weight = spec["base_mass"] + max(0.0, payload_kg)
     v_mps = (safe_speed * 1000.0) / 3600.0
-    c_d = 0.46
-    frontal_area = 8.8
+    c_d = spec["c_d"]
+    frontal_area = spec["area"]
     rho = 1.225
-    c_r = 0.007
+    c_r = spec["c_r"]
 
     f_aero = 0.5 * rho * c_d * frontal_area * (v_mps ** 2)
     f_roll = c_r * total_weight * 9.81
@@ -40,7 +55,7 @@ def calculate_energy_dynamics(distance_km: float, avg_speed_kmh: float, payload_
 
     work_joules = total_force * (safe_distance * 1000.0)
     propulsion_kwh = work_joules / 3.6e6
-    aux_kwh = 4.2 * (safe_distance / safe_speed)
+    aux_kwh = (4.2 if vehicle_type.upper() == "SEMI_TRUCK" else 1.5) * (safe_distance / safe_speed)
     net_kwh = round(propulsion_kwh + aux_kwh, 1)
 
     return {
