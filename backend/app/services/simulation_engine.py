@@ -237,3 +237,12 @@ def run_stochastic_simulation(
             },
         }
     }
+
+async def run_stochastic_simulation_async(
+    base: BaseMetricsSnapshot,
+    variables: SimulationVariables,
+    iterations: int = 500
+) -> Dict[str, Any]:
+    """Non-blocking async wrapper that executes Monte Carlo simulation off-thread."""
+    import asyncio
+    return await asyncio.to_thread(run_stochastic_simulation, base, variables, iterations)

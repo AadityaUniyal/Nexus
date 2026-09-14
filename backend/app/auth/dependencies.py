@@ -21,8 +21,11 @@ async def get_current_principal(
 
     token = authorization.split(" ")[1]
     claims = await verify_clerk_token(token)
-    clerk_user_id = claims.get("sub") or "user_clerk_sarah_104"
-    email = claims.get("email") or f"{clerk_user_id}@nexus.continental"
+    clerk_user_id = claims.get("sub")
+    if not clerk_user_id:
+        raise UnauthenticatedException("Invalid token payload: missing subject (sub)")
+
+    email = claims.get("email") or f"{clerk_user_id}@nexus.internal"
     display_name = claims.get("name") or "Operational User"
 
     # Query local user or create default if not yet synced by webhook
@@ -45,13 +48,14 @@ async def get_current_principal(
             except Exception:
                 role = RoleEnum.OPERATIONS_MANAGER
         nexus_user_id = user.id
-        workspace_id = user.workspace_id or "ws-continental-fleet-01"
+        workspace_id = user.workspace_id
         is_active = user.is_active
     else:
+        # Default unregistered authenticated users to read-only VIEWER role
         if not role:
-            role = RoleEnum.OPERATIONS_MANAGER
+            role = RoleEnum.VIEWER
         nexus_user_id = f"usr-{clerk_user_id[:8]}"
-        workspace_id = "ws-continental-fleet-01"
+        workspace_id = claims.get("workspace_id") or "ws-continental-fleet-01"
         is_active = True
 
     if not is_active:

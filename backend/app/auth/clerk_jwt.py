@@ -34,17 +34,10 @@ async def verify_clerk_token(token: str) -> Dict[str, Any]:
         except Exception as e:
             raise UnauthenticatedException(f"Invalid or expired Clerk token: {str(e)}")
 
-    # In local development mode without Clerk JWKS, verify with local secret or decode unverified with fallback
+    # In local development mode without Clerk JWKS, verify strictly with local secret key
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
-    except Exception:
-        # Fallback to unverified decode in development to inspect sub/email
-        try:
-            payload = jwt.get_unverified_claims(token)
-            if payload and "sub" in payload:
-                return payload
-        except Exception:
-            pass
-        # If token is a plain identifier like 'usr-sarah-104' or mock session
-        return {"sub": token, "email": "operator@nexus.continental", "name": "Sarah Chen"}
+    except Exception as e:
+        raise UnauthenticatedException(f"Invalid or expired authorization token: {str(e)}")
+

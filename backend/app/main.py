@@ -46,13 +46,13 @@ cors_origins = settings.CORS_ORIGINS
 if settings.FRONTEND_URL and settings.FRONTEND_URL not in cors_origins:
     cors_origins.append(settings.FRONTEND_URL)
 
-# Set CORS middleware
+# Set CORS middleware with strict allowed methods and headers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Accept", "Origin"],
 )
 app.add_middleware(RateLimitMiddleware)
 
@@ -98,13 +98,18 @@ async def nexus_exception_handler(request: Request, exc: NexusException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    logger.error(f"Unhandled exception [Request ID: {req_id}]: {exc}", exc_info=True)
+    
+    # Do not leak internal exception trace/type details in production environments
+    details = {"errorType": type(exc).__name__, "detail": str(exc)} if settings.APP_ENV == "development" else None
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": {
                 "code": "INTERNAL_SERVER_ERROR",
                 "message": "An unexpected operational error occurred.",
-                "details": {"errorType": type(exc).__name__, "detail": str(exc)},
+                "details": details,
                 "requestId": req_id,
             }
         },

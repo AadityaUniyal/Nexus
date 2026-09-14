@@ -20,64 +20,33 @@ from app.core.errors import NexusException, UnauthorizedException
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-VALID_DEMO_PASSWORDS = {
-    "Password123!",
-    "nexus2026!",
-    "OperationalIntelligence2026!",
-    "nexus-demo-password",
-    "demo1234",
-    "admin123",
-    "password123",
-    "password",
-}
-
-DEMO_USERS_MAP = {
-    "sarah.chen@nexus.ops": ("Sarah Chen", "OPERATIONS_MANAGER", "Fleet Command & Decision Dispatch"),
-    "marcus.vance@nexus.ops": ("Marcus Vance", "ADMINISTRATOR", "Platform Governance & Architecture"),
-    "admin@nexus.ops": ("Marcus Vance", "ADMINISTRATOR", "Platform Governance & Security"),
-    "elena.rostova@nexus.ops": ("Elena Rostova", "ANALYST", "Operational Analytics & Optimization"),
-    "david.kim@nexus.ops": ("David Kim", "OPERATOR", "Central Superhub Control"),
-}
-
 @router.post("/login", response_model=Token)
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """Authenticate user with email and password."""
-    # First check Database for registered users
+    """Authenticate user with email and password strictly from database."""
     stmt = select(User).where(User.email == req.email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
-    if user:
-        if not verify_password(req.password, user.hashed_password):
-            raise UnauthorizedException("Invalid email or password.")
-        token = create_access_token(
-            subject=user.id,
-            extra_claims={"email": user.email, "name": user.name, "role": user.role, "workspace_id": user.workspace_id}
-        )
-        return Token(access_token=token, token_type="bearer", user=UserRead.model_validate(user))
+    if not user or not verify_password(req.password, user.hashed_password):
+        raise UnauthorizedException("Invalid email or password.")
 
-    # Check Demo account fallback with strict password validation
-    if req.email in DEMO_USERS_MAP:
-        if req.password not in VALID_DEMO_PASSWORDS:
-            raise UnauthorizedException("Invalid email or password.")
-
-        name, role, dept = DEMO_USERS_MAP[req.email]
-        user_read = UserRead(
-            id=f"usr-{role.lower()[:3]}-1",
-            email=req.email,
-            name=name,
-            role=role,
-            department=dept,
-            is_active=True,
-            workspace_id="ws-demo-1",
+    if not user.is_active:
+        raise NexusException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="ACCOUNT_SUSPENDED",
+            message="User account has been suspended.",
         )
-        token = create_access_token(
-            subject=user_read.id,
-            extra_claims={"email": user_read.email, "name": user_read.name, "role": user_read.role, "workspace_id": user_read.workspace_id}
-        )
-        return Token(access_token=token, token_type="bearer", user=user_read)
 
-    raise UnauthorizedException("Invalid email or password.")
+    token = create_access_token(
+        subject=user.id,
+        extra_claims={
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "workspace_id": user.workspace_id,
+        }
+    )
+    return Token(access_token=token, token_type="bearer", user=UserRead.model_validate(user))
 
 @router.post("/signup", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):

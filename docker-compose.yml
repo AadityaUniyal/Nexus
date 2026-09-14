@@ -1,20 +1,30 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: nexus-postgres
     restart: always
     environment:
-      POSTGRES_USER: nexus
-      POSTGRES_PASSWORD: nexuspassword
-      POSTGRES_DB: nexus
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexuspassword}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nexus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,12 +37,31 @@ services:
     restart: always
     environment:
       - APP_ENV=development
-      - DATABASE_URL=postgresql+asyncpg://nexus:nexuspassword@postgres:5432/nexus
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexuspassword}@postgres:5432/${POSTGRES_DB:-nexus}
+      - REDIS_URL=redis://redis:6379/0
+      - AZURE_IOT_HUB_ENABLED=true
+      - FABRIC_ONELAKE_ENABLED=true
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nexus-worker
+    restart: always
+    command: ["python", "-m", "app.workers.worker"]
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexuspassword}@postgres:5432/${POSTGRES_DB:-nexus}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - backend
 
   frontend:
     build:

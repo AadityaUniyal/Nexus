@@ -83,10 +83,6 @@ class LocationService:
         if cached is not None:
             return [LocationAutocompleteItem(**item) for item in cached]
 
-        _METRICS["requests_today"] += 1
-        _METRICS["autocomplete_requests"] += 1
-        _METRICS["estimated_credits"] += 1
-
         provider = get_location_provider()
         try:
             results = await provider.autocomplete(
@@ -96,6 +92,9 @@ class LocationService:
                 bias_lat=bias_lat,
                 bias_lng=bias_lng,
             )
+            _METRICS["requests_today"] += 1
+            _METRICS["autocomplete_requests"] += 1
+            _METRICS["estimated_credits"] += 1
             _cache_set(cache_key, [r.model_dump() for r in results], ttl_seconds=1800)
             return results
         except Exception as e:

@@ -48,26 +48,16 @@ INITIAL_ORDERS = [
 # --- WAREHOUSES ---
 @router.get("/warehouses", response_model=List[WarehouseRead])
 async def list_warehouses(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retrieve all operational hub warehouses directly from PostgreSQL."""
+    """Retrieve operational hub warehouses directly from PostgreSQL with pagination."""
     ws = workspace_id or "ws-continental-fleet-01"
-    stmt = select(Warehouse).where(Warehouse.workspace_id == ws)
+    stmt = select(Warehouse).where(Warehouse.workspace_id == ws).offset(skip).limit(limit)
     result = await db.execute(stmt)
-    warehouses = result.scalars().all()
-
-    if not warehouses:
-        # Seed initial warehouses into DB if empty
-        for w_data in INITIAL_WAREHOUSES:
-            ws_id = workspace_id or "ws-continental-fleet-01"
-            w = Warehouse(**{**w_data, "workspace_id": ws_id})
-            db.add(w)
-        await db.commit()
-        result = await db.execute(select(Warehouse))
-        warehouses = result.scalars().all()
-
-    return warehouses
+    return result.scalars().all()
 
 @router.get("/warehouses/{warehouse_id}", response_model=WarehouseRead)
 async def get_warehouse(warehouse_id: str, db: AsyncSession = Depends(get_db)):
@@ -97,15 +87,16 @@ async def create_warehouse(req: WarehouseCreate, db: AsyncSession = Depends(get_
 # --- VEHICLES ---
 @router.get("/vehicles", response_model=List[VehicleRead])
 async def list_vehicles(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retrieve all active fleet commercial vehicles from PostgreSQL."""
+    """Retrieve commercial vehicles from PostgreSQL with pagination."""
     ws = workspace_id or "ws-continental-fleet-01"
-    stmt = select(Vehicle).where(Vehicle.workspace_id == ws)
+    stmt = select(Vehicle).where(Vehicle.workspace_id == ws).offset(skip).limit(limit)
     result = await db.execute(stmt)
-    vehicles = result.scalars().all()
-    return vehicles
+    return result.scalars().all()
 
 @router.get("/vehicles/{vehicle_id}", response_model=VehicleRead)
 async def get_vehicle(vehicle_id: str, db: AsyncSession = Depends(get_db)):
@@ -160,24 +151,16 @@ async def update_vehicle_telemetry(
 # --- ROUTES ---
 @router.get("/routes", response_model=List[RouteRead])
 async def list_routes(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retrieve all inter-hub routes from PostgreSQL."""
+    """Retrieve inter-hub routes from PostgreSQL with pagination."""
     ws = workspace_id or "ws-continental-fleet-01"
-    stmt = select(Route).where(Route.workspace_id == ws)
+    stmt = select(Route).where(Route.workspace_id == ws).offset(skip).limit(limit)
     result = await db.execute(stmt)
-    routes = result.scalars().all()
-
-    if not routes:
-        for r_data in INITIAL_ROUTES:
-            r = Route(**{**r_data, "workspace_id": ws})
-            db.add(r)
-        await db.commit()
-        result = await db.execute(select(Route).where(Route.workspace_id == ws))
-        routes = result.scalars().all()
-
-    return routes
+    return result.scalars().all()
 
 @router.get("/routes/{route_id}", response_model=RouteRead)
 async def get_route(route_id: str, db: AsyncSession = Depends(get_db)):
@@ -205,25 +188,16 @@ async def create_route(req: RouteCreate, db: AsyncSession = Depends(get_db)):
 # --- ORDERS ---
 @router.get("/orders", response_model=List[OrderRead])
 async def list_orders(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retrieve active orders & consignments from PostgreSQL."""
+    """Retrieve active orders & consignments from PostgreSQL with pagination."""
     ws = workspace_id or "ws-continental-fleet-01"
-    stmt = select(Order).where(Order.workspace_id == ws)
+    stmt = select(Order).where(Order.workspace_id == ws).offset(skip).limit(limit)
     result = await db.execute(stmt)
-    orders = result.scalars().all()
-
-    if not orders:
-        ws_id = workspace_id or "ws-continental-fleet-01"
-        for o_data in INITIAL_ORDERS:
-            o = Order(**{**o_data, "workspace_id": ws_id})
-            db.add(o)
-        await db.commit()
-        result = await db.execute(select(Order))
-        orders = result.scalars().all()
-
-    return orders
+    return result.scalars().all()
 
 @router.post("/orders", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
 async def create_order(req: OrderCreate, db: AsyncSession = Depends(get_db)):

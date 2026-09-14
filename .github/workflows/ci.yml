@@ -27,6 +27,11 @@ jobs:
             pip install fastapi uvicorn pydantic email-validator pydantic-settings httpx sqlalchemy asyncpg alembic python-dotenv "python-jose[cryptography]" bcrypt groq loguru pipecat-ai pytest pytest-asyncio
           fi
 
+      - name: Security Vulnerability Scan (Bandit)
+        run: |
+          pip install bandit
+          bandit -r backend/app -x backend/app/tests -ll -ii || true
+
       - name: Run Pytest Test Suite
         run: |
           python -m pytest backend/tests

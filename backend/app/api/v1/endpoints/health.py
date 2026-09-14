@@ -32,6 +32,9 @@ async def health_ready(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         db_status = f"UNAVAILABLE ({type(e).__name__})"
 
+    from app.integrations.azure_iot import azure_iot_gateway
+    from app.integrations.fabric_onelake import fabric_onelake_client
+
     redis_status = "NOT_CONFIGURED" if "localhost" in settings.REDIS_URL else "CONFIGURED"
     overall_status = "READY" if db_connected else "DEGRADED"
 
@@ -42,7 +45,7 @@ async def health_ready(db: AsyncSession = Depends(get_db)):
         database_connected=db_connected,
         redis=redis_status,
         ai_inference="ONLINE (Groq LLaMA 3.3)" if settings.GROQ_API_KEY else "DISABLED",
-        azure_iot="CONNECTED" if settings.AZURE_IOT_HUB_ENABLED else "DISABLED",
-        fabric_lake="SYNCED" if settings.FABRIC_ONELAKE_ENABLED else "DISABLED",
+        azure_iot="CONNECTED (Azure IoT Hub Ingestion Active)" if azure_iot_gateway.is_healthy() else "DISABLED",
+        fabric_lake="SYNCED (Microsoft Fabric OneLake Delta Lake)" if fabric_onelake_client.is_healthy() else "DISABLED",
         timestamp=datetime.now(timezone.utc).isoformat(),
     )

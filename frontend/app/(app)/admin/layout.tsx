@@ -56,27 +56,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <ArrowLeft className="w-3.5 h-3.5" /> Return to Command Hub
             </Button>
           </Link>
-          <Button
-            variant="primary"
-            onClick={() => {
-              // Elevate demo session to administrator
-              localStorage.setItem(
-                'nexus_user',
-                JSON.stringify({
-                  id: 'usr-adm-1',
-                  name: 'Marcus Vance',
-                  role: 'ADMINISTRATOR',
-                  email: 'admin@nexus.ops',
-                  department: 'Platform Governance & Security',
-                })
-              );
-              setIsAdmin(true);
-              tactileAudio.playSuccessChord();
-            }}
-            className="font-mono text-xs gap-1.5 bg-red-600 hover:bg-red-700 text-white"
-          >
-            <Key className="w-3.5 h-3.5" /> Switch to Admin Credential
-          </Button>
         </div>
       </div>
     );
