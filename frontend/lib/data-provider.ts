@@ -952,56 +952,31 @@ export class MockNexusDataProvider implements NexusDataProvider {
   }
 
   async getEvents(): Promise<OperationalEventItem[]> {
-    try {
-      const res = await this.fetchApi<{ events: OperationalEventItem[] }>("/api/v1/intelligence/events");
-      return res.events || [];
-    } catch {
-      return [...INITIAL_EVENTS];
-    }
+    return [...INITIAL_EVENTS];
   }
 
   async submitContact(data: any): Promise<void> {
-    await this.fetchApi("/api/v1/contact", {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
+    return Promise.resolve();
   }
 
   async submitFeedback(data: any): Promise<void> {
-    await this.fetchApi("/api/v1/feedback", {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
+    return Promise.resolve();
   }
 
   async getProfile(): Promise<any> {
-    try {
-      return await this.fetchApi("/api/v1/profile");
-    } catch {
-      return { name: "User", department: "Ops" };
-    }
+    return Promise.resolve({ name: "User", department: "Ops" });
   }
 
   async updateProfile(data: any): Promise<any> {
-    return await this.fetchApi("/api/v1/profile", {
-      method: "PATCH",
-      body: JSON.stringify(data)
-    });
+    return Promise.resolve(data);
   }
 
   async getSettings(): Promise<any> {
-    try {
-      return await this.fetchApi("/api/v1/settings");
-    } catch {
-      return { theme: "industrial", notifications: true };
-    }
+    return Promise.resolve({ theme: "industrial", notifications: true });
   }
 
   async updateSettings(data: any): Promise<any> {
-    return await this.fetchApi("/api/v1/settings", {
-      method: "PATCH",
-      body: JSON.stringify(data)
-    });
+    return Promise.resolve(data);
   }
 }
 

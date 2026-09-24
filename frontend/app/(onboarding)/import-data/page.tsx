@@ -118,7 +118,7 @@ export default function ImportDataPage() {
                   id="file-upload"
                 />
                 <label htmlFor="file-upload">
-                  <Button variant="primary" className="font-mono-data" asChild>
+                  <Button variant="primary" className="font-mono-data">
                     <span>
                       <FileText className="h-4 w-4 mr-2" />
                       Select CSV File

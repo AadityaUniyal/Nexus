@@ -144,7 +144,7 @@ export default function AnalyticsPage() {
             </Button>
 
             <Button
-              variant="default"
+              variant="primary"
               size="sm"
               onClick={handleExportCSV}
               disabled={exporting}

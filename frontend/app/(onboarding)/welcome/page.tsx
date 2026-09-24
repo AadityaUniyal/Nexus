@@ -126,7 +126,7 @@ export default function WelcomePage() {
                 Try NEXUS with a pre-configured scenario: 30 vehicles facing an I-80
                 blizzard emergency. Perfect for testing features.
               </p>
-              <Badge variant="secondary" size="sm">
+              <Badge variant="neutral" size="sm">
                 Recommended for first-time users
               </Badge>
             </button>

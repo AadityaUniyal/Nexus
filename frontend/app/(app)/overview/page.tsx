@@ -461,7 +461,7 @@ export default function OverviewPage() {
                   title="No vehicles yet"
                   description="Import your fleet to start tracking vehicle telemetry in real-time."
                   action={
-                    <Button variant="primary" size="sm" asChild>
+                    <Button variant="primary" size="sm">
                       <a href="/onboarding/import-data">Import Fleet Data</a>
                     </Button>
                   }
