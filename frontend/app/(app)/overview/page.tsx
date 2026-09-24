@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Clock,
   Globe2,
+  Upload,
 } from "lucide-react";
 import {
   VehicleItem,
@@ -42,6 +43,8 @@ import {
   PulseLED,
   TactileCard,
 } from "@/components/ui/motion-animations";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { InteractiveWorldMap } from "@/components/world/InteractiveWorldMap";
 import { motion, AnimatePresence } from "motion/react";
 import { Map as MapIcon, Box } from "lucide-react";
@@ -56,14 +59,28 @@ export default function OverviewPage() {
   const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
   const [events, setEvents] = React.useState<OperationalEventItem[]>([]);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [worldView, setWorldView] = React.useState<"3D" | "GIS">("3D");
   const [briefing, setBriefing] = React.useState<string>(
     "Operations situation normal with 2 active anomalies flagged. Vehicle NX-TRK-104 is holding near Cheyenne Summit due to an I-80 corridor blizzard warning. Simulation SIM-SCENARIO-901 indicates an active I-70 detour will recover 135 minutes with 94% confidence. Fleet utilization is at 80% across 6 primary fulfillment superhubs."
   );
+  const [operationalMode, setOperationalMode] = React.useState<string>("SANDBOX");
+  const [activeScenario, setActiveScenario] = React.useState<string>("I-80 Blizzard Emergency");
+  const [showGuideBanner, setShowGuideBanner] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMode = localStorage.getItem("nexus_operational_mode");
+      if (savedMode) setOperationalMode(savedMode);
+      const savedScenario = localStorage.getItem("nexus_active_scenario");
+      if (savedScenario) setActiveScenario(savedScenario);
+    }
+  }, []);
 
   // Fetch live state directly from authoritative dataProvider (PostgreSQL backed)
   React.useEffect(() => {
     async function loadLiveTelemetry() {
+      setIsLoading(true);
       try {
         const [vData, wData, iData, rData] = await Promise.all([
           dataProvider.getVehicles(),
@@ -78,6 +95,8 @@ export default function OverviewPage() {
         if (rData && rData.length > 0) setRoutes(rData);
       } catch (err) {
         console.warn("[Overview] Using cached operational state:", err);
+      } finally {
+        setIsLoading(false);
       }
     }
     loadLiveTelemetry();
@@ -174,6 +193,44 @@ export default function OverviewPage() {
             </Link>
           </div>
         </div>
+
+        {/* Real-World Operational Launchpad Banner */}
+        {showGuideBanner && (
+          <div className="p-4 rounded-xl border border-nexus-secondary/30 bg-gradient-to-r from-nexus-secondary/10 via-nexus-surface-container/60 to-purple-500/10 shadow-tactile flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-lg bg-nexus-secondary text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-nexus-secondary text-white uppercase tracking-wider">
+                    {operationalMode === "SANDBOX" ? "Demo Sandbox Active" : "Production Operations"}
+                  </span>
+                  <span className="text-xs font-mono text-nexus-on-surface-variant">
+                    Scenario: {activeScenario}
+                  </span>
+                </div>
+                <p className="text-xs text-nexus-on-surface mt-1 leading-relaxed">
+                  {operationalMode === "SANDBOX"
+                    ? "Viewing 30 pre-configured Class-8 trucks facing an active Level-3 blizzard on I-80. You can test What-If rerouting or bring your own real fleet."
+                    : "Live enterprise fleet connected. Real-time telemetry ingestion and weather hazard monitoring active."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+              <Link href="/welcome">
+                <Button variant="outline" size="sm" className="font-mono text-xs gap-1">
+                  <Upload className="h-3.5 w-3.5" /> Launchpad / Import Fleet
+                </Button>
+              </Link>
+              <Link href="/simulations">
+                <Button variant="primary" size="sm" className="font-mono text-xs gap-1 shadow-tactile">
+                  Run Detour Sim <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Top KPI Metrics Row with Stagger Animation */}
         <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -392,34 +449,54 @@ export default function OverviewPage() {
               </Link>
             </CardHeader>
             <CardContent>
-              <div className="divide-y divide-nexus-outline-variant/20">
-                {vehicles.map((v) => (
-                  <div key={v.id} className="py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-nexus-surface-container text-nexus-on-surface">
-                        <Truck className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-nexus-on-surface">{v.code}</span>
-                          <StatusLed
-                            status={v.healthScore < 80 ? "CRITICAL" : v.status === "IN_TRANSIT" ? "HEALTHY" : "OFFLINE"}
-                            size="sm"
-                          />
+              {isLoading ? (
+                <div className="space-y-3">
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </div>
+              ) : vehicles.length === 0 ? (
+                <EmptyState
+                  icon={Truck}
+                  title="No vehicles yet"
+                  description="Import your fleet to start tracking vehicle telemetry in real-time."
+                  action={
+                    <Button variant="primary" size="sm" asChild>
+                      <a href="/onboarding/import-data">Import Fleet Data</a>
+                    </Button>
+                  }
+                  size="sm"
+                />
+              ) : (
+                <div className="divide-y divide-nexus-outline-variant/20">
+                  {vehicles.slice(0, 5).map((v) => (
+                    <div key={v.id} className="py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-nexus-surface-container text-nexus-on-surface">
+                          <Truck className="h-4 w-4" />
                         </div>
-                        <p className="text-[11px] text-nexus-on-surface-variant font-mono-data truncate max-w-xs">
-                          {v.currentRouteName || "Standby at Newark Depot"}
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-nexus-on-surface">{v.code}</span>
+                            <StatusLed
+                              status={v.healthScore < 80 ? "CRITICAL" : v.status === "IN_TRANSIT" ? "HEALTHY" : "OFFLINE"}
+                              size="sm"
+                            />
+                          </div>
+                          <p className="text-[11px] text-nexus-on-surface-variant font-mono-data truncate max-w-xs">
+                            {v.currentRouteName || "Standby at Newark Depot"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right text-xs font-mono-data">
+                        <p className="font-semibold text-nexus-on-surface">{v.speedKmh} km/h</p>
+                        <p className="text-[10px] text-nexus-on-surface-variant">Battery: {v.batteryPct}%</p>
                       </div>
                     </div>
-
-                    <div className="text-right text-xs font-mono-data">
-                      <p className="font-semibold text-nexus-on-surface">{v.speedKmh} km/h</p>
-                      <p className="text-[10px] text-nexus-on-surface-variant">Battery: {v.batteryPct}%</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

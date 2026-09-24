@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.auth.dependencies import require_onboarded
 from app.auth.principal import RequestPrincipal
 from app.models.system import Report
+from app.services.analytics_service import AnalyticsService
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -27,19 +28,20 @@ async def get_reports(
     res = await db.execute(stmt)
     reports = res.scalars().all()
     if not reports:
-        # Default sample report
+        # Default report computed live
+        overview = await AnalyticsService.get_overview(db, workspace_id=ws_id)
         return [
             {
                 "id": "rep-daily-1",
                 "title": "Daily Continental Logistics Briefing",
                 "type": "DAILY_BRIEFING",
-                "generatedAt": "2026-08-30T06:00:00Z",
-                "author": "Sarah Chen",
-                "summary": "Executive operational summary detailing fleet utilization, bottleneck resolutions, and 98.4% SLA compliance.",
+                "generatedAt": datetime.now(timezone.utc).isoformat(),
+                "author": "Nexus Analytics Engine",
+                "summary": f"Executive operational summary detailing fleet performance and {overview['slaComplianceRate']}% SLA compliance.",
                 "kpis": {
-                    "slaCompliance": 98.4,
-                    "throughput": 14200,
-                    "activeVehicles": 30
+                    "slaCompliance": overview["slaComplianceRate"],
+                    "throughput": overview["totalNetworkUnits"],
+                    "activeVehicles": overview["fleetSummary"]["activeVehicles"]
                 }
             }
         ]
@@ -64,14 +66,24 @@ async def create_report(
 ):
     ws_id = principal.workspace_id
     now_iso = datetime.now(timezone.utc).isoformat()
+    
+    # Calculate live KPIs for report payload
+    overview = await AnalyticsService.get_overview(db, workspace_id=ws_id)
+    kpis = {
+        "slaCompliance": overview["slaComplianceRate"],
+        "throughput": overview["totalNetworkUnits"],
+        "activeVehicles": overview["fleetSummary"]["activeVehicles"],
+        "activeIncidents": overview["incidentsSummary"]["activeIncidents"],
+    }
+
     report = Report(
         id=f"rep-{uuid.uuid4().hex[:10]}",
         workspace_id=ws_id,
         title=req.title,
         type=req.type,
         author=principal.display_name,
-        summary=req.summary or "Executive briefing detailing network throughput and incident resolutions.",
-        kpis={"slaCompliance": 98.6, "throughput": 15400, "activeVehicles": 32},
+        summary=req.summary or f"Executive briefing detailing {overview['totalNetworkUnits']} network units and {overview['slaComplianceRate']}% SLA compliance.",
+        kpis=kpis,
         generated_at=now_iso
     )
     db.add(report)

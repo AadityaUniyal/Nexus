@@ -33,7 +33,16 @@ export function MetricTile({
   };
 
   return (
-    <div className={cn(variantStyles[variant], "p-4 relative overflow-hidden", className)}>
+    <div
+      role="region"
+      aria-label={`${title}: ${value}`}
+      tabIndex={0}
+      className={cn(
+        variantStyles[variant],
+        "p-4 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-nexus-accent transition-all",
+        className
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {status && <StatusLed status={status} size="sm" />}
@@ -42,7 +51,7 @@ export function MetricTile({
           </span>
         </div>
         {Icon && (
-          <div className="p-1.5 rounded-md bg-nexus-surface-container/80 text-nexus-on-surface-variant">
+          <div className="p-1.5 rounded-md bg-nexus-surface-container/80 text-nexus-on-surface-variant" aria-hidden="true">
             <Icon className="h-4 w-4" />
           </div>
         )}

@@ -5,6 +5,7 @@ from enum import Enum
 class RoleEnum(str, Enum):
     ADMINISTRATOR = "ADMINISTRATOR"
     OPERATIONS_MANAGER = "OPERATIONS_MANAGER"
+    DISPATCHER = "DISPATCHER"
     ANALYST = "ANALYST"
     OPERATOR = "OPERATOR"
     VIEWER = "VIEWER"
@@ -25,6 +26,8 @@ class PermissionEnum(str, Enum):
     VIEW_AUDIT = "VIEW_AUDIT"
     MANAGE_INTEGRATIONS = "MANAGE_INTEGRATIONS"
     MANAGE_SYSTEM = "MANAGE_SYSTEM"
+    EXECUTE_ACTIONS = "EXECUTE_ACTIONS"
+    IMPORT_DATA = "IMPORT_DATA"
 
 ROLE_PERMISSIONS_MAP = {
     RoleEnum.ADMINISTRATOR: [
@@ -43,6 +46,8 @@ ROLE_PERMISSIONS_MAP = {
         PermissionEnum.VIEW_AUDIT,
         PermissionEnum.MANAGE_INTEGRATIONS,
         PermissionEnum.MANAGE_SYSTEM,
+        PermissionEnum.EXECUTE_ACTIONS,
+        PermissionEnum.IMPORT_DATA,
     ],
     RoleEnum.OPERATIONS_MANAGER: [
         PermissionEnum.VIEW_OPERATIONS,
@@ -55,6 +60,18 @@ ROLE_PERMISSIONS_MAP = {
         PermissionEnum.VIEW_INTELLIGENCE,
         PermissionEnum.VIEW_REPORTS,
         PermissionEnum.VIEW_AUDIT,
+        PermissionEnum.EXECUTE_ACTIONS,
+        PermissionEnum.IMPORT_DATA,
+    ],
+    RoleEnum.DISPATCHER: [
+        PermissionEnum.VIEW_OPERATIONS,
+        PermissionEnum.EDIT_OPERATIONS,
+        PermissionEnum.EDIT_ASSIGNED_OPERATIONS,
+        PermissionEnum.ACKNOWLEDGE_INCIDENT,
+        PermissionEnum.APPLY_DECISION,
+        PermissionEnum.RUN_SIMULATION,
+        PermissionEnum.VIEW_REPORTS,
+        PermissionEnum.EXECUTE_ACTIONS,
     ],
     RoleEnum.ANALYST: [
         PermissionEnum.VIEW_OPERATIONS,
@@ -81,6 +98,7 @@ class RequestPrincipal:
     clerk_user_id: str
     email: str
     display_name: str
+    organization_id: Optional[str] = None
     workspace_id: Optional[str] = None
     role: RoleEnum = RoleEnum.OPERATIONS_MANAGER
     permissions: List[PermissionEnum] = field(default_factory=list)

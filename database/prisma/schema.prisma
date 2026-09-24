@@ -84,6 +84,9 @@ model Workspace {
   events             OperationalEvent[]
   locations          Location[]
   workspaceLocations WorkspaceLocation[]
+  reports            Report[]
+  feedbacks          Feedback[]
+  aiInsights         AIInsight[]
 }
 
 model User {
@@ -104,6 +107,7 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
   simulations   Simulation[]
+  feedbacks     Feedback[]
 }
 
 model Location {
@@ -354,4 +358,49 @@ model DataPipelineHealth {
   errorCount       Int      @default(0)
   lastSyncAt       DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model Report {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  type        String    @default("DAILY_BRIEFING")
+  author      String    @default("Nexus Analytics Engine")
+  summary     String
+  kpis        Json
+  generatedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Feedback {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category    String    @default("GENERAL")
+  rating      Int       @default(5)
+  comments    String
+  createdAt   DateTime  @default(now())
+}
+
+model AIInsight {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  category    String    @default("OPTIMIZATION")
+  confidence  Float     @default(0.92)
+  details     Json
+  createdAt   DateTime  @default(now())
+}
+
+model EventOutbox {
+  id          String    @id @default(uuid())
+  eventType   String
+  payload     Json
+  processed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
 }

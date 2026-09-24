@@ -1,0 +1,186 @@
+/* 🎨 NEXUS - Improved Warm Color Palette
+ * More inviting, Apple-inspired, professional
+ */
+
+:root {
+  /* Base Surfaces - Warmer, less clinical */
+  --surface: #fdfcfb;
+  --surface-dim: #e8e6e4;
+  --surface-bright: #fdfcfb;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f7f5f3;
+  --surface-container: #f2f0ee;
+  --surface-container-high: #ece9e7;
+  --surface-container-highest: #e6e3e1;
+  
+  /* Text Colors - Better contrast */
+  --on-surface: #1a1918;
+  --on-surface-variant: #48464a;
+  --inverse-surface: #2f2e2d;
+  --inverse-on-surface: #f4f1ef;
+  
+  /* Borders & Outlines */
+  --outline: #787579;
+  --outline-variant: #c9c5ca;
+  --surface-tint: #5e5d5a;
+  
+  /* Primary - Warm Forest Green (inviting, not corporate) */
+  --primary: #2d5a4a;
+  --on-primary: #ffffff;
+  --primary-container: #1f3f32;
+  --on-primary-container: #a8d4c4;
+  
+  /* Secondary - Sage Teal (warmer than medical green) */
+  --secondary: #3d8371;
+  --on-secondary: #ffffff;
+  --secondary-container: #c8f2e4;
+  --on-secondary-container: #2a5f52;
+  
+  /* Tertiary - Warm Brown (earthy) */
+  --tertiary: #6b5d52;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #f4ede6;
+  --on-tertiary-container: #544842;
+  
+  /* Error - Softer Red */
+  --error: #c84b31;
+  --on-error: #ffffff;
+  --error-container: #ffdad4;
+  --on-error-container: #930006;
+  
+  /* Simulation - Warmer Purple */
+  --simulation: #7856d8;
+  --simulation-container: #f0ebfc;
+  --on-simulation: #ffffff;
+  
+  /* AI - Deep Indigo */
+  --ai: #5645a6;
+  --ai-container: #e6e0fa;
+  --on-ai: #ffffff;
+  
+  /* Semantic Colors (Better hierarchy) */
+  --color-healthy: #2d8b5f;
+  --color-attention: #d97706;
+  --color-critical: #c84b31;
+  --color-simulation: #7856d8;
+  --color-ai: #5645a6;
+  --color-success: #16a34a;
+  --color-warning: #ea580c;
+  --color-info: #0ea5e9;
+
+  /* Accent Colors for Status */
+  --accent-emerald: #059669;
+  --accent-amber: #d97706;
+  --accent-rose: #e11d48;
+  --accent-sky: #0284c7;
+  --accent-violet: #7c3aed;
+
+  /* Shadows - Warmer, softer */
+  --shadow-soft: 0 4px 20px rgba(45, 40, 35, 0.04), 0 1px 3px rgba(45, 40, 35, 0.02);
+  --shadow-medium: 0 8px 24px rgba(45, 40, 35, 0.06), 0 2px 6px rgba(45, 40, 35, 0.03);
+  --shadow-large: 0 12px 32px rgba(45, 40, 35, 0.08), 0 4px 12px rgba(45, 40, 35, 0.04);
+}
+
+.dark {
+  /* Dark Mode - Warmer blacks, less blue */
+  --surface: #18161a;
+  --surface-dim: #18161a;
+  --surface-bright: #3e3b41;
+  --surface-container-lowest: #0f0e11;
+  --surface-container-low: #201e23;
+  --surface-container: #252329;
+  --surface-container-high: #2f2d33;
+  --surface-container-highest: #3a383e;
+  
+  /* Text Colors */
+  --on-surface: #e9e7ec;
+  --on-surface-variant: #cac5cf;
+  --inverse-surface: #e9e7ec;
+  --inverse-on-surface: #18161a;
+  
+  /* Borders */
+  --outline: #938f99;
+  --outline-variant: #48454f;
+  --surface-tint: #c5bfff;
+  
+  /* Primary - Lighter in dark mode */
+  --primary: #a8d4c4;
+  --on-primary: #003828;
+  --primary-container: #2d5a4a;
+  --on-primary-container: #c8f2e4;
+  
+  /* Secondary - Brighter teal */
+  --secondary: #6dd9c8;
+  --on-secondary: #00382e;
+  --secondary-container: #005046;
+  --on-secondary-container: #8ff5e4;
+  
+  /* Tertiary - Warm tan */
+  --tertiary: #e4c9b4;
+  --on-tertiary: #42301d;
+  --tertiary-container: #5a4631;
+  --on-tertiary-container: #ffe5d0;
+  
+  /* Error */
+  --error: #ffb4a9;
+  --on-error: #690002;
+  --error-container: #93000a;
+  --on-error-container: #ffdad4;
+  
+  /* Simulation */
+  --simulation: #b39dfa;
+  --simulation-container: #3e2175;
+  --on-simulation: #ffffff;
+  
+  /* AI */
+  --ai: #d0bcfc;
+  --ai-container: #4a3085;
+  --on-ai: #ffffff;
+}
+
+/* Typography Scale (Fixed, Predictable) */
+:root {
+  --text-xs: 0.75rem;     /* 12px - Labels, captions */
+  --text-sm: 0.875rem;    /* 14px - Body small */
+  --text-base: 1rem;      /* 16px - Body text */
+  --text-lg: 1.125rem;    /* 18px - Lead paragraphs */
+  --text-xl: 1.25rem;     /* 20px - H4 */
+  --text-2xl: 1.5rem;     /* 24px - H3 */
+  --text-3xl: 1.875rem;   /* 30px - H2 */
+  --text-4xl: 2.25rem;    /* 36px - H1 */
+  --text-5xl: 3rem;       /* 48px - Hero */
+  
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+  
+  /* Letter Spacing */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;
+  
+  /* Border Radius */
+  --radius-sm: 0.5rem;    /* 8px */
+  --radius-md: 0.75rem;   /* 12px */
+  --radius-lg: 1rem;      /* 16px */
+  --radius-xl: 1.5rem;    /* 24px */
+  --radius-2xl: 2rem;     /* 32px */
+  
+  /* Spacing Scale (8px base) */
+  --space-1: 0.25rem;     /* 4px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2rem;        /* 32px */
+  --space-12: 3rem;       /* 48px */
+  --space-16: 4rem;       /* 64px */
+  --space-24: 6rem;       /* 96px */
+}

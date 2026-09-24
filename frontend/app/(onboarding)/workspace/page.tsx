@@ -30,7 +30,7 @@ export default function OnboardingWorkspacePage() {
     provider: "geoapify",
   });
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     tactileAudio.playClick();
 
@@ -41,6 +41,30 @@ export default function OnboardingWorkspacePage() {
       if (operatingLocation) {
         localStorage.setItem('nexus_workspace_location', JSON.stringify(operatingLocation));
       }
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('nexus_token') || localStorage.getItem('token')) : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/v1/organizations', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          name: workspaceName,
+          slug: workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30),
+        }),
+      });
+      if (res.ok) {
+        const orgData = await res.json();
+        const orgId = orgData.data?.id || orgData.id;
+        if (orgId && typeof window !== 'undefined') {
+          localStorage.setItem('nexus_active_org_id', orgId);
+        }
+      }
+    } catch {
+      // Graceful fallback to client session state
     }
 
     toast({

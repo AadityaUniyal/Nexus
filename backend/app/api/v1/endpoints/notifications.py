@@ -43,11 +43,13 @@ INITIAL_NOTIFICATIONS = [
 
 @router.get("", response_model=List[NotificationRead])
 async def list_notifications(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Retrieve all operational notifications from PostgreSQL."""
-    stmt = select(Notification).order_by(Notification.created_at.desc())
+    """Retrieve operational notifications from PostgreSQL with pagination."""
+    stmt = select(Notification).order_by(Notification.created_at.desc()).offset(skip).limit(limit)
     if workspace_id and workspace_id != "ws-demo-1":
         stmt = stmt.where(Notification.workspace_id == workspace_id)
     result = await db.execute(stmt)

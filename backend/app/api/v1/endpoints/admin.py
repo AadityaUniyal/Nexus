@@ -49,13 +49,15 @@ async def get_admin_overview(
 
 @router.get("/users", response_model=List[UserRead])
 async def list_admin_users(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_USERS)),
 ):
-    """List all workspace users directly from PostgreSQL."""
+    """List all workspace users directly from PostgreSQL with pagination."""
     ws = workspace_id or principal.workspace_id
-    stmt = select(User)
+    stmt = select(User).offset(skip).limit(limit)
     if ws and ws != "ws-demo-1":
         stmt = stmt.where(User.workspace_id == ws)
     result = await db.execute(stmt)

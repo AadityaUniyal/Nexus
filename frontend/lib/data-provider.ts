@@ -87,9 +87,16 @@ export class ApiNexusDataProvider implements NexusDataProvider {
     }
 
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("nexus_clerk_token");
+      const token =
+        localStorage.getItem("nexus_clerk_token") ||
+        localStorage.getItem("nexus_token") ||
+        localStorage.getItem("token");
       if (token && !headers.has("Authorization")) {
         headers.set("Authorization", `Bearer ${token}`);
+      }
+      const workspaceId = localStorage.getItem("nexus_active_workspace_id");
+      if (workspaceId && !headers.has("X-Workspace-ID")) {
+        headers.set("X-Workspace-ID", workspaceId);
       }
     }
 
@@ -945,31 +952,56 @@ export class MockNexusDataProvider implements NexusDataProvider {
   }
 
   async getEvents(): Promise<OperationalEventItem[]> {
-    return [...INITIAL_EVENTS];
+    try {
+      const res = await this.fetchApi<{ events: OperationalEventItem[] }>("/api/v1/intelligence/events");
+      return res.events || [];
+    } catch {
+      return [...INITIAL_EVENTS];
+    }
   }
 
   async submitContact(data: any): Promise<void> {
-    return Promise.resolve();
+    await this.fetchApi("/api/v1/contact", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
   }
 
   async submitFeedback(data: any): Promise<void> {
-    return Promise.resolve();
+    await this.fetchApi("/api/v1/feedback", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
   }
 
   async getProfile(): Promise<any> {
-    return Promise.resolve({});
+    try {
+      return await this.fetchApi("/api/v1/profile");
+    } catch {
+      return { name: "User", department: "Ops" };
+    }
   }
 
   async updateProfile(data: any): Promise<any> {
-    return Promise.resolve(data);
+    return await this.fetchApi("/api/v1/profile", {
+      method: "PATCH",
+      body: JSON.stringify(data)
+    });
   }
 
   async getSettings(): Promise<any> {
-    return Promise.resolve({});
+    try {
+      return await this.fetchApi("/api/v1/settings");
+    } catch {
+      return { theme: "industrial", notifications: true };
+    }
   }
 
   async updateSettings(data: any): Promise<any> {
-    return Promise.resolve(data);
+    return await this.fetchApi("/api/v1/settings", {
+      method: "PATCH",
+      body: JSON.stringify(data)
+    });
   }
 }
 

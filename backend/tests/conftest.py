@@ -41,6 +41,14 @@ class MockExecuteResult:
     def first(self):
         return self._items[0] if self._items else None
 
+    def scalar_one_or_none(self):
+        return self._items[0] if self._items else None
+
+    def scalar_one(self):
+        if not self._items:
+            return None
+        return self._items[0]
+
 async def mock_get_db() -> AsyncGenerator[AsyncMock, None]:
     session = AsyncMock()
     session.execute.return_value = MockExecuteResult()

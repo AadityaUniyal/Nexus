@@ -6,6 +6,7 @@ from app.auth.dependencies import require_onboarded
 from app.auth.principal import RequestPrincipal
 from app.models.operations import Vehicle, Warehouse, Route, Order
 from app.models.incidents import Incident
+from app.services.ai_service import ai_service
 
 router = APIRouter()
 
@@ -26,6 +27,19 @@ async def get_command_briefing(
     v_res = await db.execute(v_stmt)
     vehicles_count = v_res.scalar() or 0
 
+    # Orders count & delayed
+    o_stmt = select(Order).where(Order.workspace_id == ws_id)
+    o_res = await db.execute(o_stmt)
+    orders = o_res.scalars().all()
+    total_orders = len(orders)
+    delayed_orders = sum(1 for o in orders if o.status == "DELAYED")
+
+    # SLA rate
+    sla_rate = (
+        round(((total_orders - delayed_orders) / max(1, total_orders)) * 100, 1)
+        if total_orders > 0 else 98.4
+    )
+
     # Warehouses
     w_stmt = select(Warehouse).where(Warehouse.workspace_id == ws_id)
     w_res = await db.execute(w_stmt)
@@ -33,12 +47,12 @@ async def get_command_briefing(
 
     capacity_pressure = any(w.current_units / max(w.capacity_units, 1) > 0.85 for w in warehouses)
 
-    return {
+    state_summary = {
         "workspaceId": ws_id,
-        "operationalPosture": "ELEVATED_ATTENTION" if active_incidents else "NORMAL",
+        "operationalPosture": "ELEVATED_ATTENTION" if active_incidents else "NOMINAL",
         "activeIncidentsCount": len(active_incidents),
         "fleetActiveCount": vehicles_count,
-        "slaCompliancePercent": 98.4,
+        "slaCompliancePercent": sla_rate,
         "capacityPressure": capacity_pressure,
         "criticalAlerts": [
             {
@@ -57,6 +71,7 @@ async def get_command_briefing(
         ],
         "dataFreshness": "FRESH"
     }
+    return state_summary
 
 @router.post("/explain")
 async def explain_briefing(
@@ -64,12 +79,13 @@ async def explain_briefing(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Command summary using evidence from live state.
+    Command summary using live state evidence & Groq LLM synthesis.
     """
     briefing = await get_command_briefing(principal, db)
-    explanation = "Operations situation normal across North American corridors with active weather anomaly monitoring."
+    explanation = await ai_service.generate_executive_briefing(briefing)
+
     return {
         "explanation": explanation,
         "evidence": briefing,
-        "generatedBy": "DeterministicEngine"
+        "generatedBy": "Groq Llama-3.3-70B AI Engine" if ai_service._client else "DeterministicEngine"
     }

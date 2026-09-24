@@ -1,51 +1,62 @@
-import * as React from "react"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(" ")
+export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
 }
 
-function Skeleton({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+export function Skeleton({ className, ...props }: SkeletonProps) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-nexus-surface-highest/50", className)}
+      className={cn(
+        "animate-pulse rounded-lg bg-nexus-surface-container",
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
-function CardSkeleton() {
+export function SkeletonText({
+  lines = 3,
+  className,
+}: {
+  lines?: number;
+  className?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-nexus-outline-variant/30 bg-nexus-surface-lowest p-6 space-y-4 shadow-tactile">
-      <Skeleton className="h-6 w-1/3" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-5/6" />
-      <Skeleton className="h-32 w-full mt-4" />
+    <div className={cn("space-y-2", className)}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton
+          key={i}
+          className={cn("h-4", i === lines - 1 ? "w-4/5" : "w-full")}
+        />
+      ))}
     </div>
-  )
+  );
 }
 
-function TableSkeleton() {
+export function SkeletonCard({ className }: { className?: string }) {
   return (
-    <div className="w-full space-y-3">
+    <div className={cn("p-6 rounded-xl border border-nexus-outline-variant/30 bg-nexus-surface-container-lowest", className)}>
+      <div className="flex items-start gap-4">
+        <Skeleton className="h-12 w-12 rounded-lg" />
+        <div className="flex-1 space-y-3">
+          <Skeleton className="h-5 w-1/3" />
+          <SkeletonText lines={2} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonTable({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="space-y-2">
       <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className="h-16 w-full" />
+      ))}
     </div>
-  )
+  );
 }
-
-function StatSkeleton() {
-  return (
-    <div className="rounded-xl border border-nexus-outline-variant/30 bg-nexus-surface p-4 flex flex-col justify-center space-y-2">
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-8 w-16" />
-      <Skeleton className="h-3 w-24" />
-    </div>
-  )
-}
-
-export { Skeleton, CardSkeleton, TableSkeleton, StatSkeleton }

@@ -6,6 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { Drawer } from "@/components/ui/drawer";
 import { CommandMenu } from "@/components/ui/command-menu";
 import { VoiceCompanionWidget } from "@/components/voice/VoiceCompanionWidget";
+import { OperationalCopilot } from "@/components/copilot/OperationalCopilot";
 import { dataProvider } from "@/lib/data-provider";
 import { realtimeClient } from "@/lib/realtime-client";
 import { formatRelativeTime } from "@/lib/utils";
@@ -118,6 +119,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Voice Copilot Companion Widget */}
       <VoiceCompanionWidget />
+
+      {/* Real-World Autonomous Operational Copilot */}
+      <OperationalCopilot />
 
       {/* Slide-Over Notification Center Drawer */}
       <Drawer
