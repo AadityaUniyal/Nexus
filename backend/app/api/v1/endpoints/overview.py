@@ -7,43 +7,44 @@ from app.db.session import get_db
 from app.models.operations import Vehicle, Warehouse, Order
 from app.models.incidents import Incident
 from app.models.simulations import Simulation
-from app.models.system import Notification
+from app.models.system import Notification, OperationalEvent
 from app.schemas.incidents import IncidentRead, IncidentTimelineRead
+
+from app.auth.dependencies import get_optional_principal
+from app.auth.principal import RequestPrincipal
 
 router = APIRouter(tags=["Overview"])
 
 @router.get("/overview")
 async def get_system_overview(
     workspace_id: Optional[str] = Query(default=None),
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Aggregated operations overview providing high-level telemetry, KPI metrics,
     active incident summary, and SLA compliance.
     """
-    ws_id = workspace_id if (workspace_id and workspace_id != "ws-demo-1") else None
+    if principal and principal.workspace_id:
+        ws_id = principal.workspace_id
+    else:
+        ws_id = workspace_id or "ws-continental-fleet-01"
 
     # 1. Vehicles
-    v_stmt = select(Vehicle)
-    if ws_id:
-        v_stmt = v_stmt.where(Vehicle.workspace_id == ws_id)
+    v_stmt = select(Vehicle).where(Vehicle.workspace_id == ws_id)
     v_res = await db.execute(v_stmt)
     vehicles = v_res.scalars().all()
     total_vehicles = len(vehicles)
     active_vehicles = sum(1 for v in vehicles if v.status == "IN_TRANSIT")
 
     # 2. Warehouses
-    w_stmt = select(Warehouse)
-    if ws_id:
-        w_stmt = w_stmt.where(Warehouse.workspace_id == ws_id)
+    w_stmt = select(Warehouse).where(Warehouse.workspace_id == ws_id)
     w_res = await db.execute(w_stmt)
     warehouses = w_res.scalars().all()
     total_warehouses = len(warehouses)
 
     # 3. Incidents
-    i_stmt = select(Incident).order_by(Incident.created_at.desc())
-    if ws_id:
-        i_stmt = i_stmt.where(Incident.workspace_id == ws_id)
+    i_stmt = select(Incident).where(Incident.workspace_id == ws_id).order_by(Incident.created_at.desc())
     i_res = await db.execute(i_stmt)
     incidents = i_res.scalars().all()
     active_incidents = [i for i in incidents if i.status not in ["RESOLVED", "ARCHIVED"]]
@@ -51,27 +52,26 @@ async def get_system_overview(
     top_incident = active_incidents[0] if active_incidents else (incidents[0] if incidents else None)
 
     # 4. Orders
-    o_stmt = select(Order)
-    if ws_id:
-        o_stmt = o_stmt.where(Order.workspace_id == ws_id)
+    o_stmt = select(Order).where(Order.workspace_id == ws_id)
     o_res = await db.execute(o_stmt)
     orders = o_res.scalars().all()
     total_orders = len(orders)
     delayed_orders = sum(1 for o in orders if o.status == "DELAYED")
 
     # 5. Simulations
-    s_stmt = select(func.count()).select_from(Simulation)
-    if ws_id:
-        s_stmt = s_stmt.where(Simulation.workspace_id == ws_id)
+    s_stmt = select(func.count()).select_from(Simulation).where(Simulation.workspace_id == ws_id)
     s_res = await db.execute(s_stmt)
     simulations_count = s_res.scalar() or 0
 
     # 6. Notifications
-    n_stmt = select(func.count()).select_from(Notification).where(Notification.read == False)
-    if ws_id:
-        n_stmt = n_stmt.where(Notification.workspace_id == ws_id)
+    n_stmt = select(func.count()).select_from(Notification).where(Notification.read == False, Notification.workspace_id == ws_id)
     n_res = await db.execute(n_stmt)
     unread_notifications_count = n_res.scalar() or 0
+
+    # 7. Recent Operational Events
+    e_stmt = select(OperationalEvent).where(OperationalEvent.workspace_id == ws_id).order_by(OperationalEvent.created_at.desc()).limit(10)
+    e_res = await db.execute(e_stmt)
+    events = e_res.scalars().all()
 
     # KPI calculations
     sla_compliance = (
@@ -82,6 +82,8 @@ async def get_system_overview(
         round((active_vehicles / max(1, total_vehicles)) * 100, 1)
         if total_vehicles > 0 else 85.0
     )
+    incident_penalty = min(25.0, active_incidents_count * 3.5)
+    network_efficiency = max(55.0, min(99.5, round((sla_compliance * 0.6 + fleet_utilization * 0.4) - incident_penalty, 1)))
 
     top_incident_data = None
     if top_incident:
@@ -108,6 +110,18 @@ async def get_system_overview(
         f"Fleet utilization at {fleet_utilization}% with {sla_compliance}% SLA adherence across active hubs."
     )
 
+    recent_events_data = [
+        {
+            "id": e.id,
+            "eventType": e.event_type,
+            "severity": e.severity,
+            "message": e.message,
+            "entityType": e.entity_type,
+            "entityId": e.entity_id,
+            "occurredAt": e.occurred_at,
+        } for e in events
+    ]
+
     return {
         "success": True,
         "stats": {
@@ -119,7 +133,7 @@ async def get_system_overview(
             "delayedOrders": delayed_orders,
             "slaCompliance": sla_compliance,
             "fleetUtilization": fleet_utilization,
-            "networkEfficiency": 95.2,
+            "networkEfficiency": network_efficiency,
             "activeSimulations": simulations_count,
             "unreadNotifications": unread_notifications_count,
         },
@@ -127,5 +141,5 @@ async def get_system_overview(
         "briefing": briefing,
         "warehousesCount": total_warehouses,
         "vehiclesCount": total_vehicles,
-        "recentEvents": [],
+        "recentEvents": recent_events_data,
     }

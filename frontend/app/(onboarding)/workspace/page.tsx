@@ -44,7 +44,9 @@ export default function OnboardingWorkspacePage() {
     }
 
     try {
-      const token = typeof window !== 'undefined' ? (localStorage.getItem('nexus_token') || localStorage.getItem('token')) : null;
+      const token = typeof window !== 'undefined'
+        ? (localStorage.getItem('nexus_auth_token') || localStorage.getItem('nexus_clerk_token') || localStorage.getItem('nexus_token') || localStorage.getItem('token'))
+        : null;
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 

@@ -5,11 +5,19 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
+from app.auth.dependencies import get_optional_principal
+from app.auth.principal import RequestPrincipal
 from app.models.system import Notification
 from app.schemas.system import NotificationRead
 from app.core.errors import EntityNotFoundException
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
+
+def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
+    """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
+    if principal and principal.workspace_id:
+        return principal.workspace_id
+    return fallback or "ws-continental-fleet-01"
 
 INITIAL_NOTIFICATIONS = [
     {
@@ -46,22 +54,29 @@ async def list_notifications(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve operational notifications from PostgreSQL with pagination."""
-    stmt = select(Notification).order_by(Notification.created_at.desc()).offset(skip).limit(limit)
-    if workspace_id and workspace_id != "ws-demo-1":
-        stmt = stmt.where(Notification.workspace_id == workspace_id)
+    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    stmt = select(Notification).where(Notification.workspace_id == ws).order_by(Notification.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(stmt)
     notifs = result.scalars().all()
 
     if not notifs:
-        ws_id = workspace_id or "ws-continental-fleet-01"
         for n_data in INITIAL_NOTIFICATIONS:
-            n = Notification(**{**n_data, "workspace_id": ws_id})
+            n = Notification(
+                id=f"notif-{uuid.uuid4().hex[:8]}",
+                workspace_id=ws,
+                type=n_data["type"],
+                title=n_data["title"],
+                message=n_data["message"],
+                deep_link=n_data["deep_link"],
+                read=n_data["read"],
+            )
             db.add(n)
         await db.commit()
-        result = await db.execute(select(Notification).order_by(Notification.created_at.desc()))
+        result = await db.execute(select(Notification).where(Notification.workspace_id == ws).order_by(Notification.created_at.desc()))
         notifs = result.scalars().all()
 
     return [
@@ -80,12 +95,12 @@ async def list_notifications(
 @router.post("/read-all")
 async def mark_all_notifications_read(
     workspace_id: Optional[str] = Query(default=None),
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """Mark all operational notifications as read in PostgreSQL."""
-    stmt = select(Notification).where(Notification.read == False)
-    if workspace_id and workspace_id != "ws-demo-1":
-        stmt = stmt.where(Notification.workspace_id == workspace_id)
+    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    stmt = select(Notification).where(Notification.read == False, Notification.workspace_id == ws)
     result = await db.execute(stmt)
     notifs = result.scalars().all()
     for n in notifs:
@@ -95,13 +110,22 @@ async def mark_all_notifications_read(
 
 @router.patch("/{notification_id}/read", response_model=NotificationRead)
 @router.post("/{notification_id}/read", response_model=NotificationRead)
-async def mark_notification_read(notification_id: str, db: AsyncSession = Depends(get_db)):
+async def mark_notification_read(
+    notification_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Mark a notification as read in PostgreSQL."""
-    stmt = select(Notification).where(Notification.id == notification_id)
+    ws = get_tenant_workspace(principal)
+    stmt = select(Notification).where(Notification.id == notification_id, Notification.workspace_id == ws)
     result = await db.execute(stmt)
     notif = result.scalars().first()
     if not notif:
-        raise EntityNotFoundException("Notification", notification_id)
+        # Fallback query if workspace was default
+        stmt_fallback = select(Notification).where(Notification.id == notification_id)
+        notif = (await db.execute(stmt_fallback)).scalars().first()
+        if not notif:
+            raise EntityNotFoundException("Notification", notification_id)
 
     notif.read = True
     await db.commit()

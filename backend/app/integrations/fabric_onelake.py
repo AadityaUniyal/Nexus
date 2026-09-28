@@ -11,6 +11,13 @@ class MicrosoftFabricOneLakeClient:
     Streams operational telemetry, decision simulations, and incident events into:
       1. OneLake Delta Lake (Historical Data Storage & Fabric Direct Lake queries)
       2. Fabric Eventhouse KQL (Real-Time Analytics & Operational Dashboards)
+
+    # AZURE_MIGRATION_POINT:
+    # When deploying to Azure student subscription or enterprise environment:
+    # 1. Install 'azure-storage-file-datalake' and 'azure-identity'
+    # 2. Authenticate using DefaultAzureCredential() or Service Principal
+    # 3. Replace write_delta_lake_batch with DataLakeServiceClient.get_file_system_client()
+    # 4. Use Microsoft Fabric Eventstreams endpoint for publish_to_eventhouse_kql()
     """
     def __init__(self):
         self.enabled = settings.FABRIC_ONELAKE_ENABLED

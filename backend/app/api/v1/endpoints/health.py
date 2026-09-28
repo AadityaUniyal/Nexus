@@ -18,7 +18,7 @@ async def health_live():
     }
 
 @router.get("/health/ready", response_model=HealthCheckResponse)
-@router.get("/api/v1/health", response_model=HealthCheckResponse)
+@router.get("/health", response_model=HealthCheckResponse)
 async def health_ready(db: AsyncSession = Depends(get_db)):
     """Readiness probe performing actual database query and dependency checks."""
     db_connected = False

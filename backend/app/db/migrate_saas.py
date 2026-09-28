@@ -25,6 +25,10 @@ ALTER_STATEMENTS = [
     # Vehicles & Orders connections
     "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vehicle_type_id VARCHAR(64);",
     "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id VARCHAR(64);",
+    
+    # Workspace settings and user avatar
+    "ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS settings JSON DEFAULT '{}';",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512);",
 ]
 
 async def apply_saas_migrations():

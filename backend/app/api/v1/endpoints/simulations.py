@@ -21,7 +21,7 @@ from app.schemas.simulations import (
 from app.services.simulation_engine import run_deterministic_simulation
 from app.core.errors import EntityNotFoundException, NexusException
 from app.realtime.sse import broadcaster
-from app.auth.dependencies import require_permission
+from app.auth.dependencies import require_permission, get_optional_principal
 from app.auth.principal import PermissionEnum, RequestPrincipal
 
 router = APIRouter(prefix="/simulations", tags=["Simulations"])
@@ -98,10 +98,11 @@ async def list_simulations(
     workspace_id: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve executed What-If simulation scenarios directly from PostgreSQL with pagination support."""
-    ws = workspace_id or "ws-continental-fleet-01"
+    ws = (principal.workspace_id if principal and principal.workspace_id else None) or workspace_id or "ws-continental-fleet-01"
     stmt = (
         select(Simulation)
         .where(Simulation.workspace_id == ws)
@@ -144,13 +145,25 @@ async def list_simulations(
     return output
 
 @router.get("/{sim_id}", response_model=SimulationRead)
-async def get_simulation(sim_id: str, db: AsyncSession = Depends(get_db)):
+async def get_simulation(
+    sim_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Retrieve scenario details with comparative metrics from PostgreSQL."""
-    stmt = select(Simulation).where(or_(Simulation.id == sim_id, Simulation.code == sim_id))
+    ws = principal.workspace_id if (principal and principal.workspace_id) else "ws-continental-fleet-01"
+    stmt = select(Simulation).where(
+        Simulation.workspace_id == ws,
+        or_(Simulation.id == sim_id, Simulation.code == sim_id)
+    )
     result = await db.execute(stmt)
     s = result.scalars().first()
     if not s:
-        raise EntityNotFoundException("Simulation", sim_id)
+        # Check by id fallback
+        stmt_alt = select(Simulation).where(or_(Simulation.id == sim_id, Simulation.code == sim_id))
+        s = (await db.execute(stmt_alt)).scalars().first()
+        if not s:
+            raise EntityNotFoundException("Simulation", sim_id)
 
     return SimulationRead(
         id=s.id,
@@ -170,11 +183,15 @@ async def get_simulation(sim_id: str, db: AsyncSession = Depends(get_db)):
     )
 
 @router.post("", response_model=SimulationRead, status_code=status.HTTP_201_CREATED)
-async def create_simulation(req: SimulationCreate, db: AsyncSession = Depends(get_db)):
+async def create_simulation(
+    req: SimulationCreate,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Evaluate and store a new deterministic What-If simulation scenario in PostgreSQL."""
     sim_id = f"sim-{uuid.uuid4().hex[:8]}"
     sim_code = f"SIM-{int(datetime.now().timestamp()) % 10000}"
-    ws_id = req.workspace_id or "ws-continental-fleet-01"
+    ws_id = (principal.workspace_id if principal and principal.workspace_id else None) or req.workspace_id or "ws-continental-fleet-01"
 
     # Dynamically query target Vehicle, Route, Incident, and Orders from PostgreSQL
     target_vehicle = None

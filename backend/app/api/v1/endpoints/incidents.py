@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from app.db.session import get_db
+from app.auth.dependencies import get_optional_principal
+from app.auth.principal import RequestPrincipal
 from app.models.incidents import Incident, IncidentTimeline
 from app.models.system import OperationalEvent, EventOutbox, AuditLog
 from app.schemas.incidents import (
@@ -21,16 +23,23 @@ from app.realtime.sse import broadcaster
 
 router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
+def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
+    """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
+    if principal and principal.workspace_id:
+        return principal.workspace_id
+    return fallback or "ws-continental-fleet-01"
+
 @router.get("", response_model=List[IncidentRead])
 async def list_incidents(
     severity: str = Query(default="ALL"),
     workspace_id: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve operational incidents directly from PostgreSQL with timelines and pagination support."""
-    ws = workspace_id or "ws-continental-fleet-01"
+    ws = get_tenant_workspace(principal, fallback=workspace_id)
     stmt = (
         select(Incident)
         .options(selectinload(Incident.timeline))
@@ -78,12 +87,20 @@ async def list_incidents(
     return output
 
 @router.get("/{incident_id}", response_model=IncidentRead)
-async def get_incident(incident_id: str, db: AsyncSession = Depends(get_db)):
+async def get_incident(
+    incident_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Retrieve detailed incident record with full audit timeline from PostgreSQL."""
+    ws = get_tenant_workspace(principal)
     stmt = (
         select(Incident)
         .options(selectinload(Incident.timeline))
-        .where(or_(Incident.id == incident_id, Incident.code == incident_id))
+        .where(
+            Incident.workspace_id == ws,
+            or_(Incident.id == incident_id, Incident.code == incident_id)
+        )
     )
     result = await db.execute(stmt)
     inc = result.scalars().first()
@@ -118,11 +135,15 @@ async def get_incident(incident_id: str, db: AsyncSession = Depends(get_db)):
     )
 
 @router.post("", response_model=IncidentRead, status_code=status.HTTP_201_CREATED)
-async def create_incident(req: IncidentCreate, db: AsyncSession = Depends(get_db)):
+async def create_incident(
+    req: IncidentCreate,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Create and triage a new operational incident in PostgreSQL with transactional outbox."""
     inc_id = f"inc-{uuid.uuid4().hex[:8]}"
     inc_code = f"INC-{int(datetime.now().timestamp()) % 10000}"
-    ws_id = req.workspace_id or "ws-continental-fleet-01"
+    ws_id = get_tenant_workspace(principal, fallback=req.workspace_id)
 
     new_inc = Incident(
         id=inc_id,
@@ -218,13 +239,18 @@ async def create_incident(req: IncidentCreate, db: AsyncSession = Depends(get_db
 async def update_incident(
     incident_id: str,
     req: IncidentUpdate,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """Update incident fields or advance state in PostgreSQL."""
+    ws = get_tenant_workspace(principal)
     stmt = (
         select(Incident)
         .options(selectinload(Incident.timeline))
-        .where(or_(Incident.id == incident_id, Incident.code == incident_id))
+        .where(
+            Incident.workspace_id == ws,
+            or_(Incident.id == incident_id, Incident.code == incident_id)
+        )
     )
     result = await db.execute(stmt)
     inc = result.scalars().first()
@@ -261,7 +287,7 @@ async def update_incident(
 
     inc.version += 1
 
-    actor = req.actor_name or "Sarah Chen"
+    actor = req.actor_name or (principal.display_name if principal else "Operator")
     note = req.note or (f"Status advanced to {inc.status}" if status_changed else "Incident details updated")
 
     tl = IncidentTimeline(
@@ -323,34 +349,54 @@ async def update_incident(
     )
 
 @router.post("/{incident_id}/acknowledge", response_model=IncidentRead)
-async def acknowledge_incident(incident_id: str, db: AsyncSession = Depends(get_db)):
+async def acknowledge_incident(
+    incident_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Acknowledge an incident in PostgreSQL."""
-    req = IncidentTransitionRequest(status="ACKNOWLEDGED", note="Incident acknowledged by operator", actor_name="Sarah Chen")
-    return await transition_incident_state(incident_id, req, db)
+    actor = principal.display_name if principal else "Operator"
+    req = IncidentTransitionRequest(status="ACKNOWLEDGED", note="Incident acknowledged by operator", actor_name=actor)
+    return await transition_incident_state(incident_id, req, principal=principal, db=db)
 
 @router.post("/{incident_id}/start-investigation", response_model=IncidentRead)
-async def start_investigation_incident(incident_id: str, db: AsyncSession = Depends(get_db)):
+async def start_investigation_incident(
+    incident_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Start investigation on an incident in PostgreSQL."""
-    req = IncidentTransitionRequest(status="INVESTIGATING", note="Investigation initiated by operations team", actor_name="Sarah Chen")
-    return await transition_incident_state(incident_id, req, db)
+    actor = principal.display_name if principal else "Operations Lead"
+    req = IncidentTransitionRequest(status="INVESTIGATING", note="Investigation initiated by operations team", actor_name=actor)
+    return await transition_incident_state(incident_id, req, principal=principal, db=db)
 
 @router.post("/{incident_id}/resolve", response_model=IncidentRead)
-async def resolve_incident(incident_id: str, db: AsyncSession = Depends(get_db)):
+async def resolve_incident(
+    incident_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Resolve an incident in PostgreSQL."""
-    req = IncidentTransitionRequest(status="RESOLVED", note="Incident resolved and normal operations restored", actor_name="Sarah Chen")
-    return await transition_incident_state(incident_id, req, db)
+    actor = principal.display_name if principal else "Incident Commander"
+    req = IncidentTransitionRequest(status="RESOLVED", note="Incident resolved and normal operations restored", actor_name=actor)
+    return await transition_incident_state(incident_id, req, principal=principal, db=db)
 
 @router.post("/{incident_id}/transition", response_model=IncidentRead)
 async def transition_incident_state(
     incident_id: str,
     req: IncidentTransitionRequest,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """Enforce state machine transition and record audit timeline in PostgreSQL."""
+    ws = get_tenant_workspace(principal)
     stmt = (
         select(Incident)
         .options(selectinload(Incident.timeline))
-        .where(or_(Incident.id == incident_id, Incident.code == incident_id))
+        .where(
+            Incident.workspace_id == ws,
+            or_(Incident.id == incident_id, Incident.code == incident_id)
+        )
     )
     result = await db.execute(stmt)
     inc = result.scalars().first()

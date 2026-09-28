@@ -67,5 +67,6 @@ async def update_settings(
 
         return {"success": True, "message": "Workspace settings saved"}
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error updating settings: {e}")
         raise HTTPException(status_code=500, detail="Failed to save workspace settings")

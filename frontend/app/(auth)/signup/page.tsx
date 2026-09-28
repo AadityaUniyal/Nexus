@@ -22,7 +22,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [avatarMood, setAvatarMood] = React.useState<AvatarMood>('WELCOME');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!password || password.length < 6) {
@@ -40,22 +40,49 @@ export default function SignUpPage() {
     setAvatarMood('LOADING');
     tactileAudio.playClick();
 
-    // Store new user in local state
-    const newUser = {
-      id: `usr-org-${Date.now().toString().slice(-4)}`,
-      name: name || 'Enterprise Lead',
-      email: email || 'lead@enterprise.ops',
-      role: 'OPERATIONS_MANAGER',
-      department: organization || 'Autonomous Logistics Network',
-      workspace_id: `ws-${Date.now().toString().slice(-4)}`,
-    };
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          name: name.trim() || 'Enterprise Lead',
+          password,
+          role: 'OPERATIONS_MANAGER',
+          department: organization.trim() || 'Autonomous Logistics Network',
+        }),
+      });
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('nexus_user', JSON.stringify(newUser));
-      localStorage.setItem('nexus_auth_token', 'nxtok_' + Date.now());
-    }
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson?.error?.message || errJson?.detail || 'Workspace registration failed.');
+      }
 
-    setTimeout(() => {
+      const data = await res.json();
+      const token = data.access_token || data.accessToken;
+      const user = data.user || {
+        id: `usr-${Date.now()}`,
+        name: name.trim() || 'Enterprise Lead',
+        email: email.trim(),
+        role: 'OPERATIONS_MANAGER',
+        workspace_id: 'ws-continental-fleet-01',
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nexus_user', JSON.stringify(user));
+        if (token) {
+          localStorage.setItem('nexus_auth_token', token);
+          localStorage.setItem('nexus_clerk_token', token);
+          localStorage.setItem('nexus_token', token);
+        }
+        if (user.workspace_id) {
+          localStorage.setItem('nexus_active_workspace_id', user.workspace_id);
+        }
+      }
+
       setIsLoading(false);
       setAvatarMood('SUCCESS');
       tactileAudio.playSuccessChord();
@@ -67,7 +94,16 @@ export default function SignUpPage() {
       setTimeout(() => {
         router.push('/welcome');
       }, 600);
-    }, 900);
+    } catch (err: any) {
+      setIsLoading(false);
+      setAvatarMood('ERROR');
+      tactileAudio.playCriticalAlert();
+      toast({
+        title: 'Registration Error',
+        message: err.message || 'Unable to provision workspace.',
+        type: 'critical',
+      });
+    }
   };
 
   return (

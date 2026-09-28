@@ -38,10 +38,15 @@ export default function SimulationDetailPage() {
 
   React.useEffect(() => {
     async function loadSim() {
+      setLoading(true);
       try {
         const found = await dataProvider.getSimulation(simId);
         if (found) setSimulation(found);
-      } catch {}
+      } catch (e) {
+        console.error("Failed to load simulation:", e);
+      } finally {
+        setLoading(false);
+      }
     }
     if (simId) loadSim();
   }, [simId]);
@@ -73,7 +78,37 @@ export default function SimulationDetailPage() {
     }
   };
 
-  if (!simulation) return null;
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="max-w-5xl mx-auto space-y-6 animate-pulse">
+          <div className="h-6 w-36 bg-nexus-surface-variant/40 rounded"></div>
+          <div className="h-44 bg-nexus-surface-variant/30 rounded-2xl border border-nexus-outline-variant/30"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-72 bg-nexus-surface-variant/20 rounded-2xl"></div>
+            <div className="h-72 bg-nexus-surface-variant/20 rounded-2xl"></div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!simulation) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto my-16 text-center space-y-4">
+          <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
+          <h2 className="text-xl font-bold text-nexus-on-surface">Simulation Scenario Not Found</h2>
+          <p className="text-sm text-nexus-on-surface-variant">The scenario {simId} could not be located in your active workspace.</p>
+          <Link href="/simulations">
+            <Button variant="primary" className="mt-4">
+              Return to Simulation Lab
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

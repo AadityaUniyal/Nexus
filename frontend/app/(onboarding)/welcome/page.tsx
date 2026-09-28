@@ -70,22 +70,80 @@ export default function WelcomePage() {
           </p>
         </motion.div>
 
-        {/* Video Preview (Placeholder) */}
+        {/* Operational Mission Control Console Showcase */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mb-10"
         >
-          <div className="relative aspect-video rounded-2xl overflow-hidden bg-nexus-surface-container border border-nexus-outline-variant/40 shadow-tactile-lg">
-            {/* Placeholder for video */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-              <div className="p-6 rounded-full bg-nexus-primary-container/80 backdrop-blur-sm">
-                <Play className="h-12 w-12 text-white" />
+          <div className="relative rounded-2xl overflow-hidden bg-nexus-surface-container-lowest border border-nexus-outline-variant/50 shadow-tactile-lg p-6">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between border-b border-nexus-outline-variant/30 pb-4 mb-5">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-mono text-nexus-on-surface font-bold uppercase tracking-wider">
+                  Live Operations Telemetry Stream · Autonomous Watchdog Active
+                </span>
               </div>
-              <p className="text-sm font-mono-data text-nexus-on-surface-variant">
-                30-Second Product Tour (Coming Soon)
-              </p>
+              <div className="flex items-center gap-2 text-xs font-mono text-nexus-secondary">
+                <span>FastAPI 0.115</span>
+                <span>·</span>
+                <span>Neon PostgreSQL</span>
+                <span>·</span>
+                <span>SSE Sub-second</span>
+              </div>
+            </div>
+
+            {/* Core Capability Interactive Showcase */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="p-4 rounded-xl bg-nexus-surface-container/60 border border-nexus-outline-variant/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-mono text-nexus-on-surface-variant uppercase">Spatial Intelligence</span>
+                  <Globe2 className="h-4 w-4 text-nexus-secondary" />
+                </div>
+                <p className="text-sm font-bold text-nexus-on-surface">3D Digital Twin & MapLibre GIS</p>
+                <p className="text-xs text-nexus-on-surface-variant mt-1">
+                  6 continental hubs, live weather radar, and vehicle GPS coordinates broadcasting in real time.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-nexus-surface-container/60 border border-nexus-outline-variant/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-mono text-nexus-on-surface-variant uppercase">Deterministic Physics</span>
+                  <Zap className="h-4 w-4 text-amber-500" />
+                </div>
+                <p className="text-sm font-bold text-nexus-on-surface">What-If Simulation Engine</p>
+                <p className="text-xs text-nexus-on-surface-variant mt-1">
+                  Calculates aerodynamic drag force and rolling resistance to model counterfactual detour scenarios.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-nexus-surface-container/60 border border-nexus-outline-variant/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-mono text-nexus-on-surface-variant uppercase">AI Copilot</span>
+                  <Sparkles className="h-4 w-4 text-purple-500" />
+                </div>
+                <p className="text-sm font-bold text-nexus-on-surface">Groq LLaMA 3.3 Reasoning</p>
+                <p className="text-xs text-nexus-on-surface-variant mt-1">
+                  Autonomous 3-tier tool agent (Read, Analyze, Act) with Human-in-the-Loop dispatch approvals.
+                </p>
+              </div>
+            </div>
+
+            {/* Active Incident & Simulation Banner */}
+            <div className="p-3.5 rounded-xl bg-nexus-secondary/10 border border-nexus-secondary/30 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="px-2 py-0.5 rounded font-mono font-bold bg-amber-500/20 text-amber-700 dark:text-amber-400">
+                  ACTIVE BENCHMARK
+                </span>
+                <span className="text-nexus-on-surface font-medium">
+                  INC-8041: Wyoming I-80 Cheyenne Blizzard Closure vs I-70 South Detour (+85 km, saves 135 mins)
+                </span>
+              </div>
+              <span className="font-mono text-nexus-secondary font-bold shrink-0">
+                Pareto Score: 88.4 / 100
+              </span>
             </div>
           </div>
         </motion.div>

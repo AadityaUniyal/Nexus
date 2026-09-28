@@ -8,10 +8,16 @@ from app.models.simulations import Decision
 from app.schemas.simulations import SimulationRead, SimulationApplyDecision
 from app.api.v1.endpoints.simulations import apply_simulation_decision
 from app.core.errors import EntityNotFoundException
-from app.auth.dependencies import require_permission
+from app.auth.dependencies import require_permission, get_optional_principal
 from app.auth.principal import PermissionEnum, RequestPrincipal
 
 router = APIRouter(prefix="/decisions", tags=["Decisions"])
+
+def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
+    """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
+    if principal and principal.workspace_id:
+        return principal.workspace_id
+    return fallback or "ws-continental-fleet-01"
 
 class DecisionRead(BaseModel):
     id: str
@@ -30,10 +36,11 @@ async def list_decisions(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     workspace_id: Optional[str] = Query(default=None),
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve recorded decision history directly from PostgreSQL with pagination."""
-    ws = workspace_id or "ws-continental-fleet-01"
+    ws = get_tenant_workspace(principal, fallback=workspace_id)
     stmt = select(Decision).where(Decision.workspace_id == ws).order_by(Decision.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(stmt)
     rows = result.scalars().all()
@@ -51,9 +58,17 @@ async def list_decisions(
     ]
 
 @router.get("/{decision_id}", response_model=DecisionRead)
-async def get_decision(decision_id: str, db: AsyncSession = Depends(get_db)):
+async def get_decision(
+    decision_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
     """Retrieve specific decision audit record from PostgreSQL."""
-    stmt = select(Decision).where(or_(Decision.id == decision_id, Decision.simulation_id == decision_id))
+    ws = get_tenant_workspace(principal)
+    stmt = select(Decision).where(
+        Decision.workspace_id == ws,
+        or_(Decision.id == decision_id, Decision.simulation_id == decision_id)
+    )
     result = await db.execute(stmt)
     d = result.scalars().first()
     if not d:

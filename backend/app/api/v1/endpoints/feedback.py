@@ -34,11 +34,12 @@ async def submit_feedback(
             user_id=principal.nexus_user_id if principal else None,
             category=req.category.upper(),
             rating=req.rating,
-            comments=req.comment
+            comment=req.comment
         )
         db.add(fb)
         await db.commit()
         return {"success": True, "feedbackId": fb.id, "status": "LOGGED"}
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error persisting feedback: {e}")
         raise HTTPException(status_code=500, detail="Failed to record feedback")

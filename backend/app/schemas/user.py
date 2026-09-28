@@ -43,7 +43,7 @@ class UserCreate(UserBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     password: str
-    workspace_id: str = Field(..., alias="workspaceId")
+    workspace_id: Optional[str] = Field(None, alias="workspaceId")
 
 class UserUpdate(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)

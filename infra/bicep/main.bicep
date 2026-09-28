@@ -238,6 +238,10 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
           value: environment
         }
         {
+          name: 'SECRET_KEY'
+          value: uniqueString(resourceGroup().id, deployment().name)
+        }
+        {
           name: 'AZURE_IOT_HUB_ENABLED'
           value: 'true'
         }
@@ -254,12 +258,8 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
           value: appInsights.properties.ConnectionString
         }
         {
-          name: 'REDIS_HOST'
-          value: redisCache.properties.hostName
-        }
-        {
-          name: 'REDIS_PORT'
-          value: string(redisCache.properties.sslPort)
+          name: 'REDIS_URL'
+          value: 'rediss://:${redisCache.listKeys().primaryKey}@${redisCache.properties.hostName}:${redisCache.properties.sslPort}/0'
         }
         {
           name: 'STORAGE_ACCOUNT_NAME'
@@ -268,6 +268,10 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
         {
           name: 'DATABASE_URL'
           value: 'postgresql+asyncpg://${dbAdminUser}:${dbAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/nexus?ssl=require'
+        }
+        {
+          name: 'CORS_ORIGINS'
+          value: 'https://${appServiceName}.azurewebsites.net,http://localhost:3000'
         }
       ]
     }

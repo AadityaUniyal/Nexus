@@ -12,6 +12,7 @@ from app.models.incidents import Incident, IncidentTimeline
 from app.models.simulations import Simulation, Decision
 from app.models.system import OperationalEvent, AuditLog
 from app.realtime.sse import broadcaster
+from app.auth.principal import RequestPrincipal, RoleEnum, PermissionEnum, ROLE_PERMISSIONS_MAP
 from app.api.v1.endpoints.simulations import apply_simulation_decision
 
 VOICE_TOOLS_SPEC = [
@@ -272,7 +273,18 @@ async def execute_voice_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[
                     actorName="Voice Copilot",
                     operatorNotes="Decision confirmed and applied via Voice Tool.",
                 )
-                await apply_simulation_decision(sim.id, req_obj, db)
+                system_principal = RequestPrincipal(
+                    nexus_user_id="usr-system-voice",
+                    clerk_user_id="system_voice",
+                    email="voice@nexus.system",
+                    display_name="Voice Copilot",
+                    workspace_id=sim.workspace_id or "ws-continental-fleet-01",
+                    role=RoleEnum.ADMINISTRATOR,
+                    permissions=ROLE_PERMISSIONS_MAP[RoleEnum.ADMINISTRATOR],
+                    onboarding_completed=True,
+                    is_active=True,
+                )
+                await apply_simulation_decision(sim.id, req_obj, db, principal=system_principal)
                 applied_sim_id = sim.id
                 applied_sim_code = sim.code
             else:

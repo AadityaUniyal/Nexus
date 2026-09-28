@@ -12,7 +12,7 @@ from app.models.operations import Route, Vehicle
 
 logger = logging.getLogger("nexus.intelligence")
 
-router = APIRouter(prefix="/intelligence", tags=["Spatial Intelligence & ML"])
+router = APIRouter(tags=["Spatial Intelligence & ML"])
 
 @router.get("/overview")
 async def get_intelligence_overview(

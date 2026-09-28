@@ -7,20 +7,28 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.10.0",
+    "email-validator>=2.0.0",
     "pydantic-settings>=2.6.0",
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30.0",
+    "alembic>=1.13.0",
+    "python-dotenv>=1.0.0",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0.0",
+    "python-multipart>=0.0.18",
+    "numpy>=1.26.0",
+    "scikit-learn>=1.4.0",
     "httpx>=0.28.0",
     "groq>=0.11.0",
+    "loguru>=0.7.0",
+    "pipecat-ai>=0.0.40",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
-    "python-multipart>=0.0.18"
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["../tests/backend", "tests"]
+testpaths = ["tests"]
 pythonpath = [".", "app"]

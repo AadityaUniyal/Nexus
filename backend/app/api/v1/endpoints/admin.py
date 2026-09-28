@@ -24,16 +24,12 @@ async def get_admin_overview(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
 ) -> Dict[str, Any]:
     """Retrieve platform governance overview and aggregate statistics."""
-    ws = workspace_id or principal.workspace_id
-    u_stmt = select(func.count()).select_from(User)
-    if ws and ws != "ws-demo-1":
-        u_stmt = u_stmt.where(User.workspace_id == ws)
+    ws = principal.workspace_id or workspace_id or "ws-continental-fleet-01"
+    u_stmt = select(func.count()).select_from(User).where(User.workspace_id == ws)
     u_res = await db.execute(u_stmt)
     users_count = u_res.scalar() or 0
 
-    a_stmt = select(func.count()).select_from(AuditLog)
-    if ws and ws != "ws-demo-1":
-        a_stmt = a_stmt.where(AuditLog.workspace_id == ws)
+    a_stmt = select(func.count()).select_from(AuditLog).where(AuditLog.workspace_id == ws)
     a_res = await db.execute(a_stmt)
     audit_count = a_res.scalar() or 0
 
@@ -56,10 +52,8 @@ async def list_admin_users(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_USERS)),
 ):
     """List all workspace users directly from PostgreSQL with pagination."""
-    ws = workspace_id or principal.workspace_id
-    stmt = select(User).offset(skip).limit(limit)
-    if ws and ws != "ws-demo-1":
-        stmt = stmt.where(User.workspace_id == ws)
+    ws = principal.workspace_id or workspace_id or "ws-continental-fleet-01"
+    stmt = select(User).where(User.workspace_id == ws).offset(skip).limit(limit)
     result = await db.execute(stmt)
     users = result.scalars().all()
     return [
@@ -80,8 +74,12 @@ async def get_admin_user(
     db: AsyncSession = Depends(get_db),
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_USERS)),
 ):
-    """Retrieve a single user by ID from PostgreSQL."""
-    stmt = select(User).where(or_(User.id == user_id, User.email == user_id))
+    """Retrieve a single user by ID from PostgreSQL within the principal workspace."""
+    ws = principal.workspace_id or "ws-continental-fleet-01"
+    stmt = select(User).where(
+        User.workspace_id == ws,
+        or_(User.id == user_id, User.email == user_id)
+    )
     result = await db.execute(stmt)
     user = result.scalars().first()
     if not user:
@@ -103,8 +101,12 @@ async def update_user_role(
     db: AsyncSession = Depends(get_db),
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_ROLES)),
 ):
-    """Update a user's RBAC role in PostgreSQL."""
-    stmt = select(User).where(or_(User.id == user_id, User.email == user_id))
+    """Update a user's RBAC role in PostgreSQL within the principal workspace."""
+    ws = principal.workspace_id or "ws-continental-fleet-01"
+    stmt = select(User).where(
+        User.workspace_id == ws,
+        or_(User.id == user_id, User.email == user_id)
+    )
     result = await db.execute(stmt)
     user = result.scalars().first()
     if not user:
@@ -194,10 +196,8 @@ async def list_audit_logs(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.VIEW_AUDIT)),
 ):
     """Retrieve immutable audit log history from PostgreSQL."""
-    ws = workspace_id or principal.workspace_id
-    stmt = select(AuditLog).order_by(AuditLog.created_at.desc()).limit(50)
-    if ws and ws != "ws-demo-1":
-        stmt = stmt.where(AuditLog.workspace_id == ws)
+    ws = principal.workspace_id or workspace_id or "ws-continental-fleet-01"
+    stmt = select(AuditLog).where(AuditLog.workspace_id == ws).order_by(AuditLog.created_at.desc()).limit(50)
     result = await db.execute(stmt)
     logs = result.scalars().all()
     return [

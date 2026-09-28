@@ -45,3 +45,51 @@ async def test_hubs_throughput_endpoint(async_client: AsyncClient):
     data = response.json()
     assert data["success"] is True
     assert "hubs" in data
+
+@pytest.mark.asyncio
+async def test_analytics_forecast_endpoint(async_client: AsyncClient):
+    """Test ML time-series forecast endpoint."""
+    response = await async_client.get("/api/v1/analytics/forecast?metric=delivery_volume&horizon=7d")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "forecast" in data
+    assert len(data["forecast"]) == 7
+    assert "p10" in data["forecast"][0]
+    assert "p50" in data["forecast"][0]
+    assert "p90" in data["forecast"][0]
+    assert "modelMetadata" in data
+
+@pytest.mark.asyncio
+async def test_analytics_anomalies_endpoint(async_client: AsyncClient):
+    """Test Scikit-Learn IsolationForest anomaly detection endpoint."""
+    response = await async_client.get("/api/v1/analytics/anomalies")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "anomalies" in data
+    assert "algorithm" in data
+    assert "anomaliesDetectedCount" in data
+
+@pytest.mark.asyncio
+async def test_analytics_risk_scores_endpoint(async_client: AsyncClient):
+    """Test multi-factor risk scores endpoint."""
+    response = await async_client.get("/api/v1/analytics/risk-scores")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "riskBreakdown" in data
+    assert "portfolioExposureUsd" in data
+
+@pytest.mark.asyncio
+async def test_analytics_medallion_summary_endpoint(async_client: AsyncClient):
+    """Test Medallion Lakehouse Architecture summary endpoint."""
+    response = await async_client.get("/api/v1/analytics/medallion-summary")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "layers" in data
+    assert "bronze" in data["layers"]
+    assert "silver" in data["layers"]
+    assert "gold" in data["layers"]
+

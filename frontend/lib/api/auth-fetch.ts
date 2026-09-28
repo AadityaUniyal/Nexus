@@ -11,11 +11,19 @@ export async function authFetch<T = any>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // If running in browser and Clerk session token exists in cookie or localStorage
+  // If running in browser and session token exists in localStorage
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('nexus_clerk_token');
+    const token =
+      localStorage.getItem('nexus_auth_token') ||
+      localStorage.getItem('nexus_clerk_token') ||
+      localStorage.getItem('nexus_token') ||
+      localStorage.getItem('token');
     if (token && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${token}`);
+    }
+    const workspaceId = localStorage.getItem('nexus_active_workspace_id');
+    if (workspaceId && !headers.has('X-Workspace-ID')) {
+      headers.set('X-Workspace-ID', workspaceId);
     }
   }
 

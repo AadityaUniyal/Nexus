@@ -88,6 +88,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
 
     if (typeof window !== "undefined") {
       const token =
+        localStorage.getItem("nexus_auth_token") ||
         localStorage.getItem("nexus_clerk_token") ||
         localStorage.getItem("nexus_token") ||
         localStorage.getItem("token");

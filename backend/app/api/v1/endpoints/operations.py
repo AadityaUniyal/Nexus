@@ -60,11 +60,7 @@ async def get_warehouse(
     result = await db.execute(stmt)
     warehouse = result.scalars().first()
     if not warehouse:
-        # Also check by ID if global
-        stmt_alt = select(Warehouse).where(or_(Warehouse.id == warehouse_id, Warehouse.code == warehouse_id))
-        warehouse = (await db.execute(stmt_alt)).scalars().first()
-        if not warehouse:
-            raise EntityNotFoundException("Warehouse", warehouse_id)
+        raise EntityNotFoundException("Warehouse", warehouse_id)
     return warehouse
 
 @router.post("/warehouses", response_model=WarehouseRead, status_code=status.HTTP_201_CREATED)
@@ -116,10 +112,7 @@ async def get_vehicle(
     result = await db.execute(stmt)
     vehicle = result.scalars().first()
     if not vehicle:
-        stmt_alt = select(Vehicle).where(or_(Vehicle.id == vehicle_id, Vehicle.code == vehicle_id))
-        vehicle = (await db.execute(stmt_alt)).scalars().first()
-        if not vehicle:
-            raise EntityNotFoundException("Vehicle", vehicle_id)
+        raise EntityNotFoundException("Vehicle", vehicle_id)
     return vehicle
 
 @router.post("/vehicles", response_model=VehicleRead, status_code=status.HTTP_201_CREATED)
@@ -150,7 +143,11 @@ async def update_vehicle_telemetry(
     db: AsyncSession = Depends(get_db)
 ):
     """Update live GPS coordinates, speed, battery, and status."""
-    stmt = select(Vehicle).where(or_(Vehicle.id == vehicle_id, Vehicle.code == vehicle_id))
+    ws = get_tenant_workspace(principal)
+    stmt = select(Vehicle).where(
+        Vehicle.workspace_id == ws,
+        or_(Vehicle.id == vehicle_id, Vehicle.code == vehicle_id)
+    )
     result = await db.execute(stmt)
     vehicle = result.scalars().first()
     if not vehicle:
@@ -187,7 +184,11 @@ async def get_route(
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve route by ID or Code from PostgreSQL."""
-    stmt = select(Route).where(or_(Route.id == route_id, Route.code == route_id))
+    ws = get_tenant_workspace(principal)
+    stmt = select(Route).where(
+        Route.workspace_id == ws,
+        or_(Route.id == route_id, Route.code == route_id)
+    )
     result = await db.execute(stmt)
     route = result.scalars().first()
     if not route:
@@ -235,7 +236,11 @@ async def get_order(
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve order by ID or Order Number from PostgreSQL."""
-    stmt = select(Order).where(or_(Order.id == order_id, Order.order_number == order_id))
+    ws = get_tenant_workspace(principal)
+    stmt = select(Order).where(
+        Order.workspace_id == ws,
+        or_(Order.id == order_id, Order.order_number == order_id)
+    )
     result = await db.execute(stmt)
     order = result.scalars().first()
     if not order:

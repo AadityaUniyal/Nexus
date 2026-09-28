@@ -194,6 +194,48 @@ async def chat_with_copilot(
 
     msg_id = f"msg-{uuid.uuid4().hex[:10]}"
 
+    try:
+        from sqlalchemy import select
+        # Check if conversation exists, otherwise create it
+        conv_stmt = select(Conversation).where(Conversation.id == conv_id)
+        conv_res = await db.execute(conv_stmt)
+        conv = conv_res.scalars().first()
+        if not conv:
+            conv = Conversation(
+                id=conv_id,
+                title=req.prompt[:60],
+                context_type="INCIDENT" if req.incident_id else "FLEET",
+                context_id=req.incident_id or req.vehicle_code,
+                user_id=principal.nexus_user_id if not principal.nexus_user_id.startswith("usr-") else None,
+                workspace_id=principal.workspace_id,
+            )
+            db.add(conv)
+            await db.flush()
+
+        # Add user message
+        user_msg = ChatMessage(
+            id=f"msg-{uuid.uuid4().hex[:10]}",
+            conversation_id=conv_id,
+            sender="USER",
+            content=req.prompt,
+        )
+        db.add(user_msg)
+
+        # Add copilot message
+        copilot_msg = ChatMessage(
+            id=msg_id,
+            conversation_id=conv_id,
+            sender="COPILOT",
+            content=reply,
+            tool_calls_json=executed_tools,
+            citations_json=citations,
+        )
+        db.add(copilot_msg)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.warning(f"Note: Could not persist copilot conversation message to DB: {e}")
+
     return CopilotChatResponse(
         conversation_id=conv_id,
         message_id=msg_id,

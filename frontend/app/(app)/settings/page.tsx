@@ -8,21 +8,65 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Sliders, Shield, Sparkles, CheckCircle2, Save } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { authFetch } from "@/lib/api/auth-fetch";
+import { tactileAudio } from "@/lib/sound-effects";
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const [workspaceName, setWorkspaceName] = React.useState("NEXUS Central Operations Hub");
+  const [workspaceName, setWorkspaceName] = React.useState("Continental Fleet Ops");
   const [refreshRate, setRefreshRate] = React.useState("5");
   const [autoSimulate, setAutoSimulate] = React.useState(true);
   const [groqEnabled, setGroqEnabled] = React.useState(true);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    async function loadSettings() {
+      setLoading(true);
+      try {
+        const res = await authFetch("/api/v1/settings");
+        if (res) {
+          if (res.telemetryRefreshSec) setRefreshRate(String(res.telemetryRefreshSec));
+          if (res.autoRerouteApproval !== undefined) setAutoSimulate(res.autoRerouteApproval);
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Settings Saved",
-      message: "Workspace preferences synchronized.",
-      type: "success",
-    });
+    setSaving(true);
+    tactileAudio.playClick();
+    try {
+      await authFetch("/api/v1/settings", {
+        method: "PATCH",
+        body: JSON.stringify({
+          telemetryRefreshSec: parseInt(refreshRate, 10),
+          autoRerouteApproval: autoSimulate,
+          notifications: true,
+        }),
+      });
+      tactileAudio.playSuccessChord();
+      toast({
+        title: "Settings Saved",
+        message: "Workspace preferences synchronized with PostgreSQL database.",
+        type: "success",
+      });
+    } catch (err: any) {
+      tactileAudio.playCriticalAlert();
+      toast({
+        title: "Save Failed",
+        message: err?.message || "Failed to persist workspace settings.",
+        type: "critical",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -71,7 +115,7 @@ export default function SettingsPage() {
               <CardDescription>Manage Groq LLaMA 3.3 and deterministic auto-evaluation</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-4 rounded-xl bg-nexus-surface-container/60 border border-nexus-outline-variant/30 flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-nexus-surface-variant/20 border border-nexus-outline-variant/30 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-nexus-on-surface">Auto-trigger What-If Simulations</p>
                   <p className="text-[11px] text-nexus-on-surface-variant">
@@ -86,7 +130,7 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div className="p-4 rounded-xl bg-nexus-surface-container/60 border border-nexus-outline-variant/30 flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-nexus-surface-variant/20 border border-nexus-outline-variant/30 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-nexus-on-surface">Groq AI Operational Synthesis</p>
                   <p className="text-[11px] text-nexus-on-surface-variant">
@@ -101,13 +145,14 @@ export default function SettingsPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter className="justify-end">
-              <Button type="submit" variant="primary" className="font-mono-data text-xs shadow-tactile">
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                Save Preferences
-              </Button>
-            </CardFooter>
           </Card>
+
+          <div className="flex justify-end gap-3">
+            <Button type="submit" variant="primary" size="md" disabled={saving} className="gap-2 font-mono-data text-xs">
+              <Save className="h-4 w-4" />
+              {saving ? "Synchronizing..." : "Save Workspace Preferences"}
+            </Button>
+          </div>
         </form>
       </div>
     </AppShell>

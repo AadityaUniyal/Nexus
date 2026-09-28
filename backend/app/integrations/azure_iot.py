@@ -9,6 +9,12 @@ class AzureIoTHubGateway:
     """
     Enterprise Azure IoT Hub Telemetry Ingestion and Command Gateway.
     Manages vehicle device twins, ingests live telemetry, and dispatches cloud-to-device commands.
+
+    # AZURE_MIGRATION_POINT:
+    # When deploying to Azure student account:
+    # 1. Provision an Azure IoT Hub F1 (Free Tier: 8,000 msgs/day)
+    # 2. Set AZURE_IOT_HUB_CONNECTION_STRING in production environment
+    # 3. Use 'azure-iot-hub' IoTHubRegistryManager to sync device twins and dispatch C2D commands
     """
     def __init__(self):
         self.enabled = settings.AZURE_IOT_HUB_ENABLED

@@ -63,7 +63,8 @@ export default function LoginPage() {
     tactileAudio.playClick();
 
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/v1/auth/login', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,6 +82,11 @@ export default function LoginPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('nexus_user', JSON.stringify(data.user));
         localStorage.setItem('nexus_auth_token', data.access_token);
+        localStorage.setItem('nexus_clerk_token', data.access_token);
+        localStorage.setItem('nexus_token', data.access_token);
+        if (data.user?.workspace_id) {
+          localStorage.setItem('nexus_active_workspace_id', data.user.workspace_id);
+        }
       }
 
       setTimeout(() => {

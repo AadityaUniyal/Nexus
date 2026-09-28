@@ -153,16 +153,102 @@ export default function QuickTourPage() {
               </p>
             </div>
 
-            {/* Preview card (placeholder) */}
-            <div className="p-8 rounded-2xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40 shadow-tactile mb-10">
-              <div className="aspect-video rounded-lg bg-nexus-surface-container flex items-center justify-center">
-                <div className="text-center">
-                  <Icon className="h-16 w-16 mx-auto mb-3 text-nexus-on-surface-variant opacity-40" />
-                  <p className="text-sm font-mono-data text-nexus-on-surface-variant">
-                    Interactive preview coming soon
-                  </p>
+            {/* Interactive Step Preview Console */}
+            <div className="p-6 rounded-2xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40 shadow-tactile mb-10 text-left">
+              {step.id === "overview" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-nexus-outline-variant/30 pb-2">
+                    <span className="text-xs font-mono font-bold text-nexus-secondary uppercase">
+                      Fleet Operations Dashboard · Real-Time Snapshot
+                    </span>
+                    <span className="text-xs font-mono text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                      ALL SYSTEMS NOMINAL
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-lg bg-nexus-surface-container">
+                      <p className="text-[10px] text-nexus-on-surface-variant uppercase font-mono">Fleet Velocity</p>
+                      <p className="text-lg font-bold font-mono text-nexus-on-surface">64.8 km/h</p>
+                      <p className="text-[10px] text-emerald-600">+2.4% vs baseline</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-nexus-surface-container">
+                      <p className="text-[10px] text-nexus-on-surface-variant uppercase font-mono">Active Vehicles</p>
+                      <p className="text-lg font-bold font-mono text-nexus-on-surface">42 / 48</p>
+                      <p className="text-[10px] text-nexus-on-surface-variant">87.5% utilization</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-nexus-surface-container">
+                      <p className="text-[10px] text-nexus-on-surface-variant uppercase font-mono">SLA Adherence</p>
+                      <p className="text-lg font-bold font-mono text-nexus-secondary">98.4%</p>
+                      <p className="text-[10px] text-emerald-600">Above 95% target</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-nexus-surface-container">
+                      <p className="text-[10px] text-nexus-on-surface-variant uppercase font-mono">Network Units</p>
+                      <p className="text-lg font-bold font-mono text-nexus-on-surface">71,650</p>
+                      <p className="text-[10px] text-nexus-on-surface-variant">6 superhubs</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {step.id === "incident" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-nexus-outline-variant/30 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-600">
+                        CRITICAL SEVERITY
+                      </span>
+                      <span className="text-xs font-mono font-bold text-nexus-on-surface">
+                        INC-8041 · Road Weather Hazard
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono text-nexus-on-surface-variant">Detected: 14 mins ago</span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-nexus-surface-container border border-red-500/20 space-y-2">
+                    <h4 className="text-sm font-bold text-nexus-on-surface">
+                      I-80 Wyoming Cheyenne Pass Blizzard Closure
+                    </h4>
+                    <p className="text-xs text-nexus-on-surface-variant leading-relaxed">
+                      Sustained 55 mph crosswinds and zero-visibility icing conditions. 14 high-priority cargo shipments
+                      at risk of delivery SLA breach. Estimated delay: 180 minutes.
+                    </p>
+                    <div className="pt-2 flex items-center justify-between text-xs font-mono">
+                      <span className="text-nexus-on-surface-variant">Affected Vehicle: <strong className="text-nexus-on-surface">NX-TRK-104 (Freightliner eCascadia)</strong></span>
+                      <span className="text-red-600 font-bold">Penalty Exposure: $4,200</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {step.id === "simulation" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-nexus-outline-variant/30 pb-2">
+                    <span className="text-xs font-mono font-bold text-nexus-secondary uppercase">
+                      What-If Deterministic Physics Simulation · SIM-901
+                    </span>
+                    <span className="text-xs font-mono text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                      PARETO RECOMMENDATION: 88.4/100
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-nexus-surface-container border border-nexus-outline-variant/30">
+                      <p className="text-xs font-bold text-nexus-on-surface mb-1">Baseline Option (Wait on I-80)</p>
+                      <ul className="text-xs text-nexus-on-surface-variant space-y-1 font-mono">
+                        <li>· Delay Impact: +180 minutes</li>
+                        <li>· SLA Breach Risk: 88.0%</li>
+                        <li>· Total Added Cost: $4,200 (SLA fine)</li>
+                      </ul>
+                    </div>
+                    <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/30">
+                      <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-1">Counterfactual Detour (I-70 South)</p>
+                      <ul className="text-xs text-emerald-700 dark:text-emerald-400 space-y-1 font-mono">
+                        <li>· Net Time Saved: 135 minutes</li>
+                        <li>· SLA Breach Risk: 12.0% (Reduced by 76%)</li>
+                        <li>· Fuel Delta: +$80.00</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>

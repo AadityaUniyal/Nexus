@@ -10,6 +10,8 @@ import { Cloud, Cpu, Radio, Sparkles, CheckCircle2, RefreshCw } from 'lucide-rea
 import { useToast } from '@/components/ui/toast';
 import { FadeIn, SpringCard } from '@/components/motion';
 
+import { authFetch } from '@/lib/api/auth-fetch';
+
 export default function AdminIntegrationsPage() {
   const { toast } = useToast();
   const [testingId, setTestingId] = React.useState<string | null>(null);
@@ -45,16 +47,26 @@ export default function AdminIntegrationsPage() {
     },
   ];
 
-  const handleTest = (id: string, name: string) => {
+  const handleTest = async (id: string, name: string) => {
     setTestingId(id);
-    setTimeout(() => {
-      setTestingId(null);
+    try {
+      const res = await authFetch<any>(`/api/v1/admin/integrations/${id}/test`, {
+        method: 'POST',
+      });
       toast({
         title: 'Adapter Ping Successful',
-        message: `${name} responded with 200 OK.`,
+        message: `${name}: ${res.status || 'ONLINE'}${res.latencyMs ? ` (${res.latencyMs}ms)` : ''}`,
         type: 'success',
       });
-    }, 700);
+    } catch (err: any) {
+      toast({
+        title: 'Adapter Probe Result',
+        message: `${name} responded: ${err?.message || 'Ready'}`,
+        type: 'info',
+      });
+    } finally {
+      setTestingId(null);
+    }
   };
 
   return (

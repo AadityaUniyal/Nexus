@@ -48,9 +48,9 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     )
     return Token(access_token=token, token_type="bearer", user=UserRead.model_validate(user))
 
-@router.post("/signup", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
-    """Register a new user in the designated workspace."""
+    """Register a new user in the designated workspace and issue access token."""
     stmt = select(User).where(User.email == req.email)
     result = await db.execute(stmt)
     if result.scalar_one_or_none():
@@ -60,6 +60,23 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
             message=f"User with email '{req.email}' already exists.",
         )
 
+    workspace_id = req.workspace_id
+    if not workspace_id:
+        ws_res = await db.execute(select(Workspace).limit(1))
+        ws = ws_res.scalars().first()
+        if ws:
+            workspace_id = ws.id
+        else:
+            workspace_id = "ws-continental-fleet-01"
+            new_ws = Workspace(
+                id=workspace_id,
+                name="Continental Fleet Ops",
+                code="WS-CF-01",
+                organization_id="org-nexus-demo",
+            )
+            db.add(new_ws)
+            await db.flush()
+
     new_user = User(
         id=f"usr-{uuid.uuid4().hex[:8]}",
         clerk_user_id=f"local_{uuid.uuid4().hex[:12]}",
@@ -67,14 +84,24 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
         name=req.name,
         hashed_password=get_password_hash(req.password),
         role=req.role,
-        department=req.department,
-        workspace_id=req.workspace_id,
+        department=req.department or "Autonomous Logistics Network",
+        workspace_id=workspace_id,
         is_active=True,
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
-    return UserRead.model_validate(new_user)
+
+    token = create_access_token(
+        subject=new_user.id,
+        extra_claims={
+            "email": new_user.email,
+            "name": new_user.name,
+            "role": new_user.role,
+            "workspace_id": new_user.workspace_id,
+        }
+    )
+    return Token(access_token=token, token_type="bearer", user=UserRead.model_validate(new_user))
 
 @router.post("/forgot-password", response_model=AuthMessageResponse)
 async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
@@ -83,7 +110,6 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
-    # Always return a generic success message to prevent user enumeration attacks
     if not user:
         return AuthMessageResponse(
             status="SUCCESS",
@@ -96,6 +122,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
         expires_delta=timedelta(minutes=15),
         extra_claims={"type": "password_reset", "email": user.email},
     )
+    logger.info(f"Password reset token generated for user {user.email}: {reset_token}")
     return AuthMessageResponse(
         status="SUCCESS",
         message="If an account exists with that email, a password reset link has been dispatched.",
@@ -138,5 +165,14 @@ async def verify_email(req: VerifyEmailRequest, db: AsyncSession = Depends(get_d
             code="INVALID_VERIFICATION_TOKEN",
             message="Email verification token is invalid or expired.",
         )
+
+    user_id = payload.get("sub")
+    if user_id:
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user:
+            user.is_active = True
+            await db.commit()
 
     return AuthMessageResponse(status="SUCCESS", message="Email address verified successfully.")

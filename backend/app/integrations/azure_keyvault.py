@@ -8,6 +8,11 @@ class AzureKeyVaultManager:
     """
     Azure Key Vault Secret Provider.
     Retrieves production secrets (DATABASE_URL, SECRET_KEY, API Keys) securely using Azure Managed Identity.
+
+    # AZURE_MIGRATION_POINT:
+    # When deploying to Azure:
+    # 1. Install 'azure-keyvault-secrets' and 'azure-identity'
+    # 2. Use SecretClient(vault_url=self.vault_url, credential=DefaultAzureCredential())
     """
     def __init__(self, vault_url: Optional[str] = None):
         self.vault_url = vault_url or os.getenv("AZURE_KEYVAULT_URL", "")

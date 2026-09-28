@@ -73,5 +73,6 @@ async def update_profile(
             "name": profile.name or principal.display_name
         }
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error updating profile: {e}")
         raise HTTPException(status_code=500, detail="Failed to update profile")

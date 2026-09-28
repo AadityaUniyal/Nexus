@@ -16,6 +16,7 @@ class Workspace(Base, TimestampMixin):
     scale: Mapped[str] = mapped_column(String(64), default="NATIONAL_NETWORK")
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    settings: Mapped[dict] = mapped_column(JSON, default=dict)
 
     organization_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)
     organization: Mapped[Optional["app.models.organization.Organization"]] = relationship("app.models.organization.Organization", back_populates="workspaces")
@@ -43,6 +44,7 @@ class User(Base, TimestampMixin):
     department: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     onboarding_status: Mapped[str] = mapped_column(String(64), default="COMPLETE")
     avatar_seed: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     last_active_at: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     
