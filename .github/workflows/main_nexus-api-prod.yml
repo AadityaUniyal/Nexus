@@ -27,23 +27,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
-      # 🛠️ Local Build Section (Optional)
-      - name: Create and Start virtual environment and Install dependencies
+      - name: Create and build virtual environment
         run: |
-          python -m venv antenv
+          python -m venv --copies antenv
           source antenv/bin/activate
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
 
-      # Exclude frontend, docs, node_modules, and git history to keep deployment package small and fast
+      # Include pre-built antenv, backend code, startup script, and .deployment config
+      # Exclude frontend, docs, node_modules, database, and git history
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: |
             .
-            !antenv/
+            antenv/
             !frontend/
             !database/
             !docs/
