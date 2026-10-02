@@ -105,6 +105,31 @@ resource telemetryRawContainer 'Microsoft.Storage/storageAccounts/blobServices/c
   }
 }
 
+// Medallion Architecture Containers (Bronze / Silver / Gold)
+resource telemetryBronzeContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'telemetry-bronze'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+resource telemetrySilverContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'telemetry-silver'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+resource analyticsGoldContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'analytics-gold'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 // -----------------------------------------------------------------------------
 // 4. Azure Key Vault (Secrets Management)
 // -----------------------------------------------------------------------------
@@ -194,11 +219,12 @@ resource redisCache 'Microsoft.Cache/redis@2023-08-01' = {
 // -----------------------------------------------------------------------------
 // 7. Azure IoT Hub Gateway (High-throughput Vehicle Telemetry Ingestion)
 // -----------------------------------------------------------------------------
+// FREE TIER LIMIT: Max 8,000 messages/day. 1 free IoT Hub per subscription.
 resource iotHub 'Microsoft.Devices/IotHubs@2023-06-30' = {
   name: iotHubName
   location: location
   sku: {
-    name: 'S1'
+    name: 'F1'
     capacity: 1
   }
   properties: {
@@ -209,13 +235,14 @@ resource iotHub 'Microsoft.Devices/IotHubs@2023-06-30' = {
 // -----------------------------------------------------------------------------
 // 8. Azure App Service Plan & Web App (Backend API)
 // -----------------------------------------------------------------------------
+// FREE TIER LIMIT: 60 minutes/day compute. No custom domains/SSL.
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: appServicePlanName
   location: location
   kind: 'linux'
   sku: {
-    name: 'B1'
-    tier: 'Basic'
+    name: 'F1'
+    tier: 'Free'
   }
   properties: {
     reserved: true
@@ -229,7 +256,7 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
     serverFarmId: appServicePlan.id
     siteConfig: {
       linuxFxVersion: 'DOCKER|${backendImage}'
-      alwaysOn: true
+      alwaysOn: false
       http20Enabled: true
       minTlsVersion: '1.2'
       appSettings: [
@@ -272,6 +299,74 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
         {
           name: 'CORS_ORIGINS'
           value: 'https://${appServiceName}.azurewebsites.net,http://localhost:3000'
+        }
+      ]
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 9. Azure SQL Database (Free Tier alternative)
+// -----------------------------------------------------------------------------
+// FREE TIER LIMIT: 100,000 vCore seconds/month, 32GB storage. 1 free SQL DB per subscription.
+resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
+  name: '${namePrefix}-sql-${environment}-${uniqueSuffix}'
+  location: location
+  properties: {
+    administratorLogin: dbAdminUser
+    administratorLoginPassword: dbAdminPassword
+  }
+}
+
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
+  parent: sqlServer
+  name: 'nexus-sql'
+  location: location
+  sku: {
+    name: 'Free'
+    tier: 'Free'
+  }
+  properties: {
+    isLedgerOn: false
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 10. Azure Functions (Consumption Plan)
+// -----------------------------------------------------------------------------
+// FREE TIER LIMIT: 1 million executions/month, 400,000 GB-s compute.
+resource functionAppPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
+  name: '${namePrefix}-funcplan-${environment}'
+  location: location
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+  properties: {
+    reserved: true
+  }
+}
+
+resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
+  name: '${namePrefix}-func-${environment}-${uniqueSuffix}'
+  location: location
+  kind: 'functionapp,linux'
+  properties: {
+    serverFarmId: functionAppPlan.id
+    siteConfig: {
+      linuxFxVersion: 'PYTHON|3.11'
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(storageAccount.id, '2023-01-01').keys[0].value}'
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'python'
         }
       ]
     }

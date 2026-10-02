@@ -26,8 +26,34 @@ async def lifespan(app: FastAPI):
         logger.info("PostgreSQL database schemas verified.")
     except Exception as e:
         logger.warning(f"Warning: Database schema check error: {e}")
+
+    # Initialize Azure Monitor / Application Insights
+    try:
+        from app.integrations.azure_monitor import azure_monitor_client
+        if azure_monitor_client.enabled and azure_monitor_client.tracer:
+            logger.info("[Azure Monitor] Application Insights telemetry ACTIVE")
+        else:
+            logger.info("[Azure Monitor] Running in local logging mode (no connection string)")
+    except Exception as e:
+        logger.warning(f"[Azure Monitor] Initialization skipped: {e}")
+
+    # Initialize Azure Blob Storage
+    try:
+        from app.integrations.azure_blob_storage import azure_blob_storage_client
+        if azure_blob_storage_client.blob_service_client:
+            logger.info("[Azure Blob Storage] Connected to Azure Storage Account")
+        else:
+            logger.info("[Azure Blob Storage] Running in local fallback mode")
+    except Exception as e:
+        logger.warning(f"[Azure Blob Storage] Initialization skipped: {e}")
+
     yield
     # Shutdown actions
+    try:
+        from app.integrations.azure_monitor import azure_monitor_client
+        azure_monitor_client.flush()
+    except Exception:
+        pass
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
 
 app = FastAPI(
@@ -68,6 +94,23 @@ async def add_process_time_and_security_headers(request: Request, call_next):
     process_time = (time.time() - start_time) * 1000
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Process-Time-Ms"] = f"{process_time:.2f}"
+
+    # Track request metrics in Azure Application Insights
+    try:
+        from app.integrations.azure_monitor import azure_monitor_client
+        azure_monitor_client.track_metric("request_duration_ms", process_time, {
+            "path": str(request.url.path),
+            "method": request.method,
+            "status_code": str(response.status_code),
+        })
+        if response.status_code >= 400:
+            azure_monitor_client.track_event("request_error", {
+                "path": str(request.url.path),
+                "status_code": str(response.status_code),
+                "request_id": request_id,
+            })
+    except Exception:
+        pass  # Never break request processing for telemetry
     
     # OWASP Security Headers
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -156,6 +199,95 @@ async def root():
         "status": "OPERATIONAL",
         "docsUrl": "/docs",
         "apiPrefix": settings.API_V1_STR,
+    }
+
+@app.get("/health/azure")
+async def azure_health():
+    """Reports health status of all Azure free tier integrations."""
+    azure_services = {}
+
+    # Application Insights
+    try:
+        from app.integrations.azure_monitor import azure_monitor_client
+        azure_services["applicationInsights"] = {
+            "status": "ACTIVE" if (azure_monitor_client.enabled and azure_monitor_client.tracer) else "LOCAL_FALLBACK",
+            "connectionConfigured": bool(azure_monitor_client.connection_string),
+            "freeTierLimit": "5 GB ingestion/month",
+        }
+    except Exception:
+        azure_services["applicationInsights"] = {"status": "NOT_LOADED"}
+
+    # Blob Storage
+    try:
+        from app.integrations.azure_blob_storage import azure_blob_storage_client
+        azure_services["blobStorage"] = {
+            "status": "CONNECTED" if azure_blob_storage_client.blob_service_client else "LOCAL_FALLBACK",
+            "medallionContainers": ["telemetry-bronze", "telemetry-silver", "analytics-gold"],
+            "freeTierLimit": "5 GB LRS (12-month free)",
+        }
+    except Exception:
+        azure_services["blobStorage"] = {"status": "NOT_LOADED"}
+
+    # IoT Hub
+    try:
+        from app.integrations.azure_iot import azure_iot_gateway
+        azure_services["iotHub"] = {
+            "status": "HEALTHY" if azure_iot_gateway.is_healthy() else "DISABLED",
+            "connectedDevices": len(azure_iot_gateway._connected_devices),
+            "freeTierLimit": "F1: 8,000 messages/day",
+        }
+    except Exception:
+        azure_services["iotHub"] = {"status": "NOT_LOADED"}
+
+    # Key Vault
+    try:
+        from app.integrations.azure_keyvault import keyvault_manager
+        azure_services["keyVault"] = {
+            "status": "CONFIGURED" if keyvault_manager.vault_url else "ENV_FALLBACK",
+            "freeTierLimit": "~10,000 operations/month",
+        }
+    except Exception:
+        azure_services["keyVault"] = {"status": "NOT_LOADED"}
+
+    # Fabric / OneLake
+    try:
+        from app.integrations.fabric_onelake import fabric_onelake_client
+        azure_services["fabricOneLake"] = {
+            "status": "HEALTHY" if fabric_onelake_client.is_healthy() else "DISABLED",
+            "workspaceId": fabric_onelake_client.workspace_id,
+        }
+    except Exception:
+        azure_services["fabricOneLake"] = {"status": "NOT_LOADED"}
+
+    # Azure Functions Tasks
+    try:
+        from app.integrations.azure_functions_tasks import AzureFunctionsTaskRunner
+        runner = AzureFunctionsTaskRunner()
+        azure_services["functions"] = {
+            "status": "AVAILABLE",
+            "scheduledTasks": [
+                runner.schedule_daily_analytics_summary(),
+                runner.schedule_telemetry_cleanup(),
+                runner.schedule_anomaly_detection_sweep(),
+                runner.schedule_sla_compliance_report(),
+                runner.schedule_incident_digest(),
+            ],
+            "freeTierLimit": "1M executions/month",
+        }
+    except Exception:
+        azure_services["functions"] = {"status": "NOT_LOADED"}
+
+    all_healthy = all(
+        s.get("status") not in ["NOT_LOADED"]
+        for s in azure_services.values()
+    )
+
+    return {
+        "status": "OPERATIONAL" if all_healthy else "PARTIAL",
+        "platform": "Azure Free Tier",
+        "services": azure_services,
+        "monthlyCost": "$0 (within free tier limits)",
+        "timestamp": time.time(),
     }
 
 if __name__ == "__main__":

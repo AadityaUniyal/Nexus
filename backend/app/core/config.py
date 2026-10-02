@@ -52,6 +52,17 @@ class Settings(BaseSettings):
     AZURE_CLIENT_SECRET: str = os.getenv("AZURE_CLIENT_SECRET", "")
     FABRIC_WORKSPACE_ID: str = os.getenv("FABRIC_WORKSPACE_ID", "")
 
+    # Azure Monitor / Application Insights
+    APPLICATIONINSIGHTS_CONNECTION_STRING: str = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
+    AZURE_MONITOR_ENABLED: bool = os.getenv("AZURE_MONITOR_ENABLED", "true").lower() == "true"
+    
+    # Azure Blob Storage
+    AZURE_STORAGE_CONNECTION_STRING: str = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
+    AZURE_STORAGE_ENABLED: bool = os.getenv("AZURE_STORAGE_ENABLED", "true").lower() == "true"
+    
+    # Azure Key Vault
+    AZURE_KEYVAULT_URL: str = os.getenv("AZURE_KEYVAULT_URL", "")
+
     # Email & Verification Configuration
     SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.example.com")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
