@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+.next/
+out/
+
+# Backend (not deployed on Vercel)
+../backend/
+
+# Development files
+*.log
+.env
+.env.local
+.env.development
+.env.test
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Tests
+__tests__/
+*.test.*
+*.spec.*

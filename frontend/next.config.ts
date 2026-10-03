@@ -13,7 +13,15 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: api.geoapify.com *.tile.openstreetmap.org; connect-src 'self' api.geoapify.com; font-src 'self' data:;",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: api.geoapify.com *.tile.openstreetmap.org",
+              "connect-src 'self' api.geoapify.com *.vercel.app *.vercel-insights.com wss: https://nexus-backend.onrender.com",
+              "font-src 'self' data:",
+              "frame-src 'self' https://vercel.live",
+            ].join("; "),
           },
           {
             key: 'X-Frame-Options',
