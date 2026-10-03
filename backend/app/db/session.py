@@ -6,14 +6,8 @@ from sqlalchemy.ext.asyncio import (
 )
 from app.core.config import settings
 
-import ssl
 import sys
 from sqlalchemy.pool import NullPool
-
-# SSL context for cloud PostgreSQL providers (e.g. Azure Flexible Server, Neon)
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
 
 # Create async engine with robust, low-latency pool configuration
 engine_kwargs = {
@@ -32,7 +26,7 @@ elif "neon.tech" in settings.DATABASE_URL.lower():
         "max_overflow": 20,
         "pool_timeout": 30,
         "pool_recycle": 120,
-        "connect_args": {"ssl": ssl_context},
+        "connect_args": {"ssl": "require"},
     })
 elif "sqlite" not in settings.DATABASE_URL.lower():
     engine_kwargs.update({
@@ -41,7 +35,7 @@ elif "sqlite" not in settings.DATABASE_URL.lower():
         "pool_timeout": 15,
     })
     if "ssl=require" in settings.DATABASE_URL.lower() or "sslmode=require" in settings.DATABASE_URL.lower():
-        engine_kwargs["connect_args"] = {"ssl": ssl_context}
+        engine_kwargs["connect_args"] = {"ssl": "require"}
 
 engine = create_async_engine(
     settings.DATABASE_URL,
