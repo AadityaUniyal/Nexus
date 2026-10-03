@@ -137,7 +137,7 @@ export function VoiceCompanionWidget({ className = '' }: { className?: string })
   };
 
   return (
-    <div className={cn("fixed bottom-20 right-4 sm:bottom-6 sm:right-28 z-40 flex flex-col items-end gap-2 font-sans select-none", className)}>
+    <div className={cn("fixed bottom-24 right-4 sm:bottom-6 sm:right-64 z-40 flex flex-col items-end gap-2 font-sans select-none", className)}>
       {/* Transcript & Response Bubble */}
       <AnimatePresence>
         {(expanded || transcript || lastResponse) && (

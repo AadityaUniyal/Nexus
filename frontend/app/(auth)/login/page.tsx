@@ -146,9 +146,9 @@ export default function LoginPage() {
       </header>
 
       {/* Main Split-Screen 3D Experience */}
-      <main className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 md:p-12 items-center">
-        {/* Left Side: 3D Spatial Product Hologram Showcase */}
-        <div className="lg:col-span-6 flex flex-col justify-center space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 p-4 sm:p-6 md:p-12 items-center justify-center">
+        {/* Left Side: 3D Spatial Product Hologram Showcase (Desktop) */}
+        <div className="hidden lg:flex lg:col-span-6 flex-col justify-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-nexus-surface-lowest border border-nexus-outline-variant/40 shadow-tactile w-fit">
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs font-mono-data text-nexus-on-surface font-semibold">
@@ -177,7 +177,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side: Auth Card with Reactive 3D Avatar */}
-        <div className="lg:col-span-6 flex flex-col items-center">
+        <div className="col-span-1 lg:col-span-6 flex flex-col items-center justify-center w-full">
           <div className="w-full max-w-md space-y-6">
             {/* Reactive 3D Avatar */}
             <div className="flex justify-center -mb-2">

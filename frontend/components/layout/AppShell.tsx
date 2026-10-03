@@ -91,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex overflow-hidden">
         <Sidebar className="hidden md:flex shrink-0" />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-32 sm:pb-32 md:pb-36 space-y-6 md:space-y-8 max-w-7xl mx-auto w-full">
           {children}
         </main>
       </div>

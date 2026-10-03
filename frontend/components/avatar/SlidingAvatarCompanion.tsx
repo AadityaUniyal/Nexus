@@ -89,11 +89,19 @@ export function SlidingAvatarCompanion() {
   const context = getRouteContext(pathname);
   const activeMood = customMood || context.mood;
 
-  // Don't display on minimalist onboarding or if dismissed
-  if (isDismissed) return null;
+  // Don't display on auth, onboarding or if dismissed
+  const isAuthPage =
+    pathname?.startsWith('/login') ||
+    pathname?.startsWith('/signup') ||
+    pathname?.startsWith('/forgot-password') ||
+    pathname?.startsWith('/reset-password') ||
+    pathname?.startsWith('/verify-email') ||
+    pathname?.startsWith('/welcome');
+
+  if (isDismissed || isAuthPage) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 select-none">
+    <div className="fixed bottom-6 left-6 z-40 select-none">
       <AnimatePresence>
         {isOpen && (
           <motion.div
