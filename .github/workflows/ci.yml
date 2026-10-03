@@ -1,4 +1,8 @@
-name: NEXUS Continuous Integration
+name: Nexus CI
+
+# Quality gate for every push / PR. Deployments:
+#   - Backend  -> Azure App Service via main_nexus-api-prod.yml (publish profile)
+#   - Frontend -> Vercel (Git integration, or the job below when VERCEL_TOKEN is set)
 
 on:
   push:
@@ -6,56 +10,91 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-test:
-    name: Backend Test Suite & Compilation
+    name: Backend lint & tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-
-      - name: Install Backend Dependencies
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f backend/requirements.txt ]; then
-            pip install -r backend/requirements.txt
-          else
-            pip install fastapi uvicorn pydantic email-validator pydantic-settings httpx sqlalchemy asyncpg alembic python-dotenv "python-jose[cryptography]" bcrypt groq loguru pipecat-ai pytest pytest-asyncio
-          fi
-
-      - name: Security Vulnerability Scan (Bandit)
+          pip install -r backend/requirements.txt flake8
+      - name: Lint (syntax & undefined-name errors)
+        run: flake8 backend --select=E9,F63,F7 --extend-exclude=backend/alembic --show-source
+      - name: Security scan (advisory)
         run: |
           pip install bandit
-          bandit -r backend/app -x backend/app/tests -ll -ii || true
-
-      - name: Run Pytest Test Suite
-        run: |
-          python -m pytest backend/tests
+          bandit -r backend/app -ll -ii || true
+      - name: Tests
+        working-directory: backend
+        run: python -m pytest -q tests
 
   frontend-build:
-    name: Frontend Type Safety & Production Build
+    name: Frontend typecheck & build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Frontend Dependencies
+      - name: Install
         run: npm ci --prefix frontend
-
-      - name: Type Check (TypeScript)
-        run: cd frontend && npx tsc --noEmit
-
-      - name: Production Next.js Build
-        run: cd frontend && npm run build
+      - name: Type check
+        working-directory: frontend
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: frontend
         env:
-          NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8000"
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+        run: npm run build
+
+  deploy-vercel:
+    name: Deploy frontend to Vercel
+    needs: [backend-test, frontend-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip when Vercel Git integration handles deploys
+        if: env.VERCEL_TOKEN == ''
+        run: echo "VERCEL_TOKEN not set; relying on Vercel Git integration."
+      - name: Deploy
+        if: env.VERCEL_TOKEN != ''
+        run: |
+          npm i -g vercel@latest
+          vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          vercel build --prod --token "$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"
+
+  smoke-test:
+    name: Post-deploy smoke test
+    needs: [deploy-vercel]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Wait for rollout, then verify
+        run: |
+          pip install httpx
+          sleep 120
+          python scripts/verify_deployment.py || echo "::warning::Smoke test failed; check Azure/Vercel logs"

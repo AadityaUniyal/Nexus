@@ -1,7 +1,9 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
     admin,
+    ai_chat,
     analytics,
+    events,
     auth,
     briefing,
     contact,
@@ -31,6 +33,7 @@ from app.api.v1.endpoints import (
     weather,
     webhooks,
     world,
+    locations_simple,
 )
 
 api_router = APIRouter()
@@ -75,3 +78,5 @@ api_router.include_router(briefing.router, prefix="/briefing", tags=["briefing"]
 api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 api_router.include_router(contact.router, prefix="/contact", tags=["contact"])
 api_router.include_router(admin.router)
+api_router.include_router(ai_chat.router)
+api_router.include_router(events.router)

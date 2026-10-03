@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
 import { motion, AnimatePresence } from "motion/react";
+import { authFetch } from "@/lib/api/auth-fetch";
 
 interface Message {
   id: string;
@@ -76,30 +77,10 @@ export function OperationalCopilot({ className }: { className?: string }) {
     setIsLoading(true);
 
     try {
-      const token =
-        typeof window !== "undefined"
-          ? localStorage.getItem("nexus_clerk_token") || localStorage.getItem("nexus_token")
-          : null;
-      const workspaceId =
-        typeof window !== "undefined" ? localStorage.getItem("nexus_active_workspace_id") : null;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      if (workspaceId) headers["X-Workspace-ID"] = workspaceId;
-
-      const res = await fetch("/api/v1/copilot/chat", {
+      const data = await authFetch<any>("/api/v1/ai/chat", {
         method: "POST",
-        headers,
         body: JSON.stringify({ prompt: query }),
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP_${res.status}`);
-      }
-
-      const data = await res.json();
       tactileAudio.playSuccessChord();
 
       const copilotMsg: Message = {
@@ -134,30 +115,13 @@ export function OperationalCopilot({ className }: { className?: string }) {
   const handleProcessApproval = async (approvalId: string, decision: "APPROVE" | "REJECT") => {
     tactileAudio.playClick();
     try {
-      const token =
-        typeof window !== "undefined"
-          ? localStorage.getItem("nexus_clerk_token") || localStorage.getItem("nexus_token")
-          : null;
-      const workspaceId =
-        typeof window !== "undefined" ? localStorage.getItem("nexus_active_workspace_id") : null;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      if (workspaceId) headers["X-Workspace-ID"] = workspaceId;
-
-      const res = await fetch(`/api/v1/governance/approvals/${approvalId}/action`, {
+      const updatedAppr = await authFetch<any>(`/api/v1/governance/approvals/${approvalId}/action`, {
         method: "POST",
-        headers,
         body: JSON.stringify({
           decision,
           notes: `${decision === "APPROVE" ? "Approved" : "Rejected"} via Nexus Copilot UI`,
         }),
       });
-
-      if (!res.ok) throw new Error(`HTTP_${res.status}`);
-      const updatedAppr = await res.json();
 
       tactileAudio.playSuccessChord();
       toast({

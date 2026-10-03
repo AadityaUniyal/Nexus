@@ -1,5 +1,11 @@
 import asyncio
 import os
+import sys
+
+# Ensure testing environment flags are active before importing the app
+os.environ["APP_ENV"] = "test"
+os.environ["TESTING"] = "1"
+
 import pytest
 from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
@@ -58,14 +64,15 @@ async def mock_get_db() -> AsyncGenerator[AsyncMock, None]:
     session.rollback = AsyncMock(return_value=None)
     session.close = AsyncMock(return_value=None)
     session.add = MagicMock()
+    session.add_all = MagicMock()
     yield session
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+@pytest.fixture(scope="session", autouse=True)
+def teardown_telemetry():
+    """Teardown fixture ensuring OpenTelemetry exporters and background threads are cleanly shut down."""
+    yield
+    from app.integrations.azure_monitor import azure_monitor_client
+    azure_monitor_client.shutdown()
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:

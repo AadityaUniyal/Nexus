@@ -1,7 +1,7 @@
 import re
 import uuid
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -34,8 +34,7 @@ class OrganizationRead(BaseModel):
     plan: Optional[str] = "PROFESSIONAL"
     is_active: Optional[bool] = True
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class WorkspaceCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
@@ -51,8 +50,7 @@ class WorkspaceRead(BaseModel):
     is_demo: bool
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MemberInvite(BaseModel):
     email: str

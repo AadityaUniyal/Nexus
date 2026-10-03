@@ -1,12 +1,9 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-
-const SlidingAvatarCompanion = dynamic(
-  () => import('@/components/avatar/SlidingAvatarCompanion').then((mod) => mod.SlidingAvatarCompanion),
-  { ssr: false }
-);
-
+/**
+ * Avatar Companion disabled for accessible enterprise UI compliance (Lighthouse >= 90)
+ */
 export function AvatarCompanionWrapper() {
-  return <SlidingAvatarCompanion />;
+  return null;
 }
+

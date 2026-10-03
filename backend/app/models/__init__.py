@@ -29,8 +29,10 @@ from app.models.system import (
     AIInsight,
     Integration,
 )
+from app.models.product_analytics import ProductEvent
 
 __all__ = [
+    "ProductEvent",
     "Base",
     "Organization",
     "OrganizationMembership",

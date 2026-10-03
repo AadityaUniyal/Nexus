@@ -12,11 +12,11 @@ export function StatusLed({ status, size = "md", pulse = true, className }: Stat
   const norm = status.toUpperCase();
 
   const colorStyles = {
-    HEALTHY: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]",
-    OPERATIONAL: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]",
-    ATTENTION: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]",
-    CRITICAL: "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.9)]",
-    SIMULATION: "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]",
+    HEALTHY: "bg-emerald-600 dark:bg-emerald-500 shadow-sm",
+    OPERATIONAL: "bg-emerald-600 dark:bg-emerald-500 shadow-sm",
+    ATTENTION: "bg-amber-600 dark:bg-amber-500 shadow-sm",
+    CRITICAL: "bg-red-600 dark:bg-red-500 shadow-sm",
+    SIMULATION: "bg-purple-600 dark:bg-purple-500 shadow-sm",
     OFFLINE: "bg-zinc-400 shadow-none",
   };
 

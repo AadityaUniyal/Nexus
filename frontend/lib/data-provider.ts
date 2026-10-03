@@ -87,13 +87,18 @@ export class ApiNexusDataProvider implements NexusDataProvider {
     }
 
     if (typeof window !== "undefined") {
-      const token =
-        localStorage.getItem("nexus_auth_token") ||
-        localStorage.getItem("nexus_clerk_token") ||
-        localStorage.getItem("nexus_token") ||
-        localStorage.getItem("token");
-      if (token && !headers.has("Authorization")) {
-        headers.set("Authorization", `Bearer ${token}`);
+      if (!headers.has("Authorization")) {
+        try {
+          const clerk = (window as any).Clerk;
+          if (clerk?.session) {
+            const token = await clerk.session.getToken();
+            if (token) {
+              headers.set("Authorization", `Bearer ${token}`);
+            }
+          }
+        } catch (e) {
+          // Clerk session token unavailable or not initialized yet
+        }
       }
       const workspaceId = localStorage.getItem("nexus_active_workspace_id");
       if (workspaceId && !headers.has("X-Workspace-ID")) {

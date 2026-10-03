@@ -28,12 +28,18 @@ export function Tabs({ tabs, activeTab, onChange, className, variant = "pill", l
 
   if (variant === "line") {
     return (
-      <div className={cn("flex border-b border-nexus-outline-variant/40 space-x-6", className)}>
+      <div role="tablist" className={cn("flex border-b border-nexus-outline-variant/40 space-x-6", className)}>
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
+          const tabKey = `${activeLayoutId}-tab-${tab.id}`;
           return (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              id={tabKey}
+              aria-selected={isActive}
+              aria-controls={`${activeLayoutId}-panel-${tab.id}`}
               onClick={() => onChange(tab.id)}
               className={cn(
                 "relative pb-3 text-sm font-medium transition-colors flex items-center gap-2 select-none",
@@ -72,6 +78,7 @@ export function Tabs({ tabs, activeTab, onChange, className, variant = "pill", l
 
   return (
     <div
+      role="tablist"
       className={cn(
         "inline-flex items-center p-1 rounded-xl bg-nexus-surface-container/70 border border-nexus-outline-variant/30 gap-1",
         className
@@ -79,9 +86,15 @@ export function Tabs({ tabs, activeTab, onChange, className, variant = "pill", l
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
+        const tabKey = `${activeLayoutId}-tab-${tab.id}`;
         return (
           <button
             key={tab.id}
+            type="button"
+            role="tab"
+            id={tabKey}
+            aria-selected={isActive}
+            aria-controls={`${activeLayoutId}-panel-${tab.id}`}
             onClick={() => onChange(tab.id)}
             className={cn(
               "relative px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 select-none",

@@ -24,6 +24,8 @@ dist/
 *.tsbuildinfo
 next-env.d.ts
 frontend/next-env.d.ts
+.vercel/
+frontend/.vercel/
 
 # Python / Backend Artifacts
 .venv/

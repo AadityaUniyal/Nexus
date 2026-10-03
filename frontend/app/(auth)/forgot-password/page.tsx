@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { LogoMark } from '@/components/brand/Logo';
 import { useRouter } from 'next/navigation';
 import { Avatar3D } from '@/components/avatar/Avatar3D';
 import { Button } from '@/components/ui/button';
@@ -49,10 +50,8 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-nexus-surface flex flex-col items-center justify-center p-6 select-none">
       <Link href="/" className="mb-6 flex items-center gap-2 group">
-        <div className="h-9 w-9 rounded-xl bg-nexus-primary-container flex items-center justify-center text-white shadow-tactile group-hover:scale-105 transition-transform">
-          <span className="font-bold text-sm tracking-tighter">NX</span>
-        </div>
-        <span className="text-xl font-bold tracking-tight text-nexus-on-surface">NEXUS</span>
+        <LogoMark size={34} />
+        <span className="text-xl font-bold tracking-tight text-nexus-on-surface">Nexus</span>
       </Link>
 
       <div className="w-full max-w-md space-y-6">

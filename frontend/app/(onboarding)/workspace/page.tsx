@@ -13,6 +13,7 @@ import { ArrowRight } from 'lucide-react';
 import { FadeIn } from '@/components/motion';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/hooks/use-toast';
+import { authFetch } from '@/lib/api/auth-fetch';
 
 export default function OnboardingWorkspacePage() {
   const router = useRouter();
@@ -44,26 +45,16 @@ export default function OnboardingWorkspacePage() {
     }
 
     try {
-      const token = typeof window !== 'undefined'
-        ? (localStorage.getItem('nexus_auth_token') || localStorage.getItem('nexus_clerk_token') || localStorage.getItem('nexus_token') || localStorage.getItem('token'))
-        : null;
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch('/api/v1/organizations', {
+      const orgData = await authFetch<any>('/api/v1/organizations', {
         method: 'POST',
-        headers,
         body: JSON.stringify({
           name: workspaceName,
           slug: workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30),
         }),
       });
-      if (res.ok) {
-        const orgData = await res.json();
-        const orgId = orgData.data?.id || orgData.id;
-        if (orgId && typeof window !== 'undefined') {
-          localStorage.setItem('nexus_active_org_id', orgId);
-        }
+      const orgId = orgData?.data?.id || orgData?.id;
+      if (orgId && typeof window !== 'undefined') {
+        localStorage.setItem('nexus_active_org_id', orgId);
       }
     } catch {
       // Graceful fallback to client session state

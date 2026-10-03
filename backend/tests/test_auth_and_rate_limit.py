@@ -23,3 +23,17 @@ async def test_cors_headers(async_client: AsyncClient):
     response = await async_client.get("/health/live", headers={"Origin": "http://localhost:3000"})
     assert response.status_code == 200
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000" or response.headers.get("access-control-allow-origin") == "*"
+
+@pytest.mark.asyncio
+async def test_cors_preflight_allows_workspace_id_header(async_client: AsyncClient):
+    response = await async_client.options(
+        "/health/live",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "Authorization, X-Workspace-ID",
+        },
+    )
+    assert response.status_code == 200
+    allow_headers = response.headers.get("access-control-allow-headers", "").lower()
+    assert "x-workspace-id" in allow_headers

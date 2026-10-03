@@ -1,4 +1,4 @@
-import os
+﻿import os
 import secrets
 from typing import List, Union
 from pydantic import field_validator
@@ -30,9 +30,9 @@ class Settings(BaseSettings):
 
     # Dual-Provider AI Subsystem (Groq Primary + Gemini Fallback)
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
     # Geoapify & Location Provider Subsystem
     GEOAPIFY_API_KEY: str = os.getenv("GEOAPIFY_API_KEY", "")
@@ -66,9 +66,27 @@ class Settings(BaseSettings):
     # Azure Blob Storage
     AZURE_STORAGE_CONNECTION_STRING: str = ""
     AZURE_STORAGE_ENABLED: bool = True
+    # Azure Event Hub
+    EVENT_HUB_ENABLED: bool = False
+    # Azure PostgreSQL Flexible Server (Free Tier)
+    AZURE_POSTGRESQL_URL: str = os.getenv(
+        "AZURE_POSTGRESQL_URL",
+        "postgresql+asyncpg://azure_user:azure_password@az-postgres.free-tier.azure.com:5432/azure_nexus_db",
+    )
     
     # Azure Key Vault
-    AZURE_KEYVAULT_URL: str = ""
+    AZURE_KEYVAULT_URL: str = os.getenv("AZURE_KEYVAULT_URL", "")
+
+    # Azure Cognitive Search (Free Tier)
+    AZURE_COGNITIVE_SEARCH_ENABLED: bool = False
+    AZURE_COGNITIVE_SEARCH_ENDPOINT: str = ""
+    AZURE_COGNITIVE_SEARCH_API_KEY: str = ""
+
+    # Azure Foundry (Free preview)
+    AZURE_FOUNDRY_ENABLED: bool = False
+    AZURE_FOUNDRY_ENDPOINT: str = ""
+    AZURE_FOUNDRY_API_KEY: str = ""
+
 
     # Email & Verification Configuration
     SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.example.com")

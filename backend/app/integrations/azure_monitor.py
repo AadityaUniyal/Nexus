@@ -1,6 +1,13 @@
 import logging
+import os
+import sys
 from typing import Dict, Any, Optional
 from app.core.config import settings
+
+# Silence verbose Azure SDK HTTP logging pipeline loggers to prevent closed-stream I/O errors
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+logging.getLogger("azure.monitor.opentelemetry").setLevel(logging.WARNING)
+logging.getLogger("azure.core.pipeline").setLevel(logging.WARNING)
 
 try:
     from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter, AzureMonitorMetricExporter, AzureMonitorLogExporter
@@ -30,29 +37,50 @@ class AzureMonitorClient:
         
         self.tracer = None
         self.meter = None
-        
+        self.tracer_provider = None
+        self.meter_provider = None
+        self.metric_reader = None
+        self.span_processor = None
+
+        is_testing = (
+            getattr(settings, "APP_ENV", "").lower() in ["test", "testing"]
+            or bool(os.getenv("TESTING"))
+            or bool(os.getenv("PYTEST_CURRENT_TEST"))
+            or "pytest" in sys.modules
+        )
+
         if self.enabled and self.connection_string:
             try:
                 # Setup Tracing
-                tracer_provider = TracerProvider()
-                trace_exporter = AzureMonitorTraceExporter(connection_string=self.connection_string)
-                span_processor = BatchSpanProcessor(trace_exporter)
-                tracer_provider.add_span_processor(span_processor)
-                trace.set_tracer_provider(tracer_provider)
+                self.tracer_provider = TracerProvider()
+                if not is_testing:
+                    trace_exporter = AzureMonitorTraceExporter(connection_string=self.connection_string)
+                    self.span_processor = BatchSpanProcessor(trace_exporter)
+                    self.tracer_provider.add_span_processor(self.span_processor)
+                trace.set_tracer_provider(self.tracer_provider)
                 self.tracer = trace.get_tracer(__name__)
                 
                 # Setup Metrics
-                metric_exporter = AzureMonitorMetricExporter(connection_string=self.connection_string)
-                reader = PeriodicExportingMetricReader(metric_exporter)
-                meter_provider = MeterProvider(metric_readers=[reader])
-                metrics.set_meter_provider(meter_provider)
-                self.meter = metrics.get_meter(__name__)
+                if is_testing:
+                    # In test environment, do not start background PeriodicExportingMetricReader
+                    self.meter_provider = MeterProvider()
+                    metrics.set_meter_provider(self.meter_provider)
+                    self.meter = metrics.get_meter(__name__)
+                    logger.info("[Azure Monitor] Testing environment detected; background metric exporter disabled")
+                else:
+                    metric_exporter = AzureMonitorMetricExporter(connection_string=self.connection_string)
+                    self.metric_reader = PeriodicExportingMetricReader(metric_exporter)
+                    self.meter_provider = MeterProvider(metric_readers=[self.metric_reader])
+                    metrics.set_meter_provider(self.meter_provider)
+                    self.meter = metrics.get_meter(__name__)
                 
                 logger.info("[Azure Monitor] Initialized Application Insights with OpenTelemetry")
             except Exception as e:
                 logger.error(f"[Azure Monitor] Failed to initialize: {e}")
                 self.tracer = None
                 self.meter = None
+                self.tracer_provider = None
+                self.meter_provider = None
         else:
             logger.info("[Azure Monitor] Application Insights connection string not found or disabled. Using local logging fallback.")
             
@@ -67,9 +95,10 @@ class AzureMonitorClient:
     def track_metric(self, name: str, value: float, properties: Optional[Dict[str, Any]] = None):
         """Tracks custom metrics (e.g. request latency, active users, error rates)"""
         if self.meter:
-            # We create a counter for simplicity here in the generalized method
-            counter = self.meter.create_counter(name=name)
-            counter.add(value, attributes=properties or {})
+            # Histograms give App Insights avg/min/max/percentiles for latency-style metrics.
+            cache = self.__dict__.setdefault("_instruments", {})
+            hist = cache.get(name) or cache.setdefault(name, self.meter.create_histogram(name=name))
+            hist.record(value, attributes=properties or {})
         else:
             logger.info(f"[Azure Monitor Metric] {name}: {value} | Properties: {properties}")
 
@@ -102,12 +131,52 @@ class AzureMonitorClient:
 
     def flush(self):
         """Flushes telemetry to Azure Monitor"""
-        if self.tracer and trace.get_tracer_provider():
-            if hasattr(trace.get_tracer_provider(), "force_flush"):
-                trace.get_tracer_provider().force_flush()
-        if self.meter and metrics.get_meter_provider():
-            if hasattr(metrics.get_meter_provider(), "force_flush"):
-                metrics.get_meter_provider().force_flush()
+        try:
+            if self.tracer_provider and hasattr(self.tracer_provider, "force_flush"):
+                self.tracer_provider.force_flush()
+            elif self.tracer and trace.get_tracer_provider():
+                if hasattr(trace.get_tracer_provider(), "force_flush"):
+                    trace.get_tracer_provider().force_flush()
+        except Exception:
+            pass
+        try:
+            if self.meter_provider and hasattr(self.meter_provider, "force_flush"):
+                self.meter_provider.force_flush()
+            elif self.meter and metrics.get_meter_provider():
+                if hasattr(metrics.get_meter_provider(), "force_flush"):
+                    metrics.get_meter_provider().force_flush()
+        except Exception:
+            pass
         logger.debug("[Azure Monitor] Flushed telemetry")
+
+    def shutdown(self):
+        """Gracefully stop background threads and exporters."""
+        if self.meter_provider and hasattr(self.meter_provider, "shutdown"):
+            try:
+                self.meter_provider.shutdown()
+            except Exception as e:
+                logger.debug(f"[Azure Monitor] Meter provider shutdown error: {e}")
+
+        if self.tracer_provider and hasattr(self.tracer_provider, "shutdown"):
+            try:
+                self.tracer_provider.shutdown()
+            except Exception as e:
+                logger.debug(f"[Azure Monitor] Tracer provider shutdown error: {e}")
+
+        try:
+            global_meter = metrics.get_meter_provider()
+            if global_meter and hasattr(global_meter, "shutdown") and global_meter != self.meter_provider:
+                global_meter.shutdown()
+        except Exception:
+            pass
+
+        try:
+            global_tracer = trace.get_tracer_provider()
+            if global_tracer and hasattr(global_tracer, "shutdown") and global_tracer != self.tracer_provider:
+                global_tracer.shutdown()
+        except Exception:
+            pass
+
+        logger.debug("[Azure Monitor] Telemetry providers shut down")
 
 azure_monitor_client = AzureMonitorClient()

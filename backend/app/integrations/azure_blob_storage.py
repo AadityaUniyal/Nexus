@@ -3,8 +3,9 @@ import os
 import json
 import time
 from typing import Dict, Any, List, Optional, Union
-from app.core.config import settings
 from pathlib import Path
+from app.core.config import settings
+from app.services.quota_guard import quota_guard
 
 try:
     from azure.storage.blob import BlobServiceClient
@@ -75,6 +76,9 @@ class AzureBlobStorageClient:
         if isinstance(data, str):
             data = data.encode('utf-8')
             
+        # Quota guard: check bytes written before upload
+        quota_guard.check_blob_storage(bytes_written=len(data), reads=0)
+
         if self.blob_service_client:
             try:
                 blob_client = self.blob_service_client.get_blob_client(container=container, blob=blob_name)

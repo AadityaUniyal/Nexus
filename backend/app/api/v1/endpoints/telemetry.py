@@ -16,6 +16,7 @@ from app.services.telemetry_service import (
 )
 from app.integrations.telemetry_adapters import TelemetryAdapter
 from app.models.integrations import WebhookEndpoint, IntegrationEvent
+from app.services.quota_guard import quota_guard
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetry & Telematics Ingestion"])
 
@@ -32,6 +33,11 @@ async def ingest_telemetry(
     Ingest normalized live vehicle telemetry for the authenticated organization workspace.
     Updates live vehicle coordinates, checks incident thresholds, and broadcasts via SSE.
     """
+    # Quota guard: track Event Hub events (1 per packet or batch size)
+    if isinstance(packet, TelemetryBatchRequest):
+        quota_guard.check_event_hub(len(packet.packets))
+    else:
+        quota_guard.check_event_hub(1)
     if isinstance(packet, TelemetryBatchRequest):
         results = []
         for p in packet.packets:

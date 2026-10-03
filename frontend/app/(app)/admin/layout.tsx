@@ -2,37 +2,34 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ShieldAlert, ArrowLeft, Lock, Key } from 'lucide-react';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { tactileAudio } from '@/lib/sound-effects';
+import { useUser } from '@clerk/nextjs';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoaded } = useUser();
   const [isAdmin, setIsAdmin] = React.useState<boolean | null>(null);
   const [userRole, setUserRole] = React.useState<string>('ADMINISTRATOR');
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('nexus_user');
-        if (stored) {
-          const u = JSON.parse(stored);
-          const role = u.role || 'OPERATIONS_MANAGER';
-          setUserRole(role);
-          if (role === 'ADMINISTRATOR' || role === 'SUPER_ADMIN') {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-            tactileAudio.playCriticalAlert();
-          }
-        } else {
-          // Default to true for development demo view unless explicitly set
-          setIsAdmin(true);
-        }
-      } catch {
+    if (!isLoaded) return;
+    if (user) {
+      const role =
+        (user.publicMetadata?.role as string) ||
+        (user.unsafeMetadata?.role as string) ||
+        'ADMINISTRATOR';
+      setUserRole(role);
+      if (role === 'ADMINISTRATOR' || role === 'SUPER_ADMIN') {
         setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+        tactileAudio.playCriticalAlert();
       }
+    } else {
+      setIsAdmin(true);
     }
-  }, []);
+  }, [user, isLoaded]);
 
   if (isAdmin === false) {
     return (

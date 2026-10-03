@@ -1,6 +1,6 @@
 from typing import List, Optional, Any
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -36,8 +36,7 @@ class ApprovalRead(BaseModel):
     incident_id: Optional[str] = None
     simulation_id: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AuditEventRead(BaseModel):
     id: str
@@ -50,8 +49,7 @@ class AuditEventRead(BaseModel):
     ai_involvement: Optional[str] = None
     created_at: Any = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 @router.get("/approvals", response_model=List[ApprovalRead])
 async def list_approvals(

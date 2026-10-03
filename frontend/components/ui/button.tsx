@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion, HTMLMotionProps } from "motion/react";
 import { cn } from "@/lib/utils";
 
@@ -18,9 +19,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary:
-        "bg-nexus-primary-container text-white shadow-tactile hover:bg-nexus-primary hover:shadow-tactile-md active:bg-black",
+        "bg-brand-700 text-white shadow-tactile hover:bg-brand-800 active:bg-brand-900 dark:bg-brand-600 dark:hover:bg-brand-500",
       secondary:
-        "bg-nexus-surface-container text-nexus-on-surface hover:bg-nexus-surface-high border border-nexus-outline-variant/60 shadow-sm",
+        "bg-nexus-surface-lowest text-nexus-on-surface hover:bg-nexus-surface-container border border-nexus-outline-variant shadow-tactile",
       outline:
         "border border-nexus-outline-variant bg-transparent text-nexus-on-surface hover:bg-nexus-surface-low hover:border-nexus-outline",
       ghost:
@@ -28,9 +29,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       danger:
         "bg-nexus-error text-white shadow-tactile hover:bg-red-700 active:bg-red-800",
       simulation:
-        "bg-nexus-simulation text-white shadow-tactile hover:bg-purple-700 active:bg-purple-800 border border-purple-400/30",
+        "bg-[#3a55c0] text-white shadow-tactile hover:bg-[#324aab] active:bg-[#2b3f93]",
       ai:
-        "bg-nexus-ai text-white shadow-tactile hover:bg-indigo-700 active:bg-indigo-800",
+        "bg-brand-700 text-white shadow-tactile hover:bg-brand-800 active:bg-brand-900",
     };
 
     const sizeStyles = {
@@ -82,3 +83,39 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = "Button";
+
+const LINK_VARIANTS = {
+  primary: "bg-brand-700 text-white shadow-tactile hover:bg-brand-800 active:bg-brand-900 dark:bg-brand-600 dark:hover:bg-brand-500",
+  secondary: "bg-nexus-surface-lowest text-nexus-on-surface hover:bg-nexus-surface-container border border-nexus-outline-variant shadow-tactile",
+  inverse: "bg-white text-brand-800 hover:bg-brand-50 active:bg-brand-100 shadow-tactile",
+} as const;
+
+const LINK_SIZES = {
+  sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
+  md: "h-10 px-4 text-sm gap-2 rounded-lg",
+  lg: "h-12 px-6 text-base gap-2.5 rounded-xl font-semibold",
+} as const;
+
+export interface ButtonLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+  href: string;
+  variant?: keyof typeof LINK_VARIANTS;
+  size?: keyof typeof LINK_SIZES;
+}
+
+/** A link styled as a button (avoids invalid <a><button> nesting). */
+export function ButtonLink({ href, variant = "primary", size = "md", className, children, ...props }: ButtonLinkProps) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "inline-flex items-center justify-center font-medium transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nexus-secondary focus-visible:ring-offset-2",
+        LINK_VARIANTS[variant],
+        LINK_SIZES[size],
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </Link>
+  );
+}

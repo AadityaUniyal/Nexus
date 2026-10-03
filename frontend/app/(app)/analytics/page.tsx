@@ -6,6 +6,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { MetricTile } from "@/components/ui/metric-tile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { apiFetch } from "@/lib/api/http";
+import { track } from "@/lib/analytics/tracker";
+import { AIInsightsPanel } from "@/components/analytics/AIInsightsPanel";
 import {
   BarChart3,
   TrendingUp,
@@ -60,13 +63,13 @@ export default function AnalyticsPage() {
     setLoading(true);
     try {
       // 1. Overview
-      const resOverview = await fetch(`/api/v1/analytics/overview?timeframe=${timeframe}`);
+      const resOverview = await apiFetch(`/api/v1/analytics/overview?timeframe=${timeframe}`);
       if (resOverview.ok) {
         setOverviewData(await resOverview.json());
       }
 
       // 2. Forecast
-      const resForecast = await fetch(
+      const resForecast = await apiFetch(
         `/api/v1/analytics/forecast?metric=${forecastMetric}&horizon=${forecastHorizon}`
       );
       if (resForecast.ok) {
@@ -74,19 +77,19 @@ export default function AnalyticsPage() {
       }
 
       // 3. Anomalies
-      const resAnomalies = await fetch(`/api/v1/analytics/anomalies`);
+      const resAnomalies = await apiFetch(`/api/v1/analytics/anomalies`);
       if (resAnomalies.ok) {
         setAnomalyData(await resAnomalies.json());
       }
 
       // 4. Risk scores
-      const resRisk = await fetch(`/api/v1/analytics/risk-scores`);
+      const resRisk = await apiFetch(`/api/v1/analytics/risk-scores`);
       if (resRisk.ok) {
         setRiskData(await resRisk.json());
       }
 
       // 5. Medallion architecture
-      const resMedallion = await fetch(`/api/v1/analytics/medallion-summary`);
+      const resMedallion = await apiFetch(`/api/v1/analytics/medallion-summary`);
       if (resMedallion.ok) {
         setMedallionData(await resMedallion.json());
       }
@@ -103,8 +106,9 @@ export default function AnalyticsPage() {
 
   const handleExportCSV = async () => {
     setExporting(true);
+    track("export", { format: "csv", timeframe });
     try {
-      const res = await fetch(`/api/v1/analytics/export?format=csv&timeframe=${timeframe}`);
+      const res = await apiFetch(`/api/v1/analytics/export?format=csv&timeframe=${timeframe}`);
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -133,17 +137,15 @@ export default function AnalyticsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto" role="main">
+      <div className="space-y-8 max-w-6xl mx-auto">
         {/* Header & Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
-              <span>Operational BI Analytics</span>
-              <span>·</span>
-              <span>Fabric Lakehouse & ML Engine</span>
+              <span>Analytics</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Data Analytics & Intelligence Command
+              Operations analytics
             </h1>
           </div>
 
@@ -189,14 +191,16 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        <AIInsightsPanel timeframe={timeframe} />
+
         {/* Tab Navigation */}
         <div className="flex border-b border-nexus-outline-variant/40 gap-2 overflow-x-auto text-sm font-medium">
           {[
-            { id: "overview" as TabType, label: "Real-Time Operations", icon: Activity },
-            { id: "forecast" as TabType, label: "Predictive ML Forecast", icon: BrainCircuit },
-            { id: "anomalies" as TabType, label: "Telemetry Anomaly Detection", icon: AlertTriangle },
-            { id: "risk" as TabType, label: "Logistics Risk Exposure", icon: ShieldAlert },
-            { id: "medallion" as TabType, label: "Medallion Lakehouse", icon: Layers },
+            { id: "overview" as TabType, label: "Overview", icon: Activity },
+            { id: "forecast" as TabType, label: "Forecast", icon: BrainCircuit },
+            { id: "anomalies" as TabType, label: "Anomalies", icon: AlertTriangle },
+            { id: "risk" as TabType, label: "Risk", icon: ShieldAlert },
+            { id: "medallion" as TabType, label: "Data pipeline", icon: Layers },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -274,18 +278,18 @@ export default function AnalyticsPage() {
                       >
                         <defs>
                           <linearGradient id="slaGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2d6955" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#2d6955" stopOpacity={0.0} />
+                            <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e2e0" opacity={0.6} />
-                        <XAxis dataKey="time" stroke="#757872" fontSize={11} fontFamily="monospace" />
-                        <YAxis domain={[85, 100]} stroke="#757872" fontSize={11} fontFamily="monospace" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.6} />
+                        <XAxis dataKey="time" stroke="var(--outline)" fontSize={11} fontFamily="monospace" />
+                        <YAxis domain={[85, 100]} stroke="var(--outline)" fontSize={11} fontFamily="monospace" />
                         <Tooltip />
                         <Area
                           type="monotone"
                           dataKey="adherence"
-                          stroke="#2d6955"
+                          stroke="var(--chart-1)"
                           strokeWidth={2.5}
                           fillOpacity={1}
                           fill="url(#slaGradient)"
@@ -319,9 +323,9 @@ export default function AnalyticsPage() {
                         data={hubThroughput}
                         margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                       >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e2e0" opacity={0.6} />
-                        <XAxis dataKey="hub" stroke="#757872" fontSize={11} fontFamily="monospace" />
-                        <YAxis stroke="#757872" fontSize={11} fontFamily="monospace" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.6} />
+                        <XAxis dataKey="hub" stroke="var(--outline)" fontSize={11} fontFamily="monospace" />
+                        <YAxis stroke="var(--outline)" fontSize={11} fontFamily="monospace" />
                         <Tooltip />
                         <Bar dataKey="volume" fill="#20231f" radius={[4, 4, 0, 0]} name="Current Load" />
                         <Bar dataKey="capacity" fill="#dcd9d8" radius={[4, 4, 0, 0]} name="Max Capacity" />
@@ -406,14 +410,14 @@ export default function AnalyticsPage() {
                           <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e2e0" opacity={0.6} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.6} />
                       <XAxis
                         dataKey={forecastHorizon === "24h" ? "time" : "date"}
-                        stroke="#757872"
+                        stroke="var(--outline)"
                         fontSize={11}
                         fontFamily="monospace"
                       />
-                      <YAxis stroke="#757872" fontSize={11} fontFamily="monospace" />
+                      <YAxis stroke="var(--outline)" fontSize={11} fontFamily="monospace" />
                       <Tooltip />
                       <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: "12px", fontFamily: "monospace" }} />
                       <Area
@@ -428,7 +432,7 @@ export default function AnalyticsPage() {
                       <Area
                         type="monotone"
                         dataKey="p50"
-                        stroke="#2d6955"
+                        stroke="var(--chart-1)"
                         strokeWidth={2.5}
                         fill="none"
                         name="P50 (Expected)"

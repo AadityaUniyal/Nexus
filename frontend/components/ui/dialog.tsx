@@ -37,6 +37,9 @@ export function Dialog({
     xl: "max-w-2xl",
   };
 
+  const titleId = React.useId();
+  const descId = React.useId();
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -47,9 +50,14 @@ export function Dialog({
             exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+            aria-hidden="true"
           />
 
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={description ? descId : undefined}
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -62,16 +70,18 @@ export function Dialog({
             <div className="flex items-start justify-between pb-4 border-b border-nexus-outline-variant/30">
               <div>
                 {title && (
-                  <h3 className="text-lg font-semibold text-nexus-on-surface tracking-tight">
+                  <h3 id={titleId} className="text-lg font-semibold text-nexus-on-surface tracking-tight">
                     {title}
                   </h3>
                 )}
                 {description && (
-                  <p className="text-xs text-nexus-on-surface-variant mt-1">{description}</p>
+                  <p id={descId} className="text-xs text-nexus-on-surface-variant mt-1">{description}</p>
                 )}
               </div>
               <button
+                type="button"
                 onClick={onClose}
+                aria-label="Close dialog"
                 className="p-1.5 rounded-lg text-nexus-on-surface-variant hover:text-nexus-on-surface hover:bg-nexus-surface-container transition-colors"
               >
                 <X className="h-4 w-4" />

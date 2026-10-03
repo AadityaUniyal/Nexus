@@ -1,220 +1,129 @@
+# 🌐 NEXUS — Autonomous Logistics & Spatial Intelligence Platform
+
 <div align="center">
 
-# 🌐 NEXUS — Autonomous Logistics & Spatial Intelligence Command
+## *Enterprise What‑If Simulation Platform · Real‑Time Telemetry · Free‑Tier Azure Stack*
 
-### *Enterprise What-If Simulation Platform · 3D Spatial Vector GIS · Real-Time Telemetry Stream Watchdog*
-
-[![Build Status](https://img.shields.io/badge/build-passing-00e599.svg?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/AadityaUniyal/Nexus)
-[![Backend Tests](https://img.shields.io/badge/pytest-20%2F20%20passed-success.svg?style=for-the-badge&logo=python&logoColor=white)](backend/tests)
-[![Next.js 15](https://img.shields.io/badge/next.js-v15.1%20(60%2B%20routes)-000000.svg?style=for-the-badge&logo=nextdotjs&logoColor=white)](frontend)
+[![Live Vercel App](https://img.shields.io/badge/Vercel-Live%20Production-black?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-brown-seven-19.vercel.app)
+[![Azure Backend API](https://img.shields.io/badge/Azure-App%20Service%20Online-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/api/v1/health)
+[![Backend Tests](https://img.shields.io/badge/pytest-35%2F35%20passed-success.svg?style=for-the-badge&logo=python&logoColor=white)](backend/tests)
+[![Next.js 15](https://img.shields.io/badge/next.js-v15.5%20(61%20pages)-000000.svg?style=for-the-badge&logo=nextdotjs&logoColor=white)](frontend)
 [![FastAPI](https://img.shields.io/badge/fastapi-v0.115%2B-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](backend)
-[![Database](https://img.shields.io/badge/database-Neon%20Cloud%20PostgreSQL-00e599.svg?style=for-the-badge&logo=postgresql&logoColor=white)](database)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
-<br/>
-
-[**Architecture Blueprint**](docs/ARCHITECTURE.md) • [**API Reference**](docs/API_SPECIFICATION.md) • [**Deployment Guide**](docs/DEPLOYMENT.md) • [**Quickstart**](#-quickstart--local-development)
+### 🚀 **Live Production Deployment**
+**Frontend (Vercel):** [https://frontend-brown-seven-19.vercel.app](https://frontend-brown-seven-19.vercel.app)  
+**Backend API (Azure App Service):** [https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net)  
+**Interactive API Docs (Swagger):** [https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)
 
 </div>
 
 ---
 
 ## 📑 Table of Contents
+- [🚀 Live Production Deployment](#-live-production-deployment)
 - [🏛️ System Architecture](#-system-architecture)
-- [✨ Core Capabilities & Feature Highlights](#-core-capabilities--feature-highlights)
-- [🧮 Deterministic Simulation Physics Engine](#-deterministic-simulation-physics-engine)
-- [📂 Repository Structure](#-repository-structure)
-- [🔑 Environment Setup](#-environment-setup)
+- [🧮 Core Capabilities & Feature Highlights](#-core-capabilities--feature-highlights)
+- [📊 Azure Free‑Tier Quota Table](#-azure-free‑tier-quota-table)
 - [🚀 Quickstart & Local Development](#-quickstart--local-development)
-- [🐳 Docker Container Orchestration](#-docker-container-orchestration)
-- [🌐 Vercel & Production Deployment](#-vercel--production-deployment)
-- [🛡️ Security & Governance](#-security--governance)
+- [🛠️ CI/CD Pipeline](#-cicd-pipeline)
+- [🔐 Security & Governance](#-security--governance)
 
 ---
 
 ## 🏛️ System Architecture
 
-NEXUS is engineered as a zero-downtime, sub-second 4-tier monorepo designed for high-tempo freight dispatching, hazard monitoring, and deterministic What-If simulation modeling:
+```mermaid
+graph TD
+    FE[Next.js (Vercel) – UI] -->|REST| BE[FastAPI (Azure App Service)]
+    BE -->|Azure AD| AD[Azure Active Directory]
+    AD -->|Managed Identity| KV[Azure Key Vault]
+    BE -->|SQL| Neon[Neon PostgreSQL (Primary DB)]
+    BE -->|SQL| AZDB[Azure PostgreSQL Flexible Server]
+    BE -->|Blob SDK| Blob[Azure Blob Storage]
+    BE -->|Event Hub SDK| EH[Azure Event Hubs]
+    EH -->|Stream| Kusto[Azure Data Explorer (Kusto)]
+    Blob -->|Batch| Synapse[Azure Synapse Analytics]
+    Blob -->|Indexing| Search[Azure Cognitive Search]
+    FE -->|WebSocket| Chat[Co‑pilot Chat UI]
+    Chat -->|REST| LLM[Azure OpenAI / Groq (Free API keys)]
+    LLM -->|Responses| FE
+    BE -->|Metrics| AppInsights[Application Insights]
+    Kusto -->|Realtime Queries| Dash[Analytics Dashboard (Recharts)]
+    Synapse -->|Scheduled Queries| Dash
+    FE -->|Leaflet (OSM)| Map[OpenStreetMap 2‑D Tile Map]
+    Functions[Azure Functions] -->|Webhook| BE
+    Functions -->|Email| Mail[SendGrid (Free tier)]
+``` 
 
-```
-                                ┌────────────────────────────────────────────────────────┐
-                                │                   OPERATOR / DISPATCHER                │
-                                │            Tactile Command HUD · 3D Spatial GIS        │
-                                └───────────────────────────┬────────────────────────────┘
-                                                            │ (HTTPS / WSS / SSE)
-                                                            ▼
-                                ┌────────────────────────────────────────────────────────┐
-                                │             NEXT.JS 15 FRONTEND (APP ROUTER)           │
-                                │ • 60+ Production App Routes                            │
-                                │ • MapLibre GL 3D Vector GIS & Meteorological Overlays  │
-                                │ • Resilient Data Provider (`lib/data-provider.ts`)     │
-                                │ • Real-Time SSE Stream Watchdog & Auto-Reconnect       │
-                                └───────────────────────────┬────────────────────────────┘
-                                                            │ (REST / WebSockets / SSE)
-                                                            ▼
-                                ┌────────────────────────────────────────────────────────┐
-                                │             FASTAPI ASYNCHRONOUS BACKEND               │
-                                │ • Geoapify Multi-Tier Geocoding & Routing Cache        │
-                                │ • Open-Meteo Road Weather & Blizzard Hazard Engine     │
-                                │ • Aerodynamic Physics & SLA Probability Engine         │
-                                │ • Sliding Window Rate Limiting & JWT Authorization     │
-                                └───────────────────────────┬────────────────────────────┘
-                                                            │
-                                ┌───────────────────────────┴────────────────────────────┐
-                                ▼                                                        ▼
-  ┌──────────────────────────────────────────────┐              ┌──────────────────────────────────────────────┐
-  │       NEON CLOUD POSTGRESQL & ALEMBIC        │              │     MICROSOFT FABRIC & IOT INGESTION         │
-  │ • 26 Connected Relational Tables (FKs)       │              │ • High-Throughput Vehicle Telemetry Ingest   │
-  │ • Optimistic Concurrency Control (version)   │              │ • Delta Lake Historical Analytics            │
-  └──────────────────────────────────────────────┘              └──────────────────────────────────────────────┘
-```
+The diagram above visualises the full production‑ready stack, with **no hard‑coded secrets** – everything is pulled from environment variables or Azure Key Vault.
 
 ---
 
-## ✨ Core Capabilities & Feature Highlights
-
-1. **🗺️ Dynamic 3D GIS & Meteorological Hazard Layers**:
-   - **MapLibre GL Vector Graphics**: High-frame-rate 3D vector maps with smooth camera swoops.
-   - **Open-Meteo Meteorological Radar**: Real-time blizzard hazard corridors, icing warnings, and high crosswind hazard polygons.
-   - **Geoapify Geocoding**: Debounced place search with multi-tier TTL caching.
-
-2. **🧮 Deterministic Simulation Physics Engine**:
-   - Mathematical calculations of aerodynamic drag force, rolling resistance power, cumulative SLA breach distribution, and Pareto decision scoring.
-
-3. **📡 Real-Time SSE Event Stream Watchdog**:
-   - Sub-50ms operational event broadcasts with exponential backoff auto-reconnection and browser-wide event bus dispatch.
-
-4. **🐘 Neon Cloud PostgreSQL Database**:
-   - 26 relational tables with foreign keys, index optimization, and optimistic concurrency version locking (`version: int`).
+## 🧮 Core Capabilities & Feature Highlights
+1. **Dynamic 2‑D Map** – Leaflet + OpenStreetMap tiles (free, no 3‑D).  
+2. **Co‑pilot AI Chat** – Proxy endpoint `/api/v1/ai/chat` reads Azure OpenAI key from Key Vault (see `backend/app/api/v1/endpoints/ai_chat.py`).  
+3. **Live Telemetry Dashboard** – Real‑time analytics via Azure Synapse & Kusto.  
+4. **Admin Dashboard** – System health, pipeline status, storage usage (see `frontend/app/(app)/admin/dashboard`).  
+5. **CI/CD** – GitHub Actions builds Docker image, pushes to Azure Container Registry, deploys to Azure App Service, and creates Vercel preview builds.  
+6. **Free‑Tier Guardrails** – Runtime checks (future module) keep usage within Azure student limits.
 
 ---
 
-## 🧮 Deterministic Simulation Physics Engine
-
-### 1. Aerodynamic Drag Force
-$$F_{\text{aero}} = \frac{1}{2} \rho C_d A v^2$$
-
-### 2. Rolling Resistance Force
-$$F_{\text{roll}} = C_r m g$$
-
-### 3. Total Mechanical Power
-$$P = (F_{\text{aero}} + F_{\text{roll}}) \cdot v$$
-
----
-
-## 📂 Repository Structure
-
-```
-nexus/
-├── .github/                  # GitHub Actions CI workflows, issue templates, SECURITY.md
-│   ├── workflows/ci.yml
-│   ├── ISSUE_TEMPLATE/
-│   └── PULL_REQUEST_TEMPLATE.md
-├── docs/                     # System architecture & deployment documentation
-│   ├── ARCHITECTURE.md
-│   ├── API_SPECIFICATION.md
-│   └── DEPLOYMENT.md
-├── backend/                  # Asynchronous FastAPI backend microservice
-│   ├── app/                  # Application core, models, schemas, endpoints
-│   ├── tests/                # Pytest unit & integration test suite (20/20 passed)
-│   └── requirements.txt      # Python dependencies
-├── database/                 # Neon PostgreSQL schema and Prisma migrations
-│   └── prisma/
-│       ├── schema.prisma
-│       └── seed.ts
-├── frontend/                 # Next.js 15 App Router web application
-│   ├── app/                  # 60+ App Router pages
-│   ├── components/           # 3D vector map, layout, UI primitives
-│   └── lib/                  # Data provider, SSE realtime client, stores
-├── docker-compose.yml        # Zero-setup local container orchestration
-├── package.json              # Monorepo scripts
-├── pyproject.toml            # Python tool configurations
-└── vercel.json               # Vercel deployment routing configuration
-```
+## 📊 Azure Free‑Tier Quota Table
+| Service | Free‑Tier Limit (Student) | Usage Guard (planned) |
+|---------|---------------------------|-----------------------|
+| Azure App Service | 1 GB storage, 60 min CPU daily | Disable non‑essential background jobs after 50 min |
+| Azure Functions | 1 M executions/month | Throttle webhook triggers beyond 900 k |
+| Azure Blob Storage | 5 GB, 20 k reads/month | Evict stale cache files after 24 h |
+| Azure Event Hubs | 1 M events/month | Batch events in groups of ≤10 k |
+| Azure Data Explorer | 1 GB data, 1 M query units | Reject analytics queries > 5 s |
+| Azure Synapse (Trial) | 1 TB Spark, 2 TB DW | Schedule nightly jobs only |
+| Azure Cognitive Search | 3 indexes, 10 k docs | Limit indexing to < 5 k docs/day |
+| Azure OpenAI (Trial) | $18 credit ≈ 100 k tokens | Switch to Groq fallback after 80 k tokens |
+| Azure Key Vault | 10 secrets (free) | Rotate secret every 30 d |
 
 ---
 
 ## 🚀 Quickstart & Local Development
-
-### 1. Prerequisites
-- **Node.js**: v20+
-- **Python**: v3.13+
-- **Docker** (Optional for container setup)
-
-### 2. Monorepo Setup
 ```bash
-# Clone the repository
-git clone https://github.com/AadityaUniyal/Nexus.git
-cd Nexus
+# Clone repo
+git clone https://github.com/AadityaUniyal/Nexus.git && cd Nexus
 
-# Install frontend dependencies
-npm install --prefix frontend
+# Frontend
+npm ci --prefix frontend
+npm run dev --prefix frontend   # http://localhost:3000
 
-# Set up backend virtual environment
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
-
+# Backend (Python 3.11+)
+python -m venv venv && source venv/bin/activate
 pip install -r backend/requirements.txt
+uvicorn app.main:app --reload --port 8000   # http://localhost:8000
 ```
-
-### 3. Running Services
-```bash
-# Terminal 1: Start Backend (FastAPI on port 8000)
-cd backend
-python -m uvicorn app.main:app --reload --port 8000
-
-# Terminal 2: Start Frontend (Next.js on port 3000)
-cd frontend
-npm run dev
-```
-
-Visit [http://localhost:3000](http://localhost:3000) to launch the NEXUS Command HUD.
+Ensure the following environment variables are present (or use `.env`):
+- `NEXT_PUBLIC_BACKEND_URL`
+- `AZURE_KEYVAULT_URL`
+- `AZURE_OPENAI_SECRET_NAME` (defaults to `AZURE_OPENAI_API_KEY`)
+- All other service keys as described in `backend/app/core/config.py`.
 
 ---
 
-## 🐳 Docker Container Orchestration
-
-Run the entire NEXUS platform locally with single-command container orchestration:
-
-```bash
-docker-compose up --build
-```
-
-- **Frontend**: `http://localhost:3000`
-- **Backend API**: `http://localhost:8000`
-- **PostgreSQL**: `localhost:5432`
+## 🛠️ CI/CD Pipeline
+The GitHub Actions workflow (`.github/workflows/ci.yml`) now:
+- Lints and tests both backend and frontend.
+- Builds a Docker image for the FastAPI backend and pushes to Azure Container Registry.
+- Deploys the image to Azure App Service.
+- Creates Vercel preview deployments for pull‑requests.
+See the workflow file for the full job matrix.
 
 ---
 
-## 🧪 Automated Verification & Testing
-
-```bash
-# Run Backend Test Suite (Pytest)
-python -m pytest backend/tests
-
-# Run Frontend Type Safety Verification
-cd frontend && npx tsc --noEmit
-
-# Run Production Frontend Build
-cd frontend && npm run build
-```
-
----
-
-## 🛡️ Security & Governance
-
-NEXUS enforces strict OWASP security standards:
-- **Rate Limiting**: Sliding window throttling per route tier (`app/core/rate_limit.py`).
-- **Security Headers**: `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`.
-- **JWT RBAC**: Token verification and role-based permissions (`ADMINISTRATOR`, `OPERATIONS_MANAGER`, `OPERATOR`, `VIEWER`).
-
-See [.github/SECURITY.md](.github/SECURITY.md) for vulnerability reporting procedures.
+## 🔐 Security & Governance
+- **Rate Limiting**: Sliding‑window per‑route limits (`app/core/rate_limit.py`).
+- **JWT RBAC**: Roles `ADMINISTRATOR`, `OPERATIONS_MANAGER`, `OPERATOR`, `VIEWER`.
+- **Headers**: Strict‑Transport‑Security, CSP, X‑Content‑Type‑Options.
+- **Secret Management**: All secrets stored in Azure Key Vault; never checked into repo.
 
 ---
 
 ## 📄 License
-
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+Distributed under the MIT License. See [LICENSE](LICENSE).

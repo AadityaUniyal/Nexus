@@ -15,12 +15,13 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: api.geoapify.com *.tile.openstreetmap.org",
-              "connect-src 'self' api.geoapify.com *.vercel.app *.vercel-insights.com *.azurewebsites.net https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net wss: https://nexus-backend.onrender.com",
+              "img-src 'self' data: blob: api.geoapify.com https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://img.clerk.com",
+              "connect-src 'self' api.geoapify.com *.vercel.app *.vercel-insights.com *.azurewebsites.net https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net wss: https://nexus-backend.onrender.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.com",
               "font-src 'self' data:",
-              "frame-src 'self' https://vercel.live",
+              "frame-src 'self' https://vercel.live https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com",
+              "worker-src 'self' blob:",
             ].join("; "),
           },
           {
@@ -44,7 +45,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8000";
     return [
       {
         source: "/api/v1/:path*",

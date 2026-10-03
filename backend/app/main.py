@@ -3,6 +3,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
+from app.core.security import decode_token
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import settings
@@ -47,11 +48,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"[Azure Blob Storage] Initialization skipped: {e}")
 
+    # Initialize Azure Event Hub
+    try:
+        from app.integrations.azure_event_hub import azure_event_hub_client
+        if azure_event_hub_client.is_healthy():
+            logger.info("[Azure Event Hub] Initialized successfully")
+        else:
+            logger.info("[Azure Event Hub] Disabled or not configured")
+    except Exception as e:
+        logger.warning(f"[Azure Event Hub] Initialization skipped: {e}")
+
     yield
     # Shutdown actions
     try:
         from app.integrations.azure_monitor import azure_monitor_client
-        azure_monitor_client.flush()
+        azure_monitor_client.shutdown()
     except Exception:
         pass
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
@@ -78,20 +89,49 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Accept", "Origin"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Workspace-ID", "Accept", "Origin"],
 )
 app.add_middleware(RateLimitMiddleware)
+
+# Auto-instrument FastAPI so Application Insights gets the `requests` table
+# (operation names, durations, result codes, failures) and distributed traces.
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from app.integrations.azure_monitor import azure_monitor_client
+    if azure_monitor_client.tracer_provider is not None:
+        FastAPIInstrumentor.instrument_app(
+            app,
+            tracer_provider=azure_monitor_client.tracer_provider,
+            excluded_urls="health/live,health/ready",
+        )
+except Exception as _otel_err:  # pragma: no cover
+    logger.info(f"[Azure Monitor] FastAPI instrumentation skipped: {_otel_err}")
 
 # Custom Request Timing, Security Headers & Logging Middleware
 @app.middleware("http")
 async def add_process_time_and_security_headers(request: Request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
+    # Extract role from JWT if present
+    auth_header = request.headers.get("Authorization")
+    role = None
+    if auth_header and auth_header.lower().startswith("bearer "):
+        token = auth_header.split(" ", 1)[1]
+        payload = decode_token(token)
+        if payload:
+            role = payload.get("role")
+    request.state.role = role
     start_time = time.time()
-
+    # Admin authorization is enforced per-route via require_permission(...)
+    # in endpoints/admin.py (the old path check here never matched /api/v1/admin).
     response = await call_next(request)
 
     process_time = (time.time() - start_time) * 1000
+    try:
+        from app.services.platform_metrics import platform_metrics
+        platform_metrics.record(str(request.url.path), response.status_code, process_time)
+    except Exception:
+        pass
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Process-Time-Ms"] = f"{process_time:.2f}"
 
@@ -227,6 +267,35 @@ async def azure_health():
         }
     except Exception:
         azure_services["blobStorage"] = {"status": "NOT_LOADED"}
+    # Event Hub
+    try:
+        from app.integrations.azure_event_hub import azure_event_hub_client
+        azure_services["eventHub"] = {
+            "status": "CONNECTED" if azure_event_hub_client.is_healthy() else "DISABLED",
+            "freeTierLimit": "1 M events/month",
+        }
+    except Exception:
+        azure_services["eventHub"] = {"status": "NOT_LOADED"}
+
+    # Cognitive Search
+    try:
+        from app.integrations.azure_cognitive_search import azure_cognitive_search_client
+        azure_services["cognitiveSearch"] = {
+            "status": "CONNECTED" if azure_cognitive_search_client.is_healthy() else "DISABLED",
+            "freeTierLimit": "3 indexes, 10K docs each",
+        }
+    except Exception:
+        azure_services["cognitiveSearch"] = {"status": "NOT_LOADED"}
+
+    # Foundry
+    try:
+        from app.integrations.azure_foundry import azure_foundry_client
+        azure_services["foundry"] = {
+            "status": "CONNECTED" if azure_foundry_client.is_healthy() else "DISABLED",
+            "freeTierLimit": "Limited sandbox resources",
+        }
+    except Exception:
+        azure_services["foundry"] = {"status": "NOT_LOADED"}
 
     # IoT Hub
     try:
@@ -276,6 +345,17 @@ async def azure_health():
         }
     except Exception:
         azure_services["functions"] = {"status": "NOT_LOADED"}
+
+    # LLM providers (Groq / Gemini free tiers)
+    try:
+        from app.services.ai_service import ai_service
+        st = ai_service.status()
+        azure_services["aiProviders"] = {
+            "status": "ACTIVE" if st["enabled"] else "DETERMINISTIC",
+            "chain": st["chain"],
+        }
+    except Exception:
+        azure_services["aiProviders"] = {"status": "NOT_LOADED"}
 
     all_healthy = all(
         s.get("status") not in ["NOT_LOADED"]
