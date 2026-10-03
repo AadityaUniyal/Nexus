@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "NEXUS Operational Intelligence & Decision Simulation Platform",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev": "npm run dev:frontend",
     "build": "npm run build:frontend",
