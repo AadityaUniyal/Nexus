@@ -11,6 +11,8 @@ try:
 except ImportError:
     _AZURE_SDK_AVAILABLE = False
 
+from app.core.config import settings
+
 class AzureKeyVaultManager:
     """
     Azure Key Vault Secret Provider.
@@ -23,7 +25,7 @@ class AzureKeyVaultManager:
     FREE TIER: ~$0.03 per 10,000 operations (effectively free for small apps)
     """
     def __init__(self, vault_url: Optional[str] = None):
-        self.vault_url = vault_url or os.getenv("AZURE_KEYVAULT_URL", "")
+        self.vault_url = vault_url or settings.AZURE_KEYVAULT_URL or os.getenv("AZURE_KEYVAULT_URL", "")
         self._cache = {}
         self._client = None
 

@@ -10,6 +10,7 @@
 *.key
 *.cert
 *.secret
+.azure_token_cache.json
 
 # Node / Frontend Artifacts
 node_modules/

@@ -47,21 +47,28 @@ class Settings(BaseSettings):
     # Cloud Integrations
     FABRIC_ONELAKE_ENABLED: bool = True
     AZURE_IOT_HUB_ENABLED: bool = True
-    AZURE_TENANT_ID: str = os.getenv("AZURE_TENANT_ID", "")
-    AZURE_CLIENT_ID: str = os.getenv("AZURE_CLIENT_ID", "")
-    AZURE_CLIENT_SECRET: str = os.getenv("AZURE_CLIENT_SECRET", "")
-    FABRIC_WORKSPACE_ID: str = os.getenv("FABRIC_WORKSPACE_ID", "")
+    AZURE_IOT_HUB_CONNECTION_STRING: str = ""
+    AZURE_IOT_HUB_HOSTNAME: str = ""
+    AZURE_SUBSCRIPTION_ID: str = ""
+    AZURE_RESOURCE_GROUP: str = ""
+    AZURE_LOCATION: str = "austriaeast"
+    AZURE_UPN: str = ""
+    AZURE_WEBAPP_URL: str = ""
+    AZURE_TENANT_ID: str = ""
+    AZURE_CLIENT_ID: str = ""
+    AZURE_CLIENT_SECRET: str = ""
+    FABRIC_WORKSPACE_ID: str = ""
 
     # Azure Monitor / Application Insights
-    APPLICATIONINSIGHTS_CONNECTION_STRING: str = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
-    AZURE_MONITOR_ENABLED: bool = os.getenv("AZURE_MONITOR_ENABLED", "true").lower() == "true"
+    APPLICATIONINSIGHTS_CONNECTION_STRING: str = ""
+    AZURE_MONITOR_ENABLED: bool = True
     
     # Azure Blob Storage
-    AZURE_STORAGE_CONNECTION_STRING: str = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
-    AZURE_STORAGE_ENABLED: bool = os.getenv("AZURE_STORAGE_ENABLED", "true").lower() == "true"
+    AZURE_STORAGE_CONNECTION_STRING: str = ""
+    AZURE_STORAGE_ENABLED: bool = True
     
     # Azure Key Vault
-    AZURE_KEYVAULT_URL: str = os.getenv("AZURE_KEYVAULT_URL", "")
+    AZURE_KEYVAULT_URL: str = ""
 
     # Email & Verification Configuration
     SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.example.com")
@@ -99,11 +106,8 @@ class Settings(BaseSettings):
     @field_validator("SECRET_KEY", mode="after")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
-        app_env = os.getenv("APP_ENV", "development").lower()
-        if app_env == "production" and not os.getenv("SECRET_KEY"):
-            raise ValueError(
-                "CRITICAL SECURITY ERROR: SECRET_KEY environment variable MUST be explicitly set in production mode!"
-            )
+        if not v or not v.strip():
+            return secrets.token_urlsafe(32)
         return v
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -120,7 +124,7 @@ class Settings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env", "../.env", ".env.azure"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"

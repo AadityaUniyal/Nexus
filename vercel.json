@@ -18,7 +18,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://nexus-backend.onrender.com/api/v1/:path*"
+      "destination": "https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/api/v1/:path*"
     }
   ]
 }

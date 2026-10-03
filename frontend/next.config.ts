@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: api.geoapify.com *.tile.openstreetmap.org",
-              "connect-src 'self' api.geoapify.com *.vercel.app *.vercel-insights.com wss: https://nexus-backend.onrender.com",
+              "connect-src 'self' api.geoapify.com *.vercel.app *.vercel-insights.com *.azurewebsites.net https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net wss: https://nexus-backend.onrender.com",
               "font-src 'self' data:",
               "frame-src 'self' https://vercel.live",
             ].join("; "),
