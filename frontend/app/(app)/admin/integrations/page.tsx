@@ -6,7 +6,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
-import { Cloud, Cpu, Radio, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Cloud, Cpu, Radio, Sparkles, Database, Key, Activity, RefreshCw, Server, MapPin } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { FadeIn, SpringCard } from '@/components/motion';
 
@@ -18,30 +18,74 @@ export default function AdminIntegrationsPage() {
 
   const integrations = [
     {
-      id: 'fabric',
-      name: 'Microsoft Fabric & OneLake Bridge',
-      desc: 'Delta Lake parquet mirroring for cloud-scale analytics.',
-      status: 'CONNECTED',
-      icon: Cloud,
-    },
-    {
-      id: 'azure',
-      name: 'Azure Event Hubs Adapter',
-      desc: 'High-throughput IoT GPS telemetry ingress.',
+      id: 'azure_iot',
+      name: 'Azure IoT Hub Gateway',
+      category: 'Azure Free Tier (F1)',
+      desc: 'Live telemetry ingestion via nexus-iothub-prod24 (8,000 msg/day free tier).',
       status: 'CONNECTED',
       icon: Radio,
     },
     {
+      id: 'azure_blob',
+      name: 'Azure Blob Storage (Medallion Lake)',
+      category: 'Azure Storage (5 GB)',
+      desc: 'Account nexusstorprod: bronze/silver/gold parquet partitions and document uploads.',
+      status: 'CONNECTED',
+      icon: Database,
+    },
+    {
+      id: 'azure_kv',
+      name: 'Azure Key Vault Secrets',
+      category: 'Azure Security',
+      desc: 'Enterprise hardware-backed vault nexus-kv-prod24 for database URIs and API credentials.',
+      status: 'CONNECTED',
+      icon: Key,
+    },
+    {
+      id: 'azure_monitor',
+      name: 'Azure Application Insights',
+      category: 'Azure Observability',
+      desc: 'Live APM tracing, OpenTelemetry metrics, and health logs (nexus-ai-prod).',
+      status: 'ACTIVE',
+      icon: Activity,
+    },
+    {
+      id: 'azure_functions',
+      name: 'Azure Functions (Serverless)',
+      category: 'Azure Compute (1M/mo)',
+      desc: 'Timer triggers for fleet anomaly sweeps, SLA auditing, and daily KPI rollups.',
+      status: 'CONNECTED',
+      icon: Server,
+    },
+    {
+      id: 'fabric',
+      name: 'Microsoft Fabric & OneLake Bridge',
+      category: 'Analytics Lakehouse',
+      desc: 'Delta Lake parquet mirroring for cloud-scale analytics & Power BI ingestion.',
+      status: 'CONNECTED',
+      icon: Cloud,
+    },
+    {
+      id: 'geoapify',
+      name: 'Geoapify Spatial Intelligence',
+      category: 'Telematics & Routing',
+      desc: 'Geocoding, route matrix optimization, isolines, and road network snapping.',
+      status: 'CONNECTED',
+      icon: MapPin,
+    },
+    {
       id: 'groq',
-      name: 'Groq LLaMA 3.3 AI Provider',
-      desc: 'Executive summaries and management command briefings (Optional enhancement).',
+      name: 'Groq LLaMA 3.3 70B AI Engine',
+      category: 'AI & Copilot',
+      desc: 'Ultra-low latency LPU inference for dispatch copilot and voice companion.',
       status: 'ACTIVE',
       icon: Sparkles,
     },
     {
       id: 'webhook',
       name: 'Enterprise Webhook Dispatcher',
-      desc: 'Outbound REST event dispatch for third-party ERP/WMS systems.',
+      category: 'Integration Bus',
+      desc: 'Outbound REST event dispatch for enterprise TMS/WMS/ERP synchronization.',
       status: 'IDLE',
       icon: Cpu,
     },
@@ -102,6 +146,11 @@ export default function AdminIntegrationsPage() {
                     </Badge>
                   </div>
                   <div>
+                    {integ.category && (
+                      <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-nexus-primary block mb-1">
+                        {integ.category}
+                      </span>
+                    )}
                     <h3 className="text-base font-bold text-nexus-on-surface">{integ.name}</h3>
                     <p className="text-xs text-nexus-on-surface-variant mt-1 leading-relaxed">{integ.desc}</p>
                   </div>
