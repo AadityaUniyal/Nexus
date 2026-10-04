@@ -51,9 +51,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install
         run: npm ci --prefix frontend
+      # Use the package script: a bare `npx tsc` inside the npm workspace downloads an
+      # unrelated placeholder package named "tsc" instead of the project's TypeScript.
       - name: Type check
-        working-directory: frontend
-        run: npx tsc --noEmit
+        run: npm run typecheck --prefix frontend
       - name: Build
         working-directory: frontend
         env:
