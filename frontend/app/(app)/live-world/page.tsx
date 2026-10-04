@@ -48,19 +48,19 @@ export default function LiveWorldPage() {
         const parsed = JSON.parse(savedLoc);
         setSelectedLocation({
           id: `loc-saved-${Date.now()}`,
-          display_name: parsed.name || "Operational Superhub",
-          latitude: parsed.lat || 41.8781,
-          longitude: parsed.lng || -87.6298,
+          display_name: `${parsed.name || "Primary Operational Base"}, ${parsed.country || "Hub"}`,
+          latitude: parsed.lat || 30.3165,
+          longitude: parsed.lng || 78.0322,
           type: "city",
           confidence: 1.0,
           provider: "geoapify",
         });
       } else {
         setSelectedLocation({
-          id: "loc-chi-default",
-          display_name: "Chicago Central Hub, IL, United States",
-          latitude: 41.8781,
-          longitude: -87.6298,
+          id: "loc-default-hub",
+          display_name: "Dehradun Hub, India",
+          latitude: 30.3165,
+          longitude: 78.0322,
           type: "city",
           confidence: 1.0,
           provider: "geoapify",
