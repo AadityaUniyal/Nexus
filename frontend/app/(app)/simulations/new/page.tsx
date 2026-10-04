@@ -13,6 +13,7 @@ import { Sparkles, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { MatrixScenarioVisualizer, VehicleCandidate } from "@/components/simulation/MatrixScenarioVisualizer";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+import { dataProvider } from "@/lib/data-provider";
 
 export interface SimulationVariables {
   vehicleId?: string;
@@ -58,43 +59,10 @@ const DEFAULT_METRICS: SimulationResultMetrics = {
   recommendationScore: 94,
   verdict: "HIGHLY_RECOMMENDED",
   insights: [
-    "Corridor diversion via I-70 South Bypass restores +135 minutes of transit margin.",
+    "Dynamic corridor diversion restores +135 minutes of transit margin.",
     "Dynamic SLA Priority preserves on-time delivery for high-value consignments.",
   ],
 };
-
-const CANDIDATE_VEHICLES: VehicleCandidate[] = [
-  {
-    id: "v-101",
-    code: "NX-101",
-    name: "Freight Hauler Alpha",
-    lat: 41.8781,
-    lng: -87.6298,
-    batteryPct: 88,
-    driverName: "Marcus Vance",
-    capacityKg: 18000,
-  },
-  {
-    id: "v-102",
-    code: "NX-102",
-    name: "Interstate Courier Beta",
-    lat: 41.5868,
-    lng: -93.625,
-    batteryPct: 74,
-    driverName: "Elena Rostova",
-    capacityKg: 14000,
-  },
-  {
-    id: "v-104",
-    code: "NX-104",
-    name: "Highland Heavy Transporter",
-    lat: 41.2565,
-    lng: -95.9345,
-    batteryPct: 92,
-    driverName: "Jamal Ortiz",
-    capacityKg: 24000,
-  },
-];
 
 function SimulationBuilderContent() {
   const router = useRouter();
@@ -103,6 +71,41 @@ function SimulationBuilderContent() {
 
   const incidentIdParam = searchParams.get("incidentId") || undefined;
   const vehicleIdParam = searchParams.get("vehicleId") || "v-104";
+
+  const [candidates, setCandidates] = React.useState<VehicleCandidate[]>([]);
+  const [targetDestination, setTargetDestination] = React.useState<{ id: string; name: string; lat: number; lng: number }>({
+    id: "loc-hub-target",
+    name: "Regional Fulfillment Terminal",
+    lat: 30.3165,
+    lng: 78.0322,
+  });
+
+  React.useEffect(() => {
+    Promise.all([dataProvider.getVehicles(), dataProvider.getWarehouses()]).then(([vList, wList]) => {
+      if (vList && vList.length > 0) {
+        setCandidates(
+          vList.map((v) => ({
+            id: v.id,
+            code: v.code,
+            name: v.name,
+            lat: v.lat,
+            lng: v.lng,
+            batteryPct: v.batteryPct,
+            driverName: v.driverName,
+            capacityKg: v.capacityKg,
+          }))
+        );
+      }
+      if (wList && wList.length > 0) {
+        setTargetDestination({
+          id: wList[0].id,
+          name: `${wList[0].name} (${wList[0].city})`,
+          lat: wList[0].lat,
+          lng: wList[0].lng,
+        });
+      }
+    });
+  }, []);
 
   // Scenario parameters
   const [title, setTitle] = React.useState("I-70 South Highway Bypass Simulation");
@@ -440,15 +443,12 @@ function SimulationBuilderContent() {
       </div>
 
       {/* Multi-Vehicle Route Matrix Dispatch Optimization */}
-      <MatrixScenarioVisualizer
-        candidates={CANDIDATE_VEHICLES}
-        targetLocation={{
-          id: "loc-target-denver",
-          name: "Rocky Mountain Aerospace Terminal (Denver, CO)",
-          lat: 39.7392,
-          lng: -104.9903,
-        }}
-      />
+      {candidates.length > 0 && (
+        <MatrixScenarioVisualizer
+          candidates={candidates}
+          targetLocation={targetDestination}
+        />
+      )}
     </div>
   );
 }
