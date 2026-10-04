@@ -254,6 +254,9 @@ async def azure_health():
             "connectionConfigured": bool(azure_monitor_client.connection_string),
             "freeTierLimit": "5 GB ingestion/month",
         }
+        from app.integrations import azure_monitor as _am
+        if _am.OTEL_IMPORT_ERROR:
+            azure_services["applicationInsights"]["error"] = _am.OTEL_IMPORT_ERROR
     except Exception:
         azure_services["applicationInsights"] = {"status": "NOT_LOADED"}
 

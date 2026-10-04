@@ -9,18 +9,26 @@ logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(l
 logging.getLogger("azure.monitor.opentelemetry").setLevel(logging.WARNING)
 logging.getLogger("azure.core.pipeline").setLevel(logging.WARNING)
 
+logger = logging.getLogger("nexus.integrations.azure_monitor")
+
+# Each import is isolated and its failure is logged. Previously one combined
+# try/except silently disabled all telemetry whenever any single name was
+# missing (e.g. an exporter class absent from the installed SDK version).
+OTEL_IMPORT_ERROR = None
+trace = metrics = trace_status = None
+TracerProvider = MeterProvider = BatchSpanProcessor = PeriodicExportingMetricReader = None
+AzureMonitorTraceExporter = AzureMonitorMetricExporter = None
 try:
-    from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter, AzureMonitorMetricExporter, AzureMonitorLogExporter
     from opentelemetry import trace, metrics
+    import opentelemetry.trace.status as trace_status
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    import opentelemetry.trace.status as trace_status
-except ImportError:
-    pass
-
-logger = logging.getLogger("nexus.integrations.azure_monitor")
+    from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter, AzureMonitorMetricExporter
+except Exception as _e:  # noqa: BLE001
+    OTEL_IMPORT_ERROR = f"{type(_e).__name__}: {_e}"
+    logger.error("[Azure Monitor] OpenTelemetry import failed: %s", OTEL_IMPORT_ERROR)
 
 class AzureMonitorClient:
     """
@@ -49,7 +57,9 @@ class AzureMonitorClient:
             or "pytest" in sys.modules
         )
 
-        if self.enabled and self.connection_string:
+        if self.enabled and self.connection_string and OTEL_IMPORT_ERROR:
+            logger.error("[Azure Monitor] Disabled: %s", OTEL_IMPORT_ERROR)
+        elif self.enabled and self.connection_string:
             try:
                 # Setup Tracing
                 self.tracer_provider = TracerProvider()
