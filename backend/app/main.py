@@ -28,8 +28,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Warning: Database schema check error: {e}")
 
+    try:
+        from app.core.task_queue import task_queue
+        await task_queue.start()
+        logger.info("Enterprise AsyncTaskQueue initialized with background workers.")
+    except Exception as e:
+        logger.warning(f"Task queue initialization warning: {e}")
+
     logger.info("NEXUS zero-Azure unified engine active.")
     yield
+    try:
+        from app.core.task_queue import task_queue
+        await task_queue.stop()
+    except Exception:
+        pass
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
 
 app = FastAPI(

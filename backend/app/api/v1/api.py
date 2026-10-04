@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     feedback,
     governance,
     health,
+    history,
     import_data,
     incidents,
     intelligence,
@@ -81,3 +82,4 @@ api_router.include_router(contact.router, prefix="/contact", tags=["contact"])
 api_router.include_router(admin.router)
 api_router.include_router(ai_chat.router)
 api_router.include_router(events.router)
+api_router.include_router(history.router)
