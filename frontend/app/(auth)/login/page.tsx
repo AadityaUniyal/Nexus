@@ -2,370 +2,342 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogoMark } from "@/components/brand/Logo";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Lock,
   Mail,
   ArrowRight,
   ShieldCheck,
   Sparkles,
-  Truck,
-  Compass,
-  Building2,
-  AlertTriangle,
-  Globe2,
-  Activity,
-  Layers,
-  ChevronRight,
+  Fingerprint,
   CheckCircle2,
+  KeyRound,
+  Globe2,
+  MapPin,
+  Building2,
+  Cpu,
+  Layers,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { tactileAudio } from "@/lib/sound-effects";
 
-type RoleOption = "ADMINISTRATOR" | "REGIONAL_DIRECTOR" | "DISPATCH_SUPERVISOR" | "SAFETY_SPECIALIST";
+export type RoleOption = "ADMINISTRATOR" | "SUPERVISOR_L1" | "SUPERVISOR_L2" | "SUPERVISOR_L3";
+
+interface RoleProfile {
+  id: string;
+  name: string;
+  title: string;
+  email: string;
+  role: RoleOption;
+  color: string;
+  badge: string;
+  targetUrl: string;
+}
+
+const ROLES: Record<RoleOption, RoleProfile> = {
+  ADMINISTRATOR: {
+    id: "usr-admin-alex",
+    name: "Alex Rivera",
+    title: "Chief Logistics Officer & Company Admin",
+    email: "alex.rivera@continental-logistics.com",
+    role: "ADMINISTRATOR",
+    color: "from-purple-500 to-indigo-500",
+    badge: "Solo Admin · Tier 0",
+    targetUrl: "/admin/company",
+  },
+  SUPERVISOR_L1: {
+    id: "usr-sarah-104",
+    name: "Sarah Chen",
+    title: "Regional Operations Director (Supervisor L1)",
+    email: "sarah.chen@continental-logistics.com",
+    role: "SUPERVISOR_L1",
+    color: "from-blue-500 to-cyan-500",
+    badge: "Regional Hubs · Level 1",
+    targetUrl: "/overview",
+  },
+  SUPERVISOR_L2: {
+    id: "usr-david-04",
+    name: "David Kim",
+    title: "Fleet & Hub Dispatch Supervisor (Supervisor L2)",
+    email: "david.kim@continental-logistics.com",
+    role: "SUPERVISOR_L2",
+    color: "from-amber-500 to-orange-500",
+    badge: "Fleet Dispatch · Level 2",
+    targetUrl: "/operations",
+  },
+  SUPERVISOR_L3: {
+    id: "usr-elena-92",
+    name: "Elena Rostova",
+    title: "Field Safety & Incident Specialist (Supervisor L3)",
+    email: "elena.rostova@continental-logistics.com",
+    role: "SUPERVISOR_L3",
+    color: "from-emerald-500 to-teal-500",
+    badge: "Field Safety · Level 3",
+    targetUrl: "/incidents",
+  },
+};
 
 export default function LoginPage() {
-  const [email, setEmail] = React.useState("admin@nexus.continental");
-  const [password, setPassword] = React.useState("Password123!");
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const router = useRouter();
   const [selectedRole, setSelectedRole] = React.useState<RoleOption>("ADMINISTRATOR");
+  const [email, setEmail] = React.useState(ROLES.ADMINISTRATOR.email);
+  const [password, setPassword] = React.useState("NexusPasskey2026!");
+  const [loading, setLoading] = React.useState(false);
+  const [passkeyActive, setPasskeyActive] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  // Location context loaded dynamically
+  const [hubLocation, setHubLocation] = React.useState<{ name: string; country: string }>({
+    name: "Dehradun",
+    country: "India",
+  });
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedLoc = localStorage.getItem("nexus_workspace_location");
+        if (savedLoc) {
+          const parsed = JSON.parse(savedLoc);
+          if (parsed?.name) setHubLocation({ name: parsed.name, country: parsed.country || "Global" });
+        }
+      } catch {
+        // fallback
+      }
+    }
+  }, []);
+
+  const handleRoleSelect = (roleKey: RoleOption) => {
+    tactileAudio.playClick();
+    setSelectedRole(roleKey);
+    setEmail(ROLES[roleKey].email);
+    setError("");
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    tactileAudio.playClick();
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-      const resp = await fetch(`${baseUrl}/api/v1/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const activeRole = ROLES[selectedRole];
+      const user = {
+        id: activeRole.id,
+        name: activeRole.name,
+        email: email || activeRole.email,
+        role: activeRole.role,
+        workspace_id: "ws-continental-fleet-01",
+      };
 
-      if (resp.ok) {
-        const data = await resp.json();
-        const user = data.user || {
-          id: "usr-admin-alex",
-          name: email.split("@")[0].replace(".", " "),
-          email,
-          role: email.includes("admin") ? "ADMINISTRATOR" : "OPERATIONS_MANAGER",
-          workspace_id: "ws-continental-fleet-01",
-        };
-        const token = data.access_token || "demo-operator-token";
-
+      if (typeof window !== "undefined") {
         document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
-        localStorage.setItem("nexus_active_workspace_id", user.workspace_id || "ws-continental-fleet-01");
         localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-        localStorage.setItem("nexus_access_token", token);
-
-        window.location.href = user.role === "ADMINISTRATOR" ? "/admin/company" : "/overview";
-      } else {
-        loginAsRole(selectedRole);
+        localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
       }
+
+      tactileAudio.playSuccess();
+      router.push(activeRole.targetUrl);
     } catch {
-      loginAsRole(selectedRole);
+      setError("Authentication failed. Please verify credentials.");
     } finally {
       setLoading(false);
     }
   };
 
-  const loginAsRole = (role: RoleOption) => {
-    let user = {
-      id: "usr-demo-admin",
-      name: "Alex Rivera",
-      title: "Chief Operating Officer & Solo Admin",
-      email: "alex.rivera@continental-logistics.com",
-      role: "ADMINISTRATOR",
-      workspace_id: "ws-continental-fleet-01",
-    };
-    let target = "/admin/company";
+  const handlePasskeyQuickSignIn = () => {
+    tactileAudio.playClick();
+    setPasskeyActive(true);
+    setTimeout(() => {
+      tactileAudio.playSuccess();
+      const activeRole = ROLES[selectedRole];
+      const user = {
+        id: activeRole.id,
+        name: activeRole.name,
+        email: activeRole.email,
+        role: activeRole.role,
+        workspace_id: "ws-continental-fleet-01",
+      };
 
-    if (role === "REGIONAL_DIRECTOR") {
-      user = {
-        id: "usr-sarah-104",
-        name: "Sarah Chen",
-        title: "Regional Operations Director (Level 1 Supervisor)",
-        email: "sarah.chen@continental-logistics.com",
-        role: "OPERATIONS_MANAGER",
-        workspace_id: "ws-continental-fleet-01",
-      };
-      target = "/overview";
-    } else if (role === "DISPATCH_SUPERVISOR") {
-      user = {
-        id: "usr-david-04",
-        name: "David Kim",
-        title: "Fleet & Hub Dispatch Supervisor (Level 2 Supervisor)",
-        email: "david.kim@continental-logistics.com",
-        role: "OPERATOR",
-        workspace_id: "ws-continental-fleet-01",
-      };
-      target = "/operations";
-    } else if (role === "SAFETY_SPECIALIST") {
-      user = {
-        id: "usr-elena-92",
-        name: "Elena Rostova",
-        title: "Field Safety & Incident Specialist (Level 3 Supervisor)",
-        email: "elena.rostova@continental-logistics.com",
-        role: "FIELD_OPERATOR",
-        workspace_id: "ws-continental-fleet-01",
-      };
-      target = "/incidents";
-    }
+      if (typeof window !== "undefined") {
+        document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
+        localStorage.setItem("nexus_demo_user", JSON.stringify(user));
+        localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
+      }
 
-    document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
-    localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
-    localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-    localStorage.setItem("nexus_access_token", "demo-operator-token");
-    window.location.href = target;
+      router.push(activeRole.targetUrl);
+    }, 900);
   };
 
-  const ROLES = [
-    {
-      key: "ADMINISTRATOR" as RoleOption,
-      levelBadge: "Solo Admin / Executive",
-      name: "Solo Company Administrator (COO)",
-      person: "Alex Rivera · Executive Master Authority",
-      desc: "Full company partition governance, SLA policies, supervisor delegation, and cloud integrations.",
-      targetPage: "/admin/company",
-      icon: ShieldCheck,
-      color: "purple",
-      badgeVariant: "simulation" as const,
-    },
-    {
-      key: "REGIONAL_DIRECTOR" as RoleOption,
-      levelBadge: "Level 1 Supervisor",
-      name: "Regional Operations Director",
-      person: "Sarah Chen · Multi-Hub Fleet Director",
-      desc: "Multi-hub operational oversight, regional KPI health, critical disruption triage, and AI synthesis.",
-      targetPage: "/overview",
-      icon: Sparkles,
-      color: "blue",
-      badgeVariant: "healthy" as const,
-    },
-    {
-      key: "DISPATCH_SUPERVISOR" as RoleOption,
-      levelBadge: "Level 2 Supervisor",
-      name: "Fleet & Hub Dispatch Supervisor",
-      person: "David Kim · Lead Dispatch Controller",
-      desc: "Live route telematics, active vehicle allocation, detour simulation runs, and driver coordination.",
-      targetPage: "/operations",
-      icon: Truck,
-      color: "amber",
-      badgeVariant: "ai" as const,
-    },
-    {
-      key: "SAFETY_SPECIALIST" as RoleOption,
-      levelBadge: "Level 3 Supervisor",
-      name: "Field Safety & Incident Specialist",
-      person: "Elena Rostova · Incident Response Lead",
-      desc: "Atmospheric weather hazards, mechanical anomalies, cold-chain temperature alerts, and 3D digital twin.",
-      targetPage: "/incidents",
-      icon: AlertTriangle,
-      color: "rose",
-      badgeVariant: "critical" as const,
-    },
-  ];
+  const activeProfile = ROLES[selectedRole];
 
   return (
-    <div className="min-h-screen bg-nexus-surface text-nexus-on-surface flex flex-col selection:bg-nexus-secondary/20 selection:text-nexus-secondary">
+    <div className="relative min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 sm:p-6 overflow-hidden select-none font-sans">
+      {/* Apple Ambient Dynamic Mesh */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-gradient-to-b from-purple-600/20 via-cyan-600/15 to-transparent rounded-full blur-3xl opacity-70" />
+        <div className="absolute -bottom-40 right-1/4 w-[600px] h-[450px] bg-gradient-to-t from-emerald-600/15 via-blue-600/10 to-transparent rounded-full blur-3xl opacity-60" />
+        <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
+      </div>
+
       {/* Top Header */}
-      <header className="h-16 border-b border-nexus-outline-variant/30 bg-nexus-surface/80 backdrop-blur-md sticky top-0 z-50 px-6 sm:px-10 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <LogoMark size={34} />
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold tracking-tight text-nexus-on-surface">Nexus</span>
-            <span className="text-xs font-mono-data text-nexus-on-surface-variant font-medium hidden sm:inline">
-              Command Gateway
-            </span>
+      <header className="relative z-20 w-full max-w-xl flex items-center justify-between py-4 px-2">
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/20 backdrop-blur-md flex items-center justify-center shadow-lg group-hover:bg-white/20 transition-all">
+            <span className="text-white font-black text-xs tracking-tighter">NX</span>
           </div>
+          <span className="text-xs font-mono text-stone-300 font-semibold tracking-wider">
+            NEXUS PASSKEY ID
+          </span>
         </Link>
 
-        <div className="flex items-center gap-4 text-xs font-mono-data text-nexus-on-surface-variant">
-          <span className="hidden sm:inline">Need a company partition?</span>
-          <Link
-            href="/signup"
-            className="px-3 py-1.5 rounded-lg border border-nexus-outline-variant/40 bg-nexus-surface-container/60 hover:bg-nexus-surface-container text-nexus-on-surface font-semibold transition-colors"
-          >
-            Provision Company
-          </Link>
+        {/* Operating Hub Location HUD */}
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-900/80 border border-stone-800 text-[11px] font-mono text-stone-300">
+          <MapPin className="w-3 h-3 text-emerald-400" />
+          <span>{hubLocation.name} Hub</span>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-4xl flex flex-col items-center">
-          <div className="mb-6 text-center space-y-1 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nexus-surface-container text-nexus-on-surface-variant text-[11px] font-mono-data font-semibold mb-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Multi-Tenant Enterprise Logistics Gateway</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-nexus-on-surface">
-              Logistics Command Sign In
-            </h1>
-            <p className="text-xs font-mono-data text-nexus-on-surface-variant">
-              Select your company leadership role for 1-click instant evaluation or sign in with your corporate credentials.
-            </p>
-          </div>
-
-          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 bg-nexus-surface-lowest border border-nexus-outline-variant/40 rounded-3xl p-6 sm:p-8 shadow-tactile-lg">
-            {/* Left 7 Cols: 4-Tier Company Role Selector */}
-            <div className="lg:col-span-7 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-nexus-outline-variant/30">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface">
-                  1. Select Company Role (1-Click Instant Access)
-                </span>
-                <span className="text-[10px] font-mono text-nexus-secondary font-bold">4 Distinct Personas</span>
+      {/* Central Login Card */}
+      <main className="relative z-20 w-full max-w-md my-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="p-8 rounded-3xl bg-stone-900/75 border border-white/10 backdrop-blur-3xl shadow-2xl space-y-6"
+        >
+          {/* User Persona Avatar with Breathing Ring */}
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="relative">
+              <div className={`w-20 h-20 rounded-2xl bg-gradient-to-tr ${activeProfile.color} flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-4 ring-white/10`}>
+                {activeProfile.name.split(" ").map((n) => n[0]).join("")}
               </div>
-
-              <div className="space-y-2.5">
-                {ROLES.map((r) => {
-                  const Icon = r.icon;
-                  const isSelected = selectedRole === r.key;
-                  return (
-                    <div
-                      key={r.key}
-                      onClick={() => {
-                        setSelectedRole(r.key);
-                        if (r.key === "ADMINISTRATOR") {
-                          setEmail("admin@nexus.continental");
-                        } else if (r.key === "REGIONAL_DIRECTOR") {
-                          setEmail("sarah.chen@nexus.continental");
-                        } else if (r.key === "DISPATCH_SUPERVISOR") {
-                          setEmail("david.kim@nexus.continental");
-                        } else {
-                          setEmail("elena.rostova@nexus.continental");
-                        }
-                      }}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isSelected
-                          ? "border-nexus-primary bg-nexus-primary/5 shadow-tactile ring-1 ring-nexus-primary/30"
-                          : "border-nexus-outline-variant/40 bg-nexus-surface-container/20 hover:bg-nexus-surface-container/50"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`p-2 rounded-xl shrink-0 mt-0.5 ${
-                            isSelected
-                              ? "bg-nexus-primary text-white shadow-sm"
-                              : "bg-nexus-surface-container text-nexus-on-surface-variant"
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="space-y-0.5 text-left">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-nexus-on-surface">{r.name}</span>
-                            <Badge variant={r.badgeVariant} size="sm">
-                              {r.levelBadge}
-                            </Badge>
-                          </div>
-                          <p className="text-[11px] font-mono-data text-nexus-secondary font-medium">
-                            {r.person}
-                          </p>
-                          <p className="text-[11px] text-nexus-on-surface-variant font-mono-data leading-relaxed">
-                            {r.desc}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          loginAsRole(r.key);
-                        }}
-                        className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1 self-end sm:self-center ${
-                          isSelected
-                            ? "bg-nexus-primary text-white shadow-tactile"
-                            : "bg-nexus-surface-container hover:bg-nexus-surface-container-high text-nexus-on-surface"
-                        }`}
-                      >
-                        <span>Launch</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
+              <div className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-stone-950 border border-white/20 text-emerald-400 shadow-md">
+                <ShieldCheck className="w-3.5 h-3.5" />
               </div>
             </div>
 
-            {/* Right 5 Cols: Standard Sign In Form */}
-            <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-nexus-outline-variant/30 pt-6 lg:pt-0 lg:pl-6 space-y-4">
-              <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface block mb-3">
-                  2. Authenticate Credentials
-                </span>
-
-                <form onSubmit={handleLogin} className="space-y-3.5">
-                  <div>
-                    <label className="block text-xs font-mono-data font-semibold text-nexus-on-surface mb-1">
-                      Corporate Identifier (Email)
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-nexus-on-surface-variant" />
-                      <Input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-9 font-mono-data text-xs h-9"
-                        placeholder="operator@nexus.continental"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono-data font-semibold text-nexus-on-surface mb-1">
-                      Password Key
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-nexus-on-surface-variant" />
-                      <Input
-                        type="password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-9 font-mono-data text-xs h-9"
-                        placeholder="••••••••••••"
-                      />
-                    </div>
-                  </div>
-
-                  {error && <p className="text-xs text-rose-500 font-mono-data">{error}</p>}
-
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    isLoading={loading}
-                    className="w-full py-2.5 font-mono-data text-xs font-semibold shadow-tactile gap-2 mt-2"
-                  >
-                    Enter Command Gateway
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </form>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-nexus-surface-container/30 border border-nexus-outline-variant/20 text-left space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-nexus-on-surface font-mono">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                  Enterprise RBAC Active
-                </div>
-                <p className="text-[10px] text-nexus-on-surface-variant font-mono-data leading-relaxed">
-                  Active workspace session is cryptographically bound to your designated operational partition and cloud telemetry streams.
-                </p>
-              </div>
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight">{activeProfile.name}</h2>
+              <p className="text-xs text-stone-400 font-mono mt-0.5">{activeProfile.title}</p>
             </div>
           </div>
 
-          <p className="mt-6 text-center text-xs text-nexus-on-surface-variant font-mono-data">
-            Protected by multi-tier encryption &amp; enterprise RBAC session tokens · Nexus 2.1
-          </p>
-        </div>
+          {/* Apple Segmented Role Switcher Pills */}
+          <div className="p-1 rounded-2xl bg-stone-950/70 border border-stone-800/80 grid grid-cols-4 gap-1 text-center font-mono">
+            {(Object.keys(ROLES) as RoleOption[]).map((roleKey) => {
+              const r = ROLES[roleKey];
+              const isSelected = selectedRole === roleKey;
+              return (
+                <button
+                  key={roleKey}
+                  type="button"
+                  onClick={() => handleRoleSelect(roleKey)}
+                  className={`py-2 px-1 rounded-xl text-[10px] font-bold transition-all ${
+                    isSelected
+                      ? "bg-white text-black shadow-md"
+                      : "text-stone-400 hover:text-white"
+                  }`}
+                >
+                  {roleKey === "ADMINISTRATOR"
+                    ? "Admin"
+                    : roleKey === "SUPERVISOR_L1"
+                    ? "L1 Dir"
+                    : roleKey === "SUPERVISOR_L2"
+                    ? "L2 Disp"
+                    : "L3 Safe"}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Passkey TouchID Button */}
+          <Button
+            type="button"
+            onClick={handlePasskeyQuickSignIn}
+            disabled={loading || passkeyActive}
+            className="w-full h-12 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 border border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/30 transition-all font-mono text-xs gap-2 shadow-lg"
+          >
+            {passkeyActive ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full border border-cyan-400 border-t-transparent animate-spin" />
+                <span>Verifying Biometric Key...</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-cyan-400" />
+                <span>Sign In with Nexus Passkey</span>
+              </div>
+            )}
+          </Button>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-stone-800" />
+            <span className="text-[10px] font-mono text-stone-500 uppercase">Or corporate pass</span>
+            <div className="h-px flex-1 bg-stone-800" />
+          </div>
+
+          {/* Standard Form */}
+          <form onSubmit={handleLogin} className="space-y-3.5">
+            <div>
+              <label className="text-[11px] font-mono text-stone-300 block mb-1">Corporate Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-500" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-9 h-11 rounded-xl bg-stone-950/60 border-stone-800 text-white placeholder:text-stone-600 focus:border-white/40 font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-mono text-stone-300">Master Passphrase</label>
+                <Link href="/forgot-password" className="text-[10px] font-mono text-stone-400 hover:text-stone-200">
+                  Forgot?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-500" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-9 h-11 rounded-xl bg-stone-950/60 border-stone-800 text-white placeholder:text-stone-600 focus:border-white/40 font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            {error && <p className="text-xs text-rose-400 font-mono">{error}</p>}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 rounded-2xl bg-white text-black font-semibold hover:bg-stone-200 transition-all text-xs gap-2 mt-2 shadow-xl"
+            >
+              <span>Authenticate Session</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </form>
+
+          {/* Footer Call to Setup */}
+          <div className="pt-2 text-center text-xs text-stone-400">
+            <span>New company setup? </span>
+            <Link href="/signup" className="text-white hover:underline font-semibold font-mono">
+              Launch Apple Setup Assistant →
+            </Link>
+          </div>
+        </motion.div>
       </main>
+
+      {/* Footer Branding */}
+      <footer className="relative z-20 w-full max-w-xl text-center py-4 text-stone-600 text-xs font-mono">
+        Sovereign Access Matrix · Hardware Bound Tokens
+      </footer>
     </div>
   );
 }
-

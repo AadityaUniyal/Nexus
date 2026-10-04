@@ -140,6 +140,11 @@ class TacticalAudioEngine {
     });
   }
 
+  /** Alias for playSuccessChord */
+  public playSuccess() {
+    this.playSuccessChord();
+  }
+
   /** Critical Alert Sonar Pulse */
   public playCriticalAlert() {
     if (!this.soundEnabled) return;
