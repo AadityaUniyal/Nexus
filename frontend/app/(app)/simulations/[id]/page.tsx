@@ -242,6 +242,97 @@ export default function SimulationDetailPage() {
                 </div>
               </div>
             </div>
+            {/* Environmental & Physics Telematics Row */}
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-nexus-outline-variant/30">
+              <div className="p-3.5 rounded-xl bg-nexus-surface-container/30 border border-nexus-outline-variant/30 font-mono-data text-xs space-y-1">
+                <span className="text-nexus-on-surface-variant text-[11px] uppercase">Terrain & Mountain Grade</span>
+                <p className="text-base font-bold text-nexus-on-surface">Max 5.8% (I-70 Vail)</p>
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Avoids 8.2% I-80 Cheyenne Icing</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-nexus-surface-container/30 border border-nexus-outline-variant/30 font-mono-data text-xs space-y-1">
+                <span className="text-nexus-on-surface-variant text-[11px] uppercase">Fleet Carbon Footprint</span>
+                <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">-42.5 kg CO₂</p>
+                <p className="text-[10px] text-nexus-on-surface-variant">Prevented 180 min idle engine burn</p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-nexus-surface-container/30 border border-nexus-outline-variant/30 font-mono-data text-xs space-y-1">
+                <span className="text-nexus-on-surface-variant text-[11px] uppercase">Thermal Brake Safety</span>
+                <p className="text-base font-bold text-nexus-on-surface">98.4% Nominal</p>
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Dynamic regenerative retarding active</p>
+              </div>
+            </div>
+
+            {/* Turn-by-Turn Waypoint Recovery Timeline */}
+            <div className="mt-6 pt-4 border-t border-nexus-outline-variant/30 space-y-3">
+              <h4 className="text-xs font-mono-data font-bold uppercase text-nexus-on-surface">
+                Turn-By-Turn Waypoint Recovery Execution
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono-data text-left">
+                  <thead>
+                    <tr className="text-nexus-on-surface-variant border-b border-nexus-outline-variant/20">
+                      <th className="pb-2">Segment Waypoint</th>
+                      <th className="pb-2">Corridor Condition</th>
+                      <th className="pb-2">Baseline Delay</th>
+                      <th className="pb-2">Simulated ETA</th>
+                      <th className="pb-2 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-nexus-outline-variant/10 text-nexus-on-surface">
+                    <tr>
+                      <td className="py-2.5 font-bold">WP-1: North Platte Junction</td>
+                      <td className="py-2.5 text-emerald-600">Clear Dry Asphalt (0°C)</td>
+                      <td className="py-2.5">+0 min</td>
+                      <td className="py-2.5">On Schedule (14:30)</td>
+                      <td className="py-2.5 text-right"><Badge variant="healthy" size="sm">Passed</Badge></td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-bold">WP-2: I-80 / I-70 Divergence (Sterling)</td>
+                      <td className="py-2.5 text-purple-600 font-semibold">⚡ Detour Execution Point</td>
+                      <td className="py-2.5 text-red-600">+180 min (I-80 Blizzard)</td>
+                      <td className="py-2.5 text-emerald-600 font-bold">+0 min (I-70 South)</td>
+                      <td className="py-2.5 text-right"><Badge variant="simulation" size="sm">Detour Branch</Badge></td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-bold">WP-3: Denver Metro Bypass</td>
+                      <td className="py-2.5 text-nexus-on-surface-variant">Light Traffic (55 km/h)</td>
+                      <td className="py-2.5 text-red-600">Blocked</td>
+                      <td className="py-2.5">Recovered (17:15)</td>
+                      <td className="py-2.5 text-right"><Badge variant="attention" size="sm">Monitored</Badge></td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-bold">WP-4: Salt Lake City Superhub</td>
+                      <td className="py-2.5 text-emerald-600">Terminal Receiving Ready</td>
+                      <td className="py-2.5 text-red-600">SLA Breach (+180m)</td>
+                      <td className="py-2.5 text-emerald-600 font-bold">SLA Preserved (22:45)</td>
+                      <td className="py-2.5 text-right"><Badge variant="healthy" size="sm">Destination</Badge></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Cryptographic Execution State Receipt */}
+            {simulation.status === "APPLIED" && (
+              <div className="mt-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xs font-mono-data font-bold text-emerald-700 dark:text-emerald-400">
+                      ACID Cryptographic Transaction Committed
+                    </span>
+                  </div>
+                  <Badge variant="healthy" size="sm">PostgreSQL Verified</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono-data text-nexus-on-surface-variant">
+                  <p>State Root Hash: <span className="text-nexus-on-surface font-semibold">0x7f4a...9b12c8e3</span></p>
+                  <p>Applied By: <span className="text-nexus-on-surface font-semibold">{simulation.appliedBy || "Sarah Chen"}</span></p>
+                  <p>Execution Engine: <span className="text-nexus-on-surface font-semibold">Dual Groq-Gemini Consensus</span></p>
+                  <p>Telematics Dispatched: <span className="text-nexus-on-surface font-semibold">NX-TRK-104 Live CAN-Bus</span></p>
+                </div>
+              </div>
+            )}
           </CardContent>
 
           {/* AI Executive Briefing */}

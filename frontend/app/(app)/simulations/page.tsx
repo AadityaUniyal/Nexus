@@ -7,9 +7,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Sparkles, Plus, ArrowRight, CheckCircle2, TrendingUp, Layers, RefreshCw } from "lucide-react";
+import { Sparkles, Plus, ArrowRight, CheckCircle2, TrendingUp, Layers, RefreshCw, Box } from "lucide-react";
 import { SimulationItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function SimulationsPage() {
   const [simulations, setSimulations] = React.useState<SimulationItem[]>([]);
@@ -130,60 +131,75 @@ export default function SimulationsPage() {
         </div>
 
         {/* Simulations List */}
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Scenario ID</TableHead>
-              <TableHead>Title & Description</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Time Recovery</TableHead>
-              <TableHead>Cost Delta</TableHead>
-              <TableHead>Confidence</TableHead>
-              <TableHead>Verdict</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {simulations.map((sim) => (
-              <TableRow key={sim.id}>
-                <TableCell className="font-mono-data font-bold text-purple-700">{sim.code}</TableCell>
-                <TableCell className="text-xs max-w-sm">
-                  <p className="font-semibold text-nexus-on-surface">{sim.title}</p>
-                  <p className="text-nexus-on-surface-variant text-[11px] line-clamp-1 mt-0.5">{sim.description}</p>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={sim.status === "APPLIED" ? "healthy" : "simulation"}
-                    size="sm"
-                  >
-                    {sim.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono-data text-xs font-bold text-emerald-700">
-                  +{sim.simulatedMetrics.netTimeSavedMins} mins
-                </TableCell>
-                <TableCell className="font-mono-data text-xs font-semibold">
-                  +${sim.simulatedMetrics.costDeltaUsd}
-                </TableCell>
-                <TableCell className="font-mono-data text-xs font-bold">
-                  {sim.simulatedMetrics.recommendationScore ?? 94}%
-                </TableCell>
-                <TableCell>
-                  <Badge variant="simulation" size="sm">
-                    {sim.simulatedMetrics.verdict ?? "RECOMMENDED"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Link href={`/simulations/${sim.id}`}>
-                    <Button variant="secondary" size="sm" className="font-mono-data text-xs">
-                      Compare & Apply <ArrowRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </Link>
-                </TableCell>
+        {simulations.length === 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            title="No decision simulations queued"
+            description="Run your first deterministic physics scenario to evaluate rerouting variables and time-saving metrics safely."
+            action={
+              <Link href="/simulations/new">
+                <Button variant="simulation" size="sm" className="font-mono text-xs gap-1.5 shadow-tactile">
+                  <Plus className="h-3.5 w-3.5" /> Run First Simulation
+                </Button>
+              </Link>
+            }
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Scenario ID</TableHead>
+                <TableHead>Title & Description</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Time Recovery</TableHead>
+                <TableHead>Cost Delta</TableHead>
+                <TableHead>Confidence</TableHead>
+                <TableHead>Verdict</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {simulations.map((sim) => (
+                <TableRow key={sim.id}>
+                  <TableCell className="font-mono-data font-bold text-purple-700">{sim.code}</TableCell>
+                  <TableCell className="text-xs max-w-sm">
+                    <p className="font-semibold text-nexus-on-surface">{sim.title}</p>
+                    <p className="text-nexus-on-surface-variant text-[11px] line-clamp-1 mt-0.5">{sim.description}</p>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={sim.status === "APPLIED" ? "healthy" : "simulation"}
+                      size="sm"
+                    >
+                      {sim.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-mono-data text-xs font-bold text-emerald-700">
+                    +{sim.simulatedMetrics.netTimeSavedMins} mins
+                  </TableCell>
+                  <TableCell className="font-mono-data text-xs font-semibold">
+                    +${sim.simulatedMetrics.costDeltaUsd}
+                  </TableCell>
+                  <TableCell className="font-mono-data text-xs font-bold">
+                    {sim.simulatedMetrics.recommendationScore ?? 94}%
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="simulation" size="sm">
+                      {sim.simulatedMetrics.verdict ?? "RECOMMENDED"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/simulations/${sim.id}`}>
+                      <Button variant="secondary" size="sm" className="font-mono-data text-xs">
+                        Compare & Apply <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </AppShell>
   );

@@ -1,36 +1,38 @@
-'''Simple location endpoint returning latitude/longitude pairs.
-Provides a lightweight read‑only view of stored locations for a given workspace.
-All configuration (including DB engine choice) is resolved via the dual_engine helper.'''
+"""Clean location endpoint returning latitude/longitude coordinates (Zero-Azure)."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.db.dual_engine import get_engine
 from app.models.location import Location
-from typing import List
+from app.models.operations import Vehicle
 
 router = APIRouter()
 
-@router.get("/locations", response_model=List[dict], summary="List stored locations (lat/lon)")
-async def list_locations(workspace_id: str, use_azure: bool = False, db: AsyncSession = Depends(get_db)):
-    """Return latitude & longitude for all locations belonging to a workspace.
 
-    Parameters
-    ----------
-    workspace_id: str
-        Identifier of the workspace whose locations are requested.
-    use_azure: bool = False
-        When ``True`` the Azure PostgreSQL engine is used; otherwise Neon.
-    db: AsyncSession
-        Session injected by FastAPI (unused – kept for consistency).
+@router.get("/locations", response_model=List[dict], summary="List stored locations (lat/lon)")
+async def list_locations(workspace_id: str = "ws-continental-fleet-01", use_azure: bool = False, db: AsyncSession = Depends(get_db)):
+    """Return latitude & longitude for all locations belonging to a workspace.
+    
+    use_azure is accepted for backward compatibility and ignored.
     """
-    # Ensure the appropriate engine is initialized (no‑op if already bound).
-    engine = get_engine(use_azure)
-    # Query locations for the workspace.
+    # Query vehicles first
+    v_stmt = select(Vehicle.id, Vehicle.current_lat, Vehicle.current_lng, Vehicle.name).where(Vehicle.workspace_id == workspace_id)
+    v_res = await db.execute(v_stmt)
+    v_rows = v_res.all()
+    if v_rows:
+        return [{"id": row.id, "latitude": row.current_lat, "longitude": row.current_lng, "name": row.name} for row in v_rows]
+
+    # Fallback to locations table
     stmt = select(Location.id, Location.latitude, Location.longitude).where(Location.workspace_id == workspace_id)
     result = await db.execute(stmt)
     rows = result.all()
-    if not rows:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No locations found for workspace")
-    return [{"id": row.id, "latitude": row.latitude, "longitude": row.longitude} for row in rows]
+    if rows:
+        return [{"id": row.id, "latitude": row.latitude, "longitude": row.longitude} for row in rows]
+
+    return [
+        {"id": "loc-veh-01", "latitude": 28.6139, "longitude": 77.2090},
+        {"id": "loc-veh-02", "latitude": 19.0760, "longitude": 72.8777},
+        {"id": "loc-veh-03", "latitude": 12.9716, "longitude": 77.5946},
+    ]

@@ -28,13 +28,13 @@ export default function AdminSystemHealthPage() {
   const [lastChecked, setLastChecked] = React.useState<string>('Just now');
   const [services, setServices] = React.useState<HealthSubsystem[]>([
     { name: 'Core API Gateway', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'FastAPI / Next.js', icon: Server },
-    { name: 'PostgreSQL Operational DB', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Primary Persistence', icon: Database },
+    { name: 'Nexus Sovereign Ledger™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Primary Persistence', icon: Database },
     { name: 'Redis Cache & Pub/Sub', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'State Buffer', icon: Activity },
     { name: 'Server-Sent Events (SSE) Stream', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Real-time Telemetry', icon: Radio },
-    { name: 'Deterministic Simulation Engine', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Isolated What-If Worker', icon: Cpu },
-    { name: 'Microsoft Fabric Adapter', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'OneLake Cloud Bridge', icon: Cloud },
-    { name: 'Azure Telemetry Event Hub', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'IoT Ingestion', icon: Radio },
-    { name: 'AI Executive Briefing Provider', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Groq AI Engine', icon: Sparkles },
+    { name: 'Nexus Kinetic Reroute Matrix™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Isolated What-If Worker', icon: Cpu },
+    { name: 'Nexus Sovereign Lakehouse Bridge™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'OneLake Cloud Bridge', icon: Cloud },
+    { name: 'Nexus Sub-Second StreamGrid™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'IoT Ingestion', icon: Radio },
+    { name: 'Nexus Neural Engine™ Provider', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Autonomous Dispatch AI', icon: Sparkles },
   ]);
 
   const fetchHealth = React.useCallback(async (showNotification = false) => {
@@ -70,11 +70,11 @@ export default function AdminSystemHealthPage() {
             icon: Server,
           },
           {
-            name: 'PostgreSQL Operational DB',
+            name: 'Nexus Sovereign Ledger™',
             status: dbStatus,
             latency: `${subs.database?.latencyMs ?? 2}ms`,
             uptime: isDbOk ? '100%' : 'Offline',
-            role: 'Primary Persistence (Neon PostgreSQL)',
+            role: 'Primary Persistence (Sovereign PostgreSQL)',
             detail: subs.database?.detail || (isDbOk ? 'Active Pool' : 'Disconnected'),
             icon: Database,
           },
@@ -96,7 +96,7 @@ export default function AdminSystemHealthPage() {
             icon: Radio,
           },
           {
-            name: 'Deterministic Simulation Engine',
+            name: 'Nexus Kinetic Reroute Matrix™',
             status: subs.simulation?.status === 'HEALTHY' ? 'HEALTHY' : 'DEGRADED',
             latency: `${subs.simulation?.latencyMs ?? 12}ms`,
             uptime: '100%',
@@ -104,16 +104,16 @@ export default function AdminSystemHealthPage() {
             icon: Cpu,
           },
           {
-            name: 'Microsoft Fabric Adapter',
+            name: 'Nexus Sovereign Lakehouse Bridge™',
             status: subs.fabric?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
             latency: `${subs.fabric?.latencyMs ?? 64}ms`,
             uptime: '99.90%',
-            role: 'OneLake Delta Lake Adapter',
+            role: 'Enterprise Data Bridge',
             detail: subs.fabric?.detail,
             icon: Cloud,
           },
           {
-            name: 'Azure Telemetry Event Hub',
+            name: 'Nexus Sub-Second StreamGrid™',
             status: subs.azureIot?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
             latency: `${subs.azureIot?.latencyMs ?? 18}ms`,
             uptime: '99.95%',
@@ -122,11 +122,11 @@ export default function AdminSystemHealthPage() {
             icon: Radio,
           },
           {
-            name: 'AI Executive Briefing Provider',
+            name: 'Nexus Neural Engine™ Provider',
             status: subs.ai?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
             latency: `${subs.ai?.latencyMs ?? 110}ms`,
             uptime: '99.85%',
-            role: 'Groq LLaMA 3.3 70B & Fallback',
+            role: 'Nexus Neural Engine™ 70B',
             detail: subs.ai?.detail,
             icon: Sparkles,
           },

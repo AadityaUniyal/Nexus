@@ -60,3 +60,12 @@ database/*.db
 *.swp
 *.swo
 Thumbs.db
+
+.vercel
+.env
+.env.local
+.env.azure
+backend/.env
+frontend/.env.local
+.agents/
+.agents

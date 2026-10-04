@@ -6,10 +6,23 @@ from app.core.errors import UnauthenticatedException
 
 async def verify_clerk_token(token: str) -> Dict[str, Any]:
     """
-    Verifies a Clerk session JWT token against Clerk JWKS or local development secret.
+    Verifies a Clerk session JWT token against Clerk JWKS or local development secret,
+    with optional support for explicitly enabled demo operator sessions.
     """
     if not token:
         raise UnauthenticatedException("Missing authorization bearer token")
+
+    # Fast-path for demo operator session
+    demo_token = token in ("demo-operator-token", "demo_operator", "nexus_demo_token") or token.startswith("demo_")
+    if settings.ENABLE_DEMO_AUTH and demo_token:
+        return {
+            "sub": "usr-demo-sarah",
+            "name": "Sarah Chen",
+            "email": "sarah.chen@nexus.platform",
+            "role": "OPERATIONS_MANAGER",
+            "workspace_id": "ws-continental-fleet-01",
+            "organization_id": "org-nexus-demo",
+        }
 
     # If Clerk JWKS is configured, verify using public keys
     if settings.CLERK_JWKS_URL:
@@ -40,4 +53,3 @@ async def verify_clerk_token(token: str) -> Dict[str, Any]:
         return payload
     except Exception as e:
         raise UnauthenticatedException(f"Invalid or expired authorization token: {str(e)}")
-

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Multi-provider LLM gateway for NEXUS.
 
 Provider chain (first healthy provider wins):
@@ -65,10 +65,9 @@ class _Stats:
 
 
 def _track(name: str, props: Dict[str, Any]) -> None:
-    """Forward AI usage to Application Insights; never raises."""
+    """Forward AI usage to operational logger; never raises."""
     try:
-        from app.integrations.azure_monitor import azure_monitor_client
-        azure_monitor_client.track_event(name, {k: str(v) for k, v in props.items()})
+        logger.info(f"[AI Usage] {name}: {props}")
     except Exception:
         pass
 
@@ -131,7 +130,13 @@ class AIService:
         )
         if not resp.choices:
             raise RuntimeError("Groq returned no choices")
-        return resp.choices[0].message.content or ""
+        msg = resp.choices[0].message
+        content = (msg.content or "").strip()
+        if not content and hasattr(msg, "reasoning") and msg.reasoning:
+            content = str(msg.reasoning).strip()
+        if not content:
+            raise RuntimeError("Groq returned empty content")
+        return content
 
     async def _call_gemini(self, system: str, user: str, temperature: float, max_tokens: int) -> str:
         payload = {

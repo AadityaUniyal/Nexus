@@ -6,6 +6,11 @@
   "workspaces": [
     "frontend"
   ],
+  "dependencies": {
+    "next": "15.5.24",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
   "scripts": {
     "dev": "npm run dev:frontend",
     "build": "npm run build:frontend",

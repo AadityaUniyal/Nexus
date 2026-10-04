@@ -1,6 +1,7 @@
 import { NexusApiError, ApiErrorDetail } from './errors';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+const demoModeEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === 'true';
 
 export async function authFetch<T = any>(
   path: string,
@@ -24,6 +25,12 @@ export async function authFetch<T = any>(
         }
       } catch (e) {
         // Clerk session token unavailable or not initialized yet
+      }
+      if (demoModeEnabled && !headers.has('Authorization')) {
+        const demoUser = localStorage.getItem('nexus_demo_user');
+        if (demoUser || document.cookie.includes('nexus_demo_session')) {
+          headers.set('Authorization', 'Bearer demo-operator-token');
+        }
       }
     }
     const workspaceId = localStorage.getItem('nexus_active_workspace_id');

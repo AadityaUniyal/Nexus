@@ -69,10 +69,8 @@ async def mock_get_db() -> AsyncGenerator[AsyncMock, None]:
 
 @pytest.fixture(scope="session", autouse=True)
 def teardown_telemetry():
-    """Teardown fixture ensuring OpenTelemetry exporters and background threads are cleanly shut down."""
+    """Teardown fixture ensuring session resources are cleanly finalized."""
     yield
-    from app.integrations.azure_monitor import azure_monitor_client
-    azure_monitor_client.shutdown()
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:

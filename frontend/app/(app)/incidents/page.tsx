@@ -10,10 +10,11 @@ import { StatusLed } from "@/components/ui/status-led";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { AlertTriangle, Plus, Sparkles, Clock, ArrowRight, ShieldAlert, RefreshCw } from "lucide-react";
+import { AlertTriangle, Plus, Sparkles, Clock, ArrowRight, ShieldAlert, RefreshCw, CheckCircle2 } from "lucide-react";
 import { IncidentItem } from "@/lib/mock-data";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function IncidentCenterPage() {
   const { toast } = useToast();
@@ -191,70 +192,88 @@ export default function IncidentCenterPage() {
         </div>
 
         {/* Incidents Table */}
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Incident Code</TableHead>
-              <TableHead>Severity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Incident Summary</TableHead>
-              <TableHead>Affected Asset</TableHead>
-              <TableHead>Est. Delay</TableHead>
-              <TableHead>Exposure Risk</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((inc) => (
-              <TableRow key={inc.id}>
-                <TableCell className="font-mono-data font-bold">{inc.code}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={inc.severity === "CRITICAL" ? "critical" : inc.severity === "HIGH" ? "attention" : "neutral"}
-                    size="sm"
-                  >
-                    {inc.severity}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <StatusLed
-                      status={inc.status === "RESOLVED" ? "HEALTHY" : inc.severity}
-                      size="sm"
-                    />
-                    <span className="text-xs font-mono-data">{inc.status}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs max-w-sm">
-                  <p className="font-semibold text-nexus-on-surface line-clamp-1">{inc.title}</p>
-                  <p className="text-nexus-on-surface-variant text-[11px] line-clamp-1 mt-0.5">{inc.summary}</p>
-                </TableCell>
-                <TableCell className="font-mono-data text-xs">{inc.affectedEntityName}</TableCell>
-                <TableCell className="font-mono-data text-xs font-semibold text-red-700">
-                  +{inc.delayMinutes}m
-                </TableCell>
-                <TableCell className="font-mono-data text-xs font-semibold">
-                  {formatCurrency(inc.costEstimate)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Link href={`/simulations/new?incidentId=${inc.id}`}>
-                      <Button variant="simulation" size="sm" className="font-mono-data text-xs">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        Simulate
-                      </Button>
-                    </Link>
-                    <Link href={`/incidents/${inc.id}`}>
-                      <Button variant="secondary" size="sm" className="font-mono-data text-xs">
-                        Inspect <ArrowRight className="h-3 w-3 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </TableCell>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={CheckCircle2}
+            title="All network corridors clear"
+            description="No active disruptions, weather hazards, or fleet anomalies flagged at this time."
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCreateOpen(true)}
+                className="font-mono text-xs gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" /> Report Manual Anomaly
+              </Button>
+            }
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Incident Code</TableHead>
+                <TableHead>Severity</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Incident Summary</TableHead>
+                <TableHead>Affected Asset</TableHead>
+                <TableHead>Est. Delay</TableHead>
+                <TableHead>Exposure Risk</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((inc) => (
+                <TableRow key={inc.id}>
+                  <TableCell className="font-mono-data font-bold">{inc.code}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={inc.severity === "CRITICAL" ? "critical" : inc.severity === "HIGH" ? "attention" : "neutral"}
+                      size="sm"
+                    >
+                      {inc.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <StatusLed
+                        status={inc.status === "RESOLVED" ? "HEALTHY" : inc.severity}
+                        size="sm"
+                      />
+                      <span className="text-xs font-mono-data">{inc.status}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs max-w-sm">
+                    <p className="font-semibold text-nexus-on-surface line-clamp-1">{inc.title}</p>
+                    <p className="text-nexus-on-surface-variant text-[11px] line-clamp-1 mt-0.5">{inc.summary}</p>
+                  </TableCell>
+                  <TableCell className="font-mono-data text-xs">{inc.affectedEntityName}</TableCell>
+                  <TableCell className="font-mono-data text-xs font-semibold text-red-700">
+                    +{inc.delayMinutes}m
+                  </TableCell>
+                  <TableCell className="font-mono-data text-xs font-semibold">
+                    {formatCurrency(inc.costEstimate)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`/simulations/new?incidentId=${inc.id}`}>
+                        <Button variant="simulation" size="sm" className="font-mono-data text-xs">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Simulate
+                        </Button>
+                      </Link>
+                      <Link href={`/incidents/${inc.id}`}>
+                        <Button variant="secondary" size="sm" className="font-mono-data text-xs">
+                          Inspect <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
 
         {/* Create Incident Modal */}
         <Dialog

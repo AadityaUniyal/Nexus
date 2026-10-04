@@ -31,6 +31,59 @@ def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Option
         return principal.workspace_id
     return fallback or "ws-continental-fleet-01"
 
+
+@router.get("/summary")
+async def get_operations_summary(
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve operational summary of warehouses, vehicles, routes, and orders."""
+    ws = get_tenant_workspace(principal)
+    
+    wh_stmt = select(Warehouse).where(Warehouse.workspace_id == ws)
+    wh_res = await db.execute(wh_stmt)
+    warehouses = wh_res.scalars().all()
+    
+    veh_stmt = select(Vehicle).where(Vehicle.workspace_id == ws)
+    veh_res = await db.execute(veh_stmt)
+    vehicles = veh_res.scalars().all()
+    
+    rt_stmt = select(Route).where(Route.workspace_id == ws)
+    rt_res = await db.execute(rt_stmt)
+    routes = rt_res.scalars().all()
+    
+    ord_stmt = select(Order).where(Order.workspace_id == ws)
+    ord_res = await db.execute(ord_stmt)
+    orders = ord_res.scalars().all()
+    
+    return {
+        "warehouses": {
+            "total": len(warehouses),
+            "operational": sum(1 for w in warehouses if getattr(w, "status", None) == "OPERATIONAL"),
+            "items": [WarehouseRead.model_validate(w).model_dump() for w in warehouses[:20]],
+        },
+        "vehicles": {
+            "total": len(vehicles),
+            "active": sum(1 for v in vehicles if getattr(v, "status", None) == "IN_TRANSIT"),
+            "items": [VehicleRead.model_validate(v).model_dump() for v in vehicles[:20]],
+        },
+        "routes": {
+            "total": len(routes),
+            "active": sum(1 for r in routes if getattr(r, "status", None) == "ACTIVE"),
+            "items": [RouteRead.model_validate(r).model_dump() for r in routes[:20]],
+        },
+        "orders": {
+            "total": len(orders),
+            "delayed": sum(1 for o in orders if getattr(o, "status", None) == "DELAYED"),
+            "items": [OrderRead.model_validate(o).model_dump() for o in orders[:20]],
+        },
+        "total_warehouses": len(warehouses),
+        "total_vehicles": len(vehicles),
+        "total_routes": len(routes),
+        "total_orders": len(orders),
+    }
+
+
 # --- WAREHOUSES ---
 @router.get("/warehouses", response_model=List[WarehouseRead])
 async def list_warehouses(

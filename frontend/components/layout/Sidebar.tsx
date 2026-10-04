@@ -16,6 +16,7 @@ import {
   Settings,
   Shield,
   LineChart,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,9 +58,10 @@ const NAVIGATION: NavSection[] = [
   {
     title: "Workspace",
     items: [
+      { name: "Company Command", href: "/admin/company", icon: Building2, badge: "Admin" },
       { name: "Notifications", href: "/notifications", icon: Bell },
       { name: "Settings", href: "/settings", icon: Settings },
-      { name: "Admin", href: "/admin", icon: Shield },
+      { name: "Admin Console", href: "/admin/dashboard", icon: Shield },
       { name: "Usage analytics", href: "/admin/analytics", icon: LineChart },
     ],
   },

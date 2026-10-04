@@ -33,7 +33,6 @@ from app.api.v1.endpoints import (
     weather,
     webhooks,
     world,
-    locations_simple,
 )
 
 api_router = APIRouter()
@@ -44,7 +43,9 @@ api_router.include_router(auth.router)
 api_router.include_router(organizations.router)
 api_router.include_router(me.router, prefix="/me", tags=["me"])
 api_router.include_router(profile.router, prefix="/me/profile", tags=["me"])
+api_router.include_router(profile.router, prefix="/profile", tags=["profile"])
 api_router.include_router(settings.router, prefix="/me/settings", tags=["me"])
+api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(health.router)
 api_router.include_router(realtime.router)

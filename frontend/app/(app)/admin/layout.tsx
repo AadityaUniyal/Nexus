@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { tactileAudio } from '@/lib/sound-effects';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/components/providers/AuthProvider';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoaded } = useUser();

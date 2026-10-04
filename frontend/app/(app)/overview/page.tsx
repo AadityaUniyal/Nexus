@@ -62,7 +62,7 @@ export default function OverviewPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [worldView, setWorldView] = React.useState<"3D" | "GIS">("3D");
   const [briefing, setBriefing] = React.useState<string>(
-    "Operations situation normal with 2 active anomalies flagged. Vehicle NX-TRK-104 is holding near Cheyenne Summit due to an I-80 corridor blizzard warning. Simulation SIM-SCENARIO-901 indicates an active I-70 detour will recover 135 minutes with 94% confidence. Fleet utilization is at 80% across 6 primary fulfillment superhubs."
+    "Synthesizing operational telemetry..."
   );
   const [operationalMode, setOperationalMode] = React.useState<string>("SANDBOX");
   const [activeScenario, setActiveScenario] = React.useState<string>("I-80 Blizzard Emergency");
@@ -89,12 +89,28 @@ export default function OverviewPage() {
           dataProvider.getRoutes(),
         ]);
 
-        if (vData && vData.length > 0) setVehicles(vData);
-        if (wData && wData.length > 0) setWarehouses(wData);
-        if (iData && iData.length > 0) setIncidents(iData);
-        if (rData && rData.length > 0) setRoutes(rData);
+        const loadedVehicles = vData || [];
+        const loadedWarehouses = wData || [];
+        const loadedIncidents = iData || [];
+        const loadedRoutes = rData || [];
+
+        setVehicles(loadedVehicles);
+        setWarehouses(loadedWarehouses);
+        setIncidents(loadedIncidents);
+        setRoutes(loadedRoutes);
+
+        if (loadedVehicles.length === 0 && loadedIncidents.length === 0) {
+          setBriefing(
+            "Welcome to Nexus Fleet Command. Your workspace is initialized with clean telemetry streams. Connect your IoT gateways or import fleet assets to activate sub-second tracking and AI-driven rerouting."
+          );
+        } else {
+          setBriefing(
+            `Operations situation nominal with ${loadedIncidents.length} active anomalies flagged across ${loadedVehicles.length} registered vehicles. Real-time telemetry ingestion active.`
+          );
+        }
       } catch (err) {
         console.warn("[Overview] Using cached operational state:", err);
+        setBriefing("Fleet Command ready. No active critical disruptions registered.");
       } finally {
         setIsLoading(false);
       }
@@ -138,8 +154,8 @@ export default function OverviewPage() {
         setBriefing(json.briefing);
         tactileAudio.playTelemetryPing();
         toast({
-          title: "Groq AI Briefing Updated",
-          message: "Synthesized latest operational telemetry.",
+          title: "Nexus Neural Engine™ Updated",
+          message: "Synthesized latest sub-second operational telemetry.",
           type: "ai",
         });
       }
@@ -239,10 +255,14 @@ export default function OverviewPage() {
               <MetricTile
                 title="Fleet In-Transit"
                 value={`${activeVehicles} / ${vehicles.length}`}
-                subtitle="80% Active Fleet Utilization"
-                change="+4.2%"
+                subtitle={
+                  vehicles.length === 0
+                    ? "0% Active Fleet Utilization"
+                    : `${Math.round((activeVehicles / vehicles.length) * 100)}% Active Fleet Utilization`
+                }
+                change={vehicles.length > 0 ? "+4.2%" : "0.0%"}
                 trend="up"
-                status="HEALTHY"
+                status={vehicles.length > 0 ? "HEALTHY" : "NEUTRAL"}
                 icon={Truck}
               />
             </TactileCard>
@@ -251,10 +271,10 @@ export default function OverviewPage() {
             <TactileCard>
               <MetricTile
                 title="Network SLA Adherence"
-                value="96.8%"
-                subtitle="1 Order Projected Delayed"
-                change="-1.2%"
-                trend="down"
+                value={vehicles.length === 0 ? "100.0%" : "96.8%"}
+                subtitle={vehicles.length === 0 ? "0 Orders Tracked" : "1 Order Projected Delayed"}
+                change={vehicles.length === 0 ? "0.0%" : "-1.2%"}
+                trend={vehicles.length === 0 ? "up" : "down"}
                 status="HEALTHY"
                 icon={Activity}
               />
@@ -264,11 +284,11 @@ export default function OverviewPage() {
             <TactileCard>
               <MetricTile
                 title="Hub Storage Capacity"
-                value="72,450"
-                subtitle="81% Aggregate Dock Load"
-                change="+2.8%"
+                value={warehouses.length === 0 ? "0" : "72,450"}
+                subtitle={warehouses.length === 0 ? "0 Active Superhubs" : "81% Aggregate Dock Load"}
+                change={warehouses.length > 0 ? "+2.8%" : "0.0%"}
                 trend="up"
-                status="ATTENTION"
+                status={warehouses.length > 0 ? "ATTENTION" : "NEUTRAL"}
                 icon={Building2}
               />
             </TactileCard>
@@ -278,9 +298,9 @@ export default function OverviewPage() {
               <MetricTile
                 title="Active Incidents"
                 value={criticalIncidents.length.toString()}
-                subtitle="1 Critical Blizzard Reroute Needed"
-                status="CRITICAL"
-                variant="critical"
+                subtitle={criticalIncidents.length === 0 ? "0 Active Disruptions" : "Action Required"}
+                status={criticalIncidents.length > 0 ? "CRITICAL" : "HEALTHY"}
+                variant={criticalIncidents.length > 0 ? "critical" : "default"}
                 icon={ShieldAlert}
               />
             </TactileCard>
@@ -297,10 +317,10 @@ export default function OverviewPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-nexus-on-surface">
-                    Groq AI Operational Briefing · LLaMA 3.3 Synthesis
+                    Nexus Neural Engine™ · Autonomous Synthesis
                   </h3>
                   <p className="text-[11px] text-nexus-on-surface-variant font-mono-data">
-                    Real-time situation awareness derived from live IoT telemetry and deterministic simulations
+                    Real-time situational intelligence derived from sub-second IoT telemetry and kinetic simulations
                   </p>
                 </div>
               </div>

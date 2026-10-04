@@ -227,7 +227,7 @@ async def get_system_health(
             "status": "HEALTHY",
             "latencyMs": 24,
             "role": "Azure IoT Hub F1 Ingestion Gateway",
-            "detail": f"Hub: {settings.AZURE_IOT_HUB_HOSTNAME or 'nexus-iothub-prod24.azure-devices.net'}",
+            "detail": f"Hub: {settings.AZURE_IOT_HUB_HOSTNAME or 'nexus-telematics-hub.local'}",
         },
         "aiBriefing": {
             "name": "AI Executive Briefing Provider",
@@ -332,7 +332,7 @@ async def list_integrations(
             "status": "HEALTHY",
             "configured": True,
             "latencyMs": 24,
-            "desc": f"IoT Hub ingress gateway ({settings.AZURE_IOT_HUB_HOSTNAME or 'nexus-iothub-prod24.azure-devices.net'}).",
+            "desc": f"IoT Hub ingress gateway ({settings.AZURE_IOT_HUB_HOSTNAME or 'nexus-telematics-hub.local'}).",
         },
         {
             "id": "azure_blob",
@@ -448,7 +448,7 @@ async def test_integration_provider(
         return {
             "provider": "azure_iot",
             "status": "HEALTHY",
-            "hub": settings.AZURE_IOT_HUB_HOSTNAME or "nexus-iothub-prod24.azure-devices.net",
+            "hub": settings.AZURE_IOT_HUB_HOSTNAME or "nexus-telematics-hub.local",
             "latencyMs": 24,
             "testedAt": datetime.now(timezone.utc).isoformat(),
         }

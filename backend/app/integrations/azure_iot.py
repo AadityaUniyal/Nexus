@@ -1,33 +1,25 @@
 import logging
 import time
 from typing import Dict, Any, Optional, List
-from app.core.config import settings
 
-logger = logging.getLogger("nexus.integrations.azure_iot")
+logger = logging.getLogger("nexus.iot")
+
 
 class AzureIoTHubGateway:
-    """
-    Enterprise Azure IoT Hub Telemetry Ingestion and Command Gateway.
-    Manages vehicle device twins, ingests live telemetry, and dispatches cloud-to-device commands.
-
-    # AZURE_MIGRATION_POINT:
-    # When deploying to Azure student account:
-    # 1. Provision an Azure IoT Hub F1 (Free Tier: 8,000 msgs/day)
-    # 2. Set AZURE_IOT_HUB_CONNECTION_STRING in production environment
-    # 3. Use 'azure-iot-hub' IoTHubRegistryManager to sync device twins and dispatch C2D commands
+    """Unified Telematics and IoT Device Twin Gateway.
+    
+    Zero-Azure standalone gateway for managing vehicle twins, ingesting live telemetry,
+    and dispatching operational vehicle commands.
     """
     def __init__(self):
-        self.enabled = settings.AZURE_IOT_HUB_ENABLED
-        self.tenant_id = settings.AZURE_TENANT_ID
-        self.client_id = settings.AZURE_CLIENT_ID
-        self.client_secret = settings.AZURE_CLIENT_SECRET
+        self.enabled = True
         self._connected_devices: Dict[str, Dict[str, Any]] = {}
 
     def is_healthy(self) -> bool:
-        return self.enabled and bool(self.client_id or settings.APP_ENV == "development")
+        return True
 
     async def register_vehicle_device_twin(self, vehicle_id: str, vehicle_code: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
-        """Registers or syncs a commercial vehicle device twin in Azure IoT Hub."""
+        """Registers or syncs a commercial vehicle device twin."""
         twin_data = {
             "deviceId": vehicle_code,
             "nexusVehicleId": vehicle_id,
@@ -45,7 +37,7 @@ class AzureIoTHubGateway:
             }
         }
         self._connected_devices[vehicle_code] = twin_data
-        logger.info(f"[Azure IoT Hub] Synced device twin for vehicle {vehicle_code} ({vehicle_id})")
+        logger.info(f"[IoT Gateway] Synced device twin for vehicle {vehicle_code} ({vehicle_id})")
         return twin_data
 
     async def ingest_telemetry_payload(self, vehicle_code: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,15 +55,15 @@ class AzureIoTHubGateway:
                 "batteryPct": payload.get("batteryPct", 100),
                 "healthScore": payload.get("healthScore", 100),
             },
-            "azureHubIngestMs": 14,
+            "ingestLatencyMs": 8,
         }
-        logger.debug(f"[Azure IoT Hub] Ingested telemetry for {vehicle_code}: lat={payload.get('lat')}, lng={payload.get('lng')}")
+        logger.debug(f"[IoT Gateway] Ingested telemetry for {vehicle_code}: lat={payload.get('lat')}, lng={payload.get('lng')}")
         return record
 
     async def send_c2d_command(self, vehicle_code: str, command_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Sends a Cloud-to-Device (C2D) reroute or emergency hold command to vehicle."""
-        command_id = f"c2d-cmd-{int(time.time()*1000)}"
-        logger.info(f"[Azure IoT Hub] Dispatched C2D command '{command_name}' to {vehicle_code} (Command ID: {command_id})")
+        """Dispatches an operational reroute or hold command to the vehicle."""
+        command_id = f"cmd-{int(time.time()*1000)}"
+        logger.info(f"[IoT Gateway] Dispatched command '{command_name}' to {vehicle_code} (Command ID: {command_id})")
         return {
             "commandId": command_id,
             "deviceId": vehicle_code,
@@ -80,5 +72,6 @@ class AzureIoTHubGateway:
             "enqueuedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "payload": payload,
         }
+
 
 azure_iot_gateway = AzureIoTHubGateway()

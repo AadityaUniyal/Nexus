@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 from fastapi import Depends, HTTPException, Header, status
 from app.core.security import decode_token
+from app.auth.clerk_jwt import verify_clerk_token
 
 async def get_current_token_payload(
     authorization: Optional[str] = Header(None)
@@ -15,6 +16,11 @@ async def get_current_token_payload(
         
     token = parts[1]
     payload = decode_token(token)
+    if not payload:
+        try:
+            payload = await verify_clerk_token(token)
+        except Exception:
+            payload = None
     return payload
 
 async def get_current_user_optional(

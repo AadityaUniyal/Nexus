@@ -1,34 +1,47 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const isPublicRoute = createRouteMatcher([
+const PUBLIC_ROUTES = [
   '/',
-  '/login(.*)',
-  '/signup(.*)',
-  '/forgot-password(.*)',
-  '/reset-password(.*)',
-  '/verify-email(.*)',
-  '/features(.*)',
-  '/contact(.*)',
-  '/faq(.*)',
-  '/feedback(.*)',
-  '/api/v1/webhooks(.*)',
-  '/api/v1/events/track',
-  '/api/v1/health(.*)',
-  '/api/health(.*)',
-  '/health(.*)',
-]);
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+  '/features',
+  '/contact',
+  '/faq',
+  '/feedback',
+  '/health',
+];
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Static files and internal Next.js requests bypass
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.') ||
+    PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+  ) {
+    return NextResponse.next();
   }
-});
+
+  // Check for active session cookie
+  const sessionCookie = req.cookies.get('nexus_demo_session')?.value || req.cookies.get('nexus_session_token')?.value;
+
+  if (!sessionCookie) {
+    const loginUrl = new URL('/login', req.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
+    '/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?|css|js)).*)',
   ],
 };

@@ -182,15 +182,15 @@ async def chat_with_copilot(
             f"- *'Simulate detour options for vehicle NX-104.'*"
         )
 
-    # 3. Enhance reply with Groq LLM synthesis if API client is active
-    if ai_service._client and context_data:
+    # 3. Enhance reply with AI LLM synthesis if API client is active
+    if ai_service.is_enabled and context_data:
         ai_synthesis = await ai_service.generate_copilot_reasoning(
             user_prompt=req.prompt,
             tools_executed=executed_tools,
             context_data=context_data
         )
         if ai_synthesis:
-            reply = f"{reply}\n\n---\n### 🧠 **Nexus AI Intelligence Synthesis (Groq Llama-3.3-70B)**\n\n{ai_synthesis}"
+            reply = f"{reply}\n\n---\n### 🧠 **Nexus AI Intelligence Synthesis**\n\n{ai_synthesis}"
 
     msg_id = f"msg-{uuid.uuid4().hex[:10]}"
 

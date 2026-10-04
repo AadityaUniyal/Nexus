@@ -74,3 +74,49 @@ async def test_ai_briefing_endpoint(async_client: AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, dict)
+
+@pytest.mark.asyncio
+async def test_overview_stats_endpoint(async_client: AsyncClient):
+    response = await async_client.get("/api/v1/overview/stats")
+    assert response.status_code == 200
+    data = response.json()
+    assert "total_orders" in data
+    assert "active_vehicles" in data
+    assert "warehouse_utilization" in data
+    assert "on_time_delivery_rate" in data
+
+@pytest.mark.asyncio
+async def test_operations_summary_endpoint(async_client: AsyncClient):
+    response = await async_client.get("/api/v1/operations/summary")
+    assert response.status_code == 200
+    data = response.json()
+    assert "warehouses" in data
+    assert "vehicles" in data
+    assert "routes" in data
+    assert "orders" in data
+
+@pytest.mark.asyncio
+async def test_location_locations_endpoint(async_client: AsyncClient):
+    response = await async_client.get("/api/v1/location/locations")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert "latitude" in data[0]
+    assert "longitude" in data[0]
+
+@pytest.mark.asyncio
+async def test_health_azure_unified_endpoint(async_client: AsyncClient):
+    response = await async_client.get("/health/azure")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["platform"] == "nexus-unified"
+
+@pytest.mark.asyncio
+async def test_api_v1_health_endpoint(async_client: AsyncClient):
+    response = await async_client.get("/api/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert "status" in data
+    assert "databaseConnected" in data or "database_connected" in data

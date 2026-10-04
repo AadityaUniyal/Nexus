@@ -17,9 +17,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: api.geoapify.com https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://img.clerk.com",
-              "connect-src 'self' api.geoapify.com *.vercel.app *.vercel-insights.com *.azurewebsites.net https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net wss: https://nexus-backend.onrender.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.com",
-              "font-src 'self' data:",
+              "img-src 'self' data: blob: api.geoapify.com https://demotiles.maplibre.org https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://img.clerk.com",
+              "connect-src 'self' api.geoapify.com *.vercel.app *.vercel-insights.com https://demotiles.maplibre.org wss: https://*.clerk.accounts.dev https://*.clerk.com https://clerk.com https://*.azurewebsites.net https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net",
+              "font-src 'self' data: https://demotiles.maplibre.org",
               "frame-src 'self' https://vercel.live https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com",
               "worker-src 'self' blob:",
             ].join("; "),
@@ -45,7 +45,15 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8000";
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_INTERNAL_URL;
+    if (!backendUrl) {
+      return [
+        {
+          source: "/api/v1/:path*",
+          destination: process.env.VERCEL ? "/api/index.py" : "http://127.0.0.1:8000/api/v1/:path*",
+        },
+      ];
+    }
     return [
       {
         source: "/api/v1/:path*",

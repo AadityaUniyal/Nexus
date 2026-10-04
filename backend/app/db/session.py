@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from app.core.config import settings
 
+import os
 import sys
 from sqlalchemy.pool import NullPool
 
@@ -17,8 +18,10 @@ engine_kwargs = {
     "pool_recycle": 300,
 }
 
-if "pytest" in sys.modules:
+if "pytest" in sys.modules or os.environ.get("VERCEL"):
     engine_kwargs["poolclass"] = NullPool
+    if "ssl=require" in settings.DATABASE_URL.lower() or "sslmode=require" in settings.DATABASE_URL.lower() or "neon.tech" in settings.DATABASE_URL.lower():
+        engine_kwargs["connect_args"] = {"ssl": "require"}
 elif "neon.tech" in settings.DATABASE_URL.lower():
     # Neon Serverless PostgreSQL with built-in connection pooler
     engine_kwargs.update({

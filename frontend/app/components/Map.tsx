@@ -42,7 +42,7 @@ const Map: React.FC<MapProps> = ({ workspaceId, useAzure = false }) => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
         const resp = await fetch(
-          `${baseUrl}/location/locations?workspace_id=${workspaceId}&use_azure=${useAzure}`
+          `${baseUrl}/api/v1/location/locations?workspace_id=${workspaceId}&use_azure=${useAzure}`
         );
         if (!resp.ok) {
           console.error('Failed to load locations', resp.statusText);
@@ -61,27 +61,26 @@ const Map: React.FC<MapProps> = ({ workspaceId, useAzure = false }) => {
     fetchLocations();
   }, [workspaceId, useAzure]);
 
-  return (
-    <MapContainer
-      center={center}
-      zoom={5}
-      style={{ height: '400px', width: '100%' }}
-      scrollWheelZoom={true}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-        url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-      />
-      {locations.map((loc) => (
-        <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
-          <Popup>
-            ID: {loc.id}<br />
-            ({loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)})
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
-  );
+      const mapProps: any = {
+        center,
+        zoom: 5,
+        style: { height: '400px', width: '100%' },
+        scrollWheelZoom: true,
+      };
+      return (
+        <MapContainer {...(mapProps as any)}>
+// @ts-ignore
+          <TileLayer {...({ attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' } as any)} />
+          {locations.map((loc) => (
+            <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
+              <Popup>
+                ID: {loc.id}<br />
+                ({loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)})
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      );
 };
 
 export default Map;

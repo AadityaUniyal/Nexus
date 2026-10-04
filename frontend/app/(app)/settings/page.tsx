@@ -132,9 +132,9 @@ export default function SettingsPage() {
 
               <div className="p-4 rounded-xl bg-nexus-surface-variant/20 border border-nexus-outline-variant/30 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-nexus-on-surface">Groq AI Operational Synthesis</p>
+                  <p className="text-xs font-bold text-nexus-on-surface">Nexus Neural Engine™ Autonomous Synthesis</p>
                   <p className="text-[11px] text-nexus-on-surface-variant">
-                    Use Groq LLaMA 3.3 70B for executive situational briefings and incident post-mortems.
+                    Enable sub-second cognitive AI for executive situational briefings and kinetic reroute synthesis.
                   </p>
                 </div>
                 <input

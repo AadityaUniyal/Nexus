@@ -98,11 +98,75 @@ export default function OnboardingWorkspacePage() {
                 onChange={(e) => setWorkspaceName(e.target.value)}
               />
 
-              {/* Geoapify Location Search Picker */}
-              <LocationPicker
-                initialLocation={operatingLocation || undefined}
-                onLocationChange={(loc) => setOperatingLocation(loc)}
-              />
+              {/* Geo Location Search Picker & Quick Presets */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-mono font-medium text-nexus-on-surface-variant uppercase">
+                    Primary Operational Location
+                  </label>
+                  <div className="flex items-center gap-1 text-[11px] text-stone-500">
+                    <span>Quick presets:</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOperatingLocation({
+                          id: "loc-ded",
+                          display_name: "Dehradun Central Hub, Uttarakhand, India",
+                          latitude: 30.3165,
+                          longitude: 78.0322,
+                          type: "city",
+                          confidence: 1.0,
+                          provider: "geoapify",
+                        })
+                      }
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      Dehradun
+                    </button>
+                    <span>·</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOperatingLocation({
+                          id: "loc-del",
+                          display_name: "Delhi NCR Superhub, India",
+                          latitude: 28.6139,
+                          longitude: 77.2090,
+                          type: "city",
+                          confidence: 1.0,
+                          provider: "geoapify",
+                        })
+                      }
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      Delhi
+                    </button>
+                    <span>·</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOperatingLocation({
+                          id: "loc-lon",
+                          display_name: "London Gateway, UK",
+                          latitude: 51.5074,
+                          longitude: -0.1278,
+                          type: "city",
+                          confidence: 1.0,
+                          provider: "geoapify",
+                        })
+                      }
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      London
+                    </button>
+                  </div>
+                </div>
+
+                <LocationPicker
+                  initialLocation={operatingLocation || undefined}
+                  onLocationChange={(loc) => setOperatingLocation(loc)}
+                />
+              </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-mono font-medium text-nexus-on-surface-variant uppercase">

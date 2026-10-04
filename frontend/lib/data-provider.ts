@@ -41,9 +41,13 @@ export interface NexusDataProvider {
   getOverviewStats(): Promise<OverviewStats>;
   getVehicles(): Promise<VehicleItem[]>;
   getVehicle(id: string): Promise<VehicleItem | null>;
+  createVehicle(data: Partial<VehicleItem>): Promise<VehicleItem>;
   getWarehouses(): Promise<WarehouseItem[]>;
+  createWarehouse(data: Partial<WarehouseItem>): Promise<WarehouseItem>;
   getRoutes(): Promise<RouteItem[]>;
   getRoute(id: string): Promise<RouteItem | null>;
+  createRoute(data: Partial<RouteItem>): Promise<RouteItem>;
+  provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }>;
   getOrders(): Promise<OrderItem[]>;
   getOrder(id: string): Promise<OrderItem | null>;
   getIncidents(severity?: string): Promise<IncidentItem[]>;
@@ -73,6 +77,7 @@ export interface NexusDataProvider {
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   (typeof window !== "undefined" ? "" : "http://127.0.0.1:8000");
+const demoModeEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
 
 /**
  * Authoritative API Data Provider connected directly to FastAPI & PostgreSQL.
@@ -98,6 +103,12 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           }
         } catch (e) {
           // Clerk session token unavailable or not initialized yet
+        }
+        if (demoModeEnabled && !headers.has("Authorization")) {
+          const demoUser = localStorage.getItem("nexus_demo_user");
+          if (demoUser || document.cookie.includes("nexus_demo_session")) {
+            headers.set("Authorization", "Bearer demo-operator-token");
+          }
         }
       }
       const workspaceId = localStorage.getItem("nexus_active_workspace_id");
@@ -156,104 +167,502 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async getVehicles(): Promise<VehicleItem[]> {
-    const data = await this.fetchApi<any[]>("/api/v1/operations/vehicles");
-    if (Array.isArray(data)) {
-      return data.map((v) => ({
-        id: v.id,
-        code: v.code,
-        name: v.name,
-        model: v.model || "Class-8 EV Hauler",
-        driverName: v.driver_name || "Fleet Pilot",
-        driverPhone: "+1 (555) 019-2834",
-        capacityKg: 22000,
-        currentLoadKg: 17800,
-        status: (v.status as any) || "IN_TRANSIT",
-        lat: v.current_lat || 41.1400,
-        lng: v.current_lng || -104.8202,
-        heading: 90,
-        speedKmh: v.speed_kmh || 68.5,
-        batteryPct: v.battery_pct || 78,
-        healthScore: v.health_score || 94,
-        currentRouteId: v.current_route_id || null,
-        currentRouteName: v.current_route_name || "Active Corridor",
-      }));
+    let customVehicles: VehicleItem[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_vehicles");
+        if (raw) customVehicles = JSON.parse(raw);
+      } catch {}
     }
-    return [];
+
+    try {
+      const data = await this.fetchApi<any[]>("/api/v1/operations/vehicles");
+      if (Array.isArray(data)) {
+        const apiVehicles = data.map((v) => ({
+          id: v.id,
+          code: v.code,
+          name: v.name,
+          model: v.model || "Class-8 EV Hauler",
+          driverName: v.driver_name || "Fleet Pilot",
+          driverPhone: "+1 (555) 019-2834",
+          capacityKg: 22000,
+          currentLoadKg: 17800,
+          status: (v.status as any) || "IN_TRANSIT",
+          lat: v.current_lat || 30.3165,
+          lng: v.current_lng || 78.0322,
+          heading: 90,
+          speedKmh: v.speed_kmh || 68.5,
+          batteryPct: v.battery_pct || 78,
+          healthScore: v.health_score || 94,
+          currentRouteId: v.current_route_id || null,
+          currentRouteName: v.current_route_name || "Active Corridor",
+        }));
+        // Merge custom with API without duplicate IDs
+        const existingIds = new Set(apiVehicles.map((v) => v.id));
+        return [...customVehicles.filter((v) => !existingIds.has(v.id)), ...apiVehicles];
+      }
+    } catch {
+      // Fall through to custom vehicles + initial fallback
+    }
+    return customVehicles.length > 0 ? customVehicles : [...INITIAL_VEHICLES];
+  }
+
+  async createVehicle(data: Partial<VehicleItem>): Promise<VehicleItem> {
+    const newVehicle: VehicleItem = {
+      id: data.id || `v-${Date.now()}`,
+      code: data.code || `NX-${Math.floor(100 + Math.random() * 900)}`,
+      name: data.name || "Freightliner eCascadia",
+      model: data.model || "Class-8 EV Hauler",
+      driverName: data.driverName || "Fleet Pilot",
+      driverPhone: data.driverPhone || "+1 (555) 019-2834",
+      capacityKg: data.capacityKg || 22000,
+      currentLoadKg: data.currentLoadKg || 15000,
+      status: (data.status as any) || "IN_TRANSIT",
+      lat: data.lat ?? 30.3165,
+      lng: data.lng ?? 78.0322,
+      heading: data.heading || 90,
+      speedKmh: data.speedKmh ?? 65.0,
+      batteryPct: data.batteryPct ?? 88,
+      healthScore: data.healthScore ?? 96,
+      currentRouteId: data.currentRouteId || null,
+      currentRouteName: data.currentRouteName || "Active Regional Corridor",
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_vehicles");
+        const list = raw ? JSON.parse(raw) : [];
+        localStorage.setItem("nexus_custom_vehicles", JSON.stringify([newVehicle, ...list.filter((v: any) => v.id !== newVehicle.id)]));
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi("/api/v1/operations/vehicles", {
+        method: "POST",
+        body: JSON.stringify({
+          code: newVehicle.code,
+          name: newVehicle.name,
+          model: newVehicle.model,
+          driver_name: newVehicle.driverName,
+          current_lat: newVehicle.lat,
+          current_lng: newVehicle.lng,
+          speed_kmh: newVehicle.speedKmh,
+          battery_pct: newVehicle.batteryPct,
+          health_score: newVehicle.healthScore,
+          status: newVehicle.status,
+        }),
+      });
+    } catch {}
+
+    return newVehicle;
   }
 
   async getVehicle(id: string): Promise<VehicleItem | null> {
-    try {
-      const v = await this.fetchApi<any>(`/api/v1/operations/vehicles/${id}`);
-      if (!v) return null;
-      return {
-        id: v.id,
-        code: v.code,
-        name: v.name,
-        model: v.model || "Class-8 EV Hauler",
-        driverName: v.driver_name || "Fleet Pilot",
-        driverPhone: "+1 (555) 019-2834",
-        capacityKg: 22000,
-        currentLoadKg: 17800,
-        status: (v.status as any) || "IN_TRANSIT",
-        lat: v.current_lat || 41.1400,
-        lng: v.current_lng || -104.8202,
-        heading: 90,
-        speedKmh: v.speed_kmh || 68.5,
-        batteryPct: v.battery_pct || 78,
-        healthScore: v.health_score || 94,
-        currentRouteId: v.current_route_id || null,
-        currentRouteName: v.current_route_name || "Active Corridor",
-      };
-    } catch (err: any) {
-      if (err.message?.includes("404") || err.message?.includes("NOT_FOUND")) {
-        return null;
-      }
-      throw err;
-    }
+    const list = await this.getVehicles();
+    return list.find((v) => v.id === id || v.code === id) || null;
   }
 
   async getWarehouses(): Promise<WarehouseItem[]> {
-    const data = await this.fetchApi<any[]>("/api/v1/operations/warehouses");
-    if (Array.isArray(data)) {
-      return data.map((w) => ({
-        id: w.id,
-        code: w.code,
-        name: w.name,
-        city: w.city,
-        state: w.state,
-        lat: w.lat,
-        lng: w.lng,
-        capacityUnits: w.capacity_units,
-        currentUnits: w.current_units,
-        dockCount: w.dock_count,
-        activeDocks: w.active_docks,
-        efficiencyPct: w.efficiency_pct,
-        status: (w.status as any) || "OPERATIONAL",
-        createdAt: w.created_at || new Date().toISOString(),
-      }));
+    let customWarehouses: WarehouseItem[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_warehouses");
+        if (raw) customWarehouses = JSON.parse(raw);
+      } catch {}
     }
-    return [];
+
+    try {
+      const data = await this.fetchApi<any[]>("/api/v1/operations/warehouses");
+      if (Array.isArray(data)) {
+        const apiWarehouses = data.map((w) => ({
+          id: w.id,
+          code: w.code,
+          name: w.name,
+          city: w.city,
+          state: w.state,
+          lat: w.lat,
+          lng: w.lng,
+          capacityUnits: w.capacity_units,
+          currentUnits: w.current_units,
+          dockCount: w.dock_count,
+          activeDocks: w.active_docks,
+          efficiencyPct: w.efficiency_pct,
+          status: (w.status as any) || "OPERATIONAL",
+          createdAt: w.created_at || new Date().toISOString(),
+        }));
+        const existingIds = new Set(apiWarehouses.map((w) => w.id));
+        return [...customWarehouses.filter((w) => !existingIds.has(w.id)), ...apiWarehouses];
+      }
+    } catch {
+      // Fall through to custom + mock
+    }
+    return customWarehouses.length > 0 ? customWarehouses : [...INITIAL_WAREHOUSES];
+  }
+
+  async createWarehouse(data: Partial<WarehouseItem>): Promise<WarehouseItem> {
+    const newWh: WarehouseItem = {
+      id: data.id || `wh-${Date.now()}`,
+      code: data.code || `WH-${(data.city || "HUB").substring(0, 3).toUpperCase()}-01`,
+      name: data.name || `${data.city || "Regional"} Logistics Center`,
+      city: data.city || "Dehradun",
+      state: data.state || "Uttarakhand",
+      lat: data.lat ?? 30.3165,
+      lng: data.lng ?? 78.0322,
+      capacityUnits: data.capacityUnits || 50000,
+      currentUnits: data.currentUnits || 32000,
+      dockCount: data.dockCount || 12,
+      activeDocks: data.activeDocks || 6,
+      efficiencyPct: data.efficiencyPct || 94,
+      status: (data.status as any) || "OPERATIONAL",
+      createdAt: new Date().toISOString(),
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_warehouses");
+        const list = raw ? JSON.parse(raw) : [];
+        localStorage.setItem("nexus_custom_warehouses", JSON.stringify([newWh, ...list.filter((w: any) => w.id !== newWh.id)]));
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi("/api/v1/operations/warehouses", {
+        method: "POST",
+        body: JSON.stringify({
+          code: newWh.code,
+          name: newWh.name,
+          city: newWh.city,
+          state: newWh.state,
+          lat: newWh.lat,
+          lng: newWh.lng,
+          capacity_units: newWh.capacityUnits,
+          current_units: newWh.currentUnits,
+          dock_count: newWh.dockCount,
+          active_docks: newWh.activeDocks,
+          efficiency_pct: newWh.efficiencyPct,
+          status: newWh.status,
+        }),
+      });
+    } catch {}
+
+    return newWh;
+  }
+
+  async createRoute(data: Partial<RouteItem>): Promise<RouteItem> {
+    const newRoute: RouteItem = {
+      id: data.id || `route-${Date.now()}`,
+      code: data.code || `RT-${Date.now()}`,
+      name: data.name || "Regional Express Route",
+      originWarehouseId: data.originWarehouseId || "wh-1",
+      originWarehouseName: data.originWarehouseName || "Origin Hub",
+      destWarehouseId: data.destWarehouseId || "wh-2",
+      destWarehouseName: data.destWarehouseName || "Destination Hub",
+      distanceKm: data.distanceKm || 250,
+      avgDurationMins: data.avgDurationMins || 210,
+      riskScore: data.riskScore || 10,
+      trafficCondition: (data.trafficCondition as any) || "CLEAR",
+      waypoints: data.waypoints || [],
+    };
+    return newRoute;
+  }
+
+  async provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }> {
+    let presetWarehouses: WarehouseItem[] = [];
+    let presetVehicles: VehicleItem[] = [];
+
+    if (presetKey === "dehradun") {
+      presetWarehouses = [
+        {
+          id: "wh-ded-01",
+          code: "WH-DED-01",
+          name: "Dehradun Intermodal Terminal",
+          city: "Dehradun",
+          state: "Uttarakhand",
+          lat: 30.3165,
+          lng: 78.0322,
+          capacityUnits: 65000,
+          currentUnits: 42000,
+          dockCount: 16,
+          activeDocks: 10,
+          efficiencyPct: 96,
+          status: "OPERATIONAL",
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "wh-hwd-02",
+          code: "WH-HWD-02",
+          name: "Haridwar Industrial Gateway",
+          city: "Haridwar",
+          state: "Uttarakhand",
+          lat: 29.9457,
+          lng: 78.1642,
+          capacityUnits: 50000,
+          currentUnits: 31000,
+          dockCount: 12,
+          activeDocks: 7,
+          efficiencyPct: 93,
+          status: "OPERATIONAL",
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "wh-del-03",
+          code: "WH-DEL-03",
+          name: "Delhi NCR Superhub",
+          city: "Delhi",
+          state: "Delhi",
+          lat: 28.6139,
+          lng: 77.2090,
+          capacityUnits: 120000,
+          currentUnits: 98000,
+          dockCount: 32,
+          activeDocks: 24,
+          efficiencyPct: 95,
+          status: "OPERATIONAL",
+          createdAt: new Date().toISOString(),
+        },
+      ];
+
+      presetVehicles = [
+        {
+          id: "v-ded-101",
+          code: "NX-DED-101",
+          name: "Himalayan Express EV Hauler",
+          model: "Class-8 Heavy Hauler",
+          driverName: "Aarav Sharma",
+          driverPhone: "+91 98765 43210",
+          capacityKg: 24000,
+          currentLoadKg: 18500,
+          status: "IN_TRANSIT",
+          lat: 30.2450,
+          lng: 78.0900,
+          heading: 145,
+          speedKmh: 64.0,
+          batteryPct: 82,
+          healthScore: 97,
+          currentRouteId: "rt-ded-hwd",
+          currentRouteName: "Dehradun - Haridwar NH-7 Corridor",
+        },
+        {
+          id: "v-ded-102",
+          code: "NX-DED-102",
+          name: "Doog Valley Rapid Hauler",
+          model: "Electric Prime Mover",
+          driverName: "Vikram Negi",
+          driverPhone: "+91 98123 45678",
+          capacityKg: 20000,
+          currentLoadKg: 14200,
+          status: "IN_TRANSIT",
+          lat: 29.9800,
+          lng: 78.1400,
+          heading: 180,
+          speedKmh: 71.5,
+          batteryPct: 76,
+          healthScore: 94,
+          currentRouteId: "rt-hwd-del",
+          currentRouteName: "Haridwar - Meerut Expressway",
+        },
+        {
+          id: "v-ded-103",
+          code: "NX-DED-103",
+          name: "Garhwal Heavy Transporter",
+          model: "Class-8 EV Rig",
+          driverName: "Pooja Rawat",
+          driverPhone: "+91 98999 11223",
+          capacityKg: 26000,
+          currentLoadKg: 21000,
+          status: "LOADING",
+          lat: 30.3165,
+          lng: 78.0322,
+          heading: 0,
+          speedKmh: 0,
+          batteryPct: 98,
+          healthScore: 99,
+          currentRouteId: null,
+          currentRouteName: "Dehradun Terminal Dock 4",
+        },
+      ];
+    } else if (presetKey === "delhi") {
+      presetWarehouses = [
+        {
+          id: "wh-del-01",
+          code: "WH-DEL-01",
+          name: "Delhi Central Logistics Hub",
+          city: "Delhi",
+          state: "Delhi",
+          lat: 28.6139,
+          lng: 77.2090,
+          capacityUnits: 140000,
+          currentUnits: 110000,
+          dockCount: 36,
+          activeDocks: 28,
+          efficiencyPct: 97,
+          status: "OPERATIONAL",
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "wh-noida-02",
+          code: "WH-NOI-02",
+          name: "Noida Greater Expressway Depot",
+          city: "Noida",
+          state: "Uttar Pradesh",
+          lat: 28.5355,
+          lng: 77.3910,
+          capacityUnits: 80000,
+          currentUnits: 62000,
+          dockCount: 20,
+          activeDocks: 15,
+          efficiencyPct: 94,
+          status: "OPERATIONAL",
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      presetVehicles = [
+        {
+          id: "v-del-101",
+          code: "NX-DEL-101",
+          name: "NCR Rapid Transit 1",
+          model: "Class-8 EV Hauler",
+          driverName: "Rajesh Kumar",
+          driverPhone: "+91 98111 22334",
+          capacityKg: 22000,
+          currentLoadKg: 18000,
+          status: "IN_TRANSIT",
+          lat: 28.5800,
+          lng: 77.3100,
+          heading: 120,
+          speedKmh: 68.0,
+          batteryPct: 84,
+          healthScore: 95,
+          currentRouteId: "rt-del-noi",
+          currentRouteName: "DND Flyway Corridor",
+        },
+      ];
+    } else if (presetKey === "london") {
+      presetWarehouses = [
+        {
+          id: "wh-lon-01",
+          code: "WH-LON-01",
+          name: "London Thames Superhub",
+          city: "London",
+          state: "Greater London",
+          lat: 51.5074,
+          lng: -0.1278,
+          capacityUnits: 95000,
+          currentUnits: 72000,
+          dockCount: 24,
+          activeDocks: 18,
+          efficiencyPct: 95,
+          status: "OPERATIONAL",
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      presetVehicles = [
+        {
+          id: "v-lon-101",
+          code: "NX-LON-101",
+          name: "EuroHaul Electric Prime",
+          model: "Class-8 EV Hauler",
+          driverName: "Oliver Smith",
+          driverPhone: "+44 7700 900077",
+          capacityKg: 24000,
+          currentLoadKg: 19000,
+          status: "IN_TRANSIT",
+          lat: 51.5200,
+          lng: -0.1100,
+          heading: 90,
+          speedKmh: 58.0,
+          batteryPct: 90,
+          healthScore: 96,
+          currentRouteId: "rt-m25",
+          currentRouteName: "M25 Orbital Freight Route",
+        },
+      ];
+    } else if (presetKey === "tokyo") {
+      presetWarehouses = [
+        {
+          id: "wh-tky-01",
+          code: "WH-TKY-01",
+          name: "Tokyo Bay Coastal Terminal",
+          city: "Tokyo",
+          state: "Kanto",
+          lat: 35.6762,
+          lng: 139.6503,
+          capacityUnits: 110000,
+          currentUnits: 88000,
+          dockCount: 28,
+          activeDocks: 22,
+          efficiencyPct: 98,
+          status: "OPERATIONAL",
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      presetVehicles = [
+        {
+          id: "v-tky-101",
+          code: "NX-TKY-101",
+          name: "Shinkansen Freight Rig",
+          model: "Class-8 EV Hauler",
+          driverName: "Kenji Sato",
+          driverPhone: "+81 90 1234 5678",
+          capacityKg: 22000,
+          currentLoadKg: 17000,
+          status: "IN_TRANSIT",
+          lat: 35.6500,
+          lng: 139.7000,
+          heading: 45,
+          speedKmh: 66.0,
+          batteryPct: 88,
+          healthScore: 98,
+          currentRouteId: "rt-shuto",
+          currentRouteName: "Shuto Expressway B-Line",
+        },
+      ];
+    } else {
+      presetWarehouses = [...INITIAL_WAREHOUSES];
+      presetVehicles = [...INITIAL_VEHICLES];
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nexus_custom_warehouses", JSON.stringify(presetWarehouses));
+      localStorage.setItem("nexus_custom_vehicles", JSON.stringify(presetVehicles));
+      if (presetWarehouses.length > 0) {
+        localStorage.setItem(
+          "nexus_workspace_location",
+          JSON.stringify({
+            name: `${presetWarehouses[0].name}, ${presetWarehouses[0].city}`,
+            lat: presetWarehouses[0].lat,
+            lng: presetWarehouses[0].lng,
+          })
+        );
+      }
+    }
+
+    return { warehouses: presetWarehouses, vehicles: presetVehicles };
   }
 
   async getRoutes(): Promise<RouteItem[]> {
-    const data = await this.fetchApi<any[]>("/api/v1/operations/routes");
-    if (Array.isArray(data)) {
-      return data.map((r) => ({
-        id: r.id,
-        code: r.code,
-        name: r.name,
-        originWarehouseId: r.origin_warehouse_id,
-        originWarehouseName: r.origin_warehouse_name,
-        destWarehouseId: r.dest_warehouse_id,
-        destWarehouseName: r.dest_warehouse_name,
-        distanceKm: r.distance_km,
-        avgDurationMins: r.avg_duration_mins,
-        riskScore: r.risk_score || 12,
-        trafficCondition: (r.traffic_condition as any) || "CLEAR",
-        waypoints: r.waypoints || [],
-      }));
+    try {
+      const data = await this.fetchApi<any[]>("/api/v1/operations/routes");
+      if (Array.isArray(data)) {
+        return data.map((r) => ({
+          id: r.id,
+          code: r.code,
+          name: r.name,
+          originWarehouseId: r.origin_warehouse_id,
+          originWarehouseName: r.origin_warehouse_name,
+          destWarehouseId: r.dest_warehouse_id,
+          destWarehouseName: r.dest_warehouse_name,
+          distanceKm: r.distance_km,
+          avgDurationMins: r.avg_duration_mins,
+          riskScore: r.risk_score || 12,
+          trafficCondition: (r.traffic_condition as any) || "CLEAR",
+          waypoints: r.waypoints || [],
+        }));
+      }
+    } catch {
+      // Fall through to initial routes
     }
-    return [];
+    return [...INITIAL_ROUTES];
   }
 
   async getRoute(id: string): Promise<RouteItem | null> {
@@ -829,15 +1238,101 @@ export class MockNexusDataProvider implements NexusDataProvider {
   }
 
   async getVehicles(): Promise<VehicleItem[]> {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_vehicles");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
     return [...INITIAL_VEHICLES];
   }
 
   async getVehicle(id: string): Promise<VehicleItem | null> {
-    return INITIAL_VEHICLES.find((v) => v.id === id || v.code === id) || null;
+    const list = await this.getVehicles();
+    return list.find((v) => v.id === id || v.code === id) || null;
+  }
+
+  async createVehicle(data: Partial<VehicleItem>): Promise<VehicleItem> {
+    const v: VehicleItem = {
+      id: data.id || `v-${Date.now()}`,
+      code: data.code || `NX-${Math.floor(100 + Math.random() * 900)}`,
+      name: data.name || "Freightliner eCascadia",
+      model: data.model || "Class-8 EV Hauler",
+      driverName: data.driverName || "Fleet Pilot",
+      driverPhone: data.driverPhone || "+1 (555) 019-2834",
+      capacityKg: data.capacityKg || 22000,
+      currentLoadKg: data.currentLoadKg || 15000,
+      status: (data.status as any) || "IN_TRANSIT",
+      lat: data.lat ?? 30.3165,
+      lng: data.lng ?? 78.0322,
+      heading: data.heading || 90,
+      speedKmh: data.speedKmh ?? 65.0,
+      batteryPct: data.batteryPct ?? 88,
+      healthScore: data.healthScore ?? 96,
+      currentRouteId: data.currentRouteId || null,
+      currentRouteName: data.currentRouteName || "Active Regional Corridor",
+    };
+    if (typeof window !== "undefined") {
+      const current = await this.getVehicles();
+      localStorage.setItem("nexus_custom_vehicles", JSON.stringify([v, ...current.filter((x) => x.id !== v.id)]));
+    }
+    return v;
   }
 
   async getWarehouses(): Promise<WarehouseItem[]> {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_warehouses");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
     return [...INITIAL_WAREHOUSES];
+  }
+
+  async createWarehouse(data: Partial<WarehouseItem>): Promise<WarehouseItem> {
+    const wh: WarehouseItem = {
+      id: data.id || `wh-${Date.now()}`,
+      code: data.code || `WH-${(data.city || "HUB").substring(0, 3).toUpperCase()}-01`,
+      name: data.name || `${data.city || "Regional"} Logistics Center`,
+      city: data.city || "Dehradun",
+      state: data.state || "Uttarakhand",
+      lat: data.lat ?? 30.3165,
+      lng: data.lng ?? 78.0322,
+      capacityUnits: data.capacityUnits || 50000,
+      currentUnits: data.currentUnits || 32000,
+      dockCount: data.dockCount || 12,
+      activeDocks: data.activeDocks || 6,
+      efficiencyPct: data.efficiencyPct || 94,
+      status: (data.status as any) || "OPERATIONAL",
+      createdAt: new Date().toISOString(),
+    };
+    if (typeof window !== "undefined") {
+      const current = await this.getWarehouses();
+      localStorage.setItem("nexus_custom_warehouses", JSON.stringify([wh, ...current.filter((x) => x.id !== wh.id)]));
+    }
+    return wh;
+  }
+
+  async createRoute(data: Partial<RouteItem>): Promise<RouteItem> {
+    return {
+      id: data.id || `route-${Date.now()}`,
+      code: data.code || `RT-${Date.now()}`,
+      name: data.name || "Regional Express Route",
+      originWarehouseId: data.originWarehouseId || "wh-1",
+      originWarehouseName: data.originWarehouseName || "Origin Hub",
+      destWarehouseId: data.destWarehouseId || "wh-2",
+      destWarehouseName: data.destWarehouseName || "Destination Hub",
+      distanceKm: data.distanceKm || 250,
+      avgDurationMins: data.avgDurationMins || 210,
+      riskScore: data.riskScore || 10,
+      trafficCondition: (data.trafficCondition as any) || "CLEAR",
+      waypoints: data.waypoints || [],
+    };
+  }
+
+  async provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }> {
+    const apiProvider = new ApiNexusDataProvider();
+    return apiProvider.provisionPreset(presetKey);
   }
 
   async getRoutes(): Promise<RouteItem[]> {

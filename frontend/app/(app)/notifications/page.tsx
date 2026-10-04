@@ -119,7 +119,7 @@ export default function NotificationsPage() {
                           <div className="mt-3">
                             <Link
                               href={n.deepLink}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e: React.MouseEvent<HTMLAnchorElement>) => e.stopPropagation()}
                               className="inline-flex items-center text-xs font-semibold text-nexus-secondary hover:underline font-mono-data gap-1"
                             >
                               <span>Inspect Related Entity</span>
@@ -139,4 +139,3 @@ export default function NotificationsPage() {
     </AppShell>
   );
 }
-

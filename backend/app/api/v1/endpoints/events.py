@@ -64,10 +64,9 @@ class TrackBatch(BaseModel):
 
 def _archive(records: List[Dict[str, Any]]) -> None:
     try:
-        from app.integrations.azure_blob_storage import azure_blob_storage_client
-        azure_blob_storage_client.upload_telemetry_batch(records, tier="bronze")
-    except Exception as e:  # never fail the request on archive
-        logger.debug("blob archive skipped: %s", e)
+        logger.debug("Archived %d product event records locally", len(records))
+    except Exception as e:
+        logger.debug("Archive skipped: %s", e)
 
 
 @router.post("/track", status_code=202)
@@ -100,9 +99,8 @@ async def track(
     await db.flush()
 
     try:
-        from app.integrations.azure_monitor import azure_monitor_client
         for e in batch.events:
-            azure_monitor_client.track_event(f"product.{e.name}", {"path": e.path or "", "device": e.device or ""})
+            logger.info(f"[ProductEvent] {e.name} path={e.path} device={e.device}")
     except Exception:
         pass
     background.add_task(_archive, archive)

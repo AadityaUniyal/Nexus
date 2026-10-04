@@ -78,7 +78,7 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
             new_ws = Workspace(
                 id=workspace_id,
                 name="Continental Fleet Ops",
-                code="WS-CF-01",
+                slug=f"continental-fleet-{uuid.uuid4().hex[:6]}",
                 organization_id="org-nexus-demo",
             )
             db.add(new_ws)
