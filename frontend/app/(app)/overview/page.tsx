@@ -4,11 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { NexusWorld } from "@/components/world/NexusWorld";
-import { MetricTile } from "@/components/ui/metric-tile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { StatusLed } from "@/components/ui/status-led";
 import {
   Truck,
   Building2,
@@ -24,6 +22,10 @@ import {
   Clock,
   Globe2,
   Upload,
+  Radio,
+  SlidersHorizontal,
+  Map as MapIcon,
+  Box,
 } from "lucide-react";
 import {
   VehicleItem,
@@ -31,6 +33,7 @@ import {
   IncidentItem,
   OperationalEventItem,
   RouteItem,
+  SimulationItem,
 } from "@/lib/mock-data";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -39,17 +42,23 @@ import {
   FadeIn,
   StaggerContainer,
   StaggerItem,
-  AnimatedCounter,
   PulseLED,
   TactileCard,
 } from "@/components/ui/motion-animations";
-import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
 import { InteractiveWorldMap } from "@/components/world/InteractiveWorldMap";
 import { motion, AnimatePresence } from "motion/react";
-import { Map as MapIcon, Box } from "lucide-react";
 import { dataProvider } from "@/lib/data-provider";
-import { NexusPulse } from "@/components/ui/nexus-pulse";
+
+// Innovations & Role Cockpits
+import { RoleCockpitSwitcher, RoleType } from "@/components/role-dashboards/RoleCockpitSwitcher";
+import { ManagerDashboard } from "@/components/role-dashboards/ManagerDashboard";
+import { OperatorDashboard } from "@/components/role-dashboards/OperatorDashboard";
+import { AnalystDashboard } from "@/components/role-dashboards/AnalystDashboard";
+import { AdminDashboard } from "@/components/role-dashboards/AdminDashboard";
+import { ViewerDashboard } from "@/components/role-dashboards/ViewerDashboard";
+import { TimeTravelScrubber } from "@/components/innovations/TimeTravelScrubber";
+import { MultiplayerPresence } from "@/components/innovations/MultiplayerPresence";
+import { GeofenceHazardPainter } from "@/components/innovations/GeofenceHazardPainter";
 
 export default function OverviewPage() {
   const { toast } = useToast();
@@ -57,471 +66,263 @@ export default function OverviewPage() {
   const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
   const [routes, setRoutes] = React.useState<RouteItem[]>([]);
   const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
+  const [simulations, setSimulations] = React.useState<SimulationItem[]>([]);
   const [events, setEvents] = React.useState<OperationalEventItem[]>([]);
+  
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [worldView, setWorldView] = React.useState<"3D" | "GIS">("3D");
-  const [briefing, setBriefing] = React.useState<string>(
-    "Synthesizing operational telemetry..."
-  );
-  const [operationalMode, setOperationalMode] = React.useState<string>("SANDBOX");
-  const [activeScenario, setActiveScenario] = React.useState<string>("I-80 Blizzard Emergency");
+  
+  const [operationalMode, setOperationalMode] = React.useState<"PRODUCTION" | "SANDBOX">("SANDBOX");
+  const [activeRole, setActiveRole] = React.useState<RoleType>("OPERATIONS_MANAGER");
+  const [timelineOffset, setTimelineOffset] = React.useState<number>(0);
   const [showGuideBanner, setShowGuideBanner] = React.useState<boolean>(true);
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedMode = localStorage.getItem("nexus_operational_mode");
+      const savedMode = localStorage.getItem("nexus_operational_mode") as any;
       if (savedMode) setOperationalMode(savedMode);
-      const savedScenario = localStorage.getItem("nexus_active_scenario");
-      if (savedScenario) setActiveScenario(savedScenario);
+      const savedRole = localStorage.getItem("nexus_user_role") as RoleType;
+      if (savedRole) setActiveRole(savedRole);
     }
   }, []);
 
-  // Fetch live state directly from authoritative dataProvider (PostgreSQL backed)
+  // Fetch live state directly from authoritative dataProvider
   React.useEffect(() => {
     async function loadLiveTelemetry() {
       setIsLoading(true);
       try {
-        const [vData, wData, iData, rData] = await Promise.all([
+        const [vData, wData, iData, rData, sData] = await Promise.all([
           dataProvider.getVehicles(),
           dataProvider.getWarehouses(),
           dataProvider.getIncidents(),
           dataProvider.getRoutes(),
+          dataProvider.getSimulations(),
         ]);
 
-        const loadedVehicles = vData || [];
-        const loadedWarehouses = wData || [];
-        const loadedIncidents = iData || [];
-        const loadedRoutes = rData || [];
-
-        setVehicles(loadedVehicles);
-        setWarehouses(loadedWarehouses);
-        setIncidents(loadedIncidents);
-        setRoutes(loadedRoutes);
-
-        if (loadedVehicles.length === 0 && loadedIncidents.length === 0) {
-          setBriefing(
-            "Welcome to Nexus Fleet Command. Your workspace is initialized with clean telemetry streams. Connect your IoT gateways or import fleet assets to activate sub-second tracking and AI-driven rerouting."
-          );
-        } else {
-          setBriefing(
-            `Operations situation nominal with ${loadedIncidents.length} active anomalies flagged across ${loadedVehicles.length} registered vehicles. Real-time telemetry ingestion active.`
-          );
-        }
+        setVehicles(vData || []);
+        setWarehouses(wData || []);
+        setIncidents(iData || []);
+        setRoutes(rData || []);
+        setSimulations(sData || []);
       } catch (err) {
         console.warn("[Overview] Using cached operational state:", err);
-        setBriefing("Fleet Command ready. No active critical disruptions registered.");
       } finally {
         setIsLoading(false);
       }
     }
     loadLiveTelemetry();
-
-    // Listen to live decision application and voice simulation events
-    const handleVoiceAction = (e: any) => {
-      const detail = e.detail;
-      if (detail?.action_type === 'RUN_SIMULATION') {
-        tactileAudio.playSuccessChord();
-        setEvents((prev) => [
-          {
-            id: `ev-${Date.now()}`,
-            eventType: 'simulation.computed',
-            entityType: 'SIMULATION',
-            entityId: detail.action_payload?.vehicle_code || 'NX-104',
-            severity: 'INFO',
-            message: `Voice Sim Computed: +${detail.action_payload?.time_saved_mins} mins recovered on ${detail.action_payload?.vehicle_code}`,
-            occurredAt: new Date().toISOString(),
-          },
-          ...prev.slice(0, 5),
-        ]);
-      }
-    };
-
-    window.addEventListener('nexus:voice-action', handleVoiceAction);
-    return () => window.removeEventListener('nexus:voice-action', handleVoiceAction);
   }, []);
 
-  const activeVehicles = vehicles.filter((v) => v.status === "IN_TRANSIT").length;
-  const criticalIncidents = incidents.filter((i) => i.severity === "CRITICAL" && i.status !== "RESOLVED");
-
-  const handleRefreshBriefing = async () => {
-    setIsRefreshing(true);
-    tactileAudio.playClick();
-    try {
-      const res = await fetch("/api/v1/ai/briefing", { method: "POST" });
-      const json = await res.json();
-      if (json.briefing) {
-        setBriefing(json.briefing);
-        tactileAudio.playTelemetryPing();
-        toast({
-          title: "Nexus Neural Engine™ Updated",
-          message: "Synthesized latest sub-second operational telemetry.",
-          type: "ai",
-        });
-      }
-    } catch {
-      toast({
-        title: "Briefing Refreshed",
-        message: "Loaded deterministic operational state.",
-        type: "info",
-      });
-    } finally {
-      setIsRefreshing(false);
+  const handleRoleChange = (role: RoleType) => {
+    setActiveRole(role);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nexus_user_role", role);
     }
+    toast({
+      title: `Switched to ${role.replace("_", " ")} Cockpit`,
+      message: "Interface data density, actions, and priority widgets updated.",
+      type: "info",
+    });
   };
+
+  const handleApplyDecision = async (simId: string) => {
+    await dataProvider.applyDecision(simId);
+    const updatedSims = await dataProvider.getSimulations();
+    setSimulations(updatedSims);
+  };
+
+  const handleToggleSandbox = (mode: "PRODUCTION" | "SANDBOX") => {
+    setOperationalMode(mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nexus_operational_mode", mode);
+    }
+    tactileAudio.playSuccess();
+    toast({
+      title: mode === "PRODUCTION" ? "Production Zero-State Mode" : "Interactive Scenario Sandbox",
+      message: mode === "PRODUCTION" ? "Displaying clean production workspace records." : "Loaded 30 Class-8 EV trucks on I-80 Blizzard corridor.",
+      type: "info",
+    });
+  };
+
+  const isZeroState = operationalMode === "PRODUCTION" && vehicles.length === 0 && incidents.length === 0;
 
   return (
     <AppShell>
-      <FadeIn className="space-y-8">
-        {/* Header Title & Actions */}
+      <FadeIn className="space-y-6">
+        {/* Top Header & War Room Presence */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-mono-data text-nexus-on-surface-variant uppercase">
-              <span>Operational Dashboard</span>
+            <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
+              <span>Autonomous Digital Twin</span>
               <span>·</span>
               <span className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
                 <PulseLED color="emerald" size="sm" />
-                Live Telemetry Ingestion Active
+                Sub-Second Telemetry Ingest Active
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Command & Intelligence Center
+              Command & Intelligence Nerve Center
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleRefreshBriefing}
-              isLoading={isRefreshing}
-              className="font-mono-data text-xs"
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-              Refresh Synthesis
-            </Button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Live War Room Presence */}
+            <MultiplayerPresence />
 
-            <Link href="/simulations/new">
-              <Button variant="simulation" size="sm" className="font-mono-data text-xs shadow-tactile">
-                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                New Simulation
-              </Button>
-            </Link>
+            {/* Sandbox / Production Toggle */}
+            <div className="flex items-center p-1 rounded-xl bg-nexus-surface-container-high border border-nexus-outline/30 text-xs font-mono">
+              <button
+                onClick={() => handleToggleSandbox("PRODUCTION")}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  operationalMode === "PRODUCTION"
+                    ? "bg-nexus-surface border border-nexus-outline/40 font-bold text-nexus-on-surface shadow-xs"
+                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
+                }`}
+              >
+                Production (0-State)
+              </button>
+              <button
+                onClick={() => handleToggleSandbox("SANDBOX")}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  operationalMode === "SANDBOX"
+                    ? "bg-nexus-secondary text-white font-bold shadow-xs"
+                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
+                }`}
+              >
+                Sandbox Demo
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Real-World Operational Launchpad Banner */}
-        {showGuideBanner && (
-          <div className="p-4 rounded-xl border border-nexus-secondary/30 bg-gradient-to-r from-nexus-secondary/10 via-nexus-surface-container/60 to-purple-500/10 shadow-tactile flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-nexus-secondary text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                <Sparkles className="h-5 w-5" />
+        {/* Apple Segmented Role Cockpit Switcher */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <RoleCockpitSwitcher activeRole={activeRole} onRoleChange={handleRoleChange} />
+        </div>
+
+        {/* Zero-State Guide Banner if in Production with 0 records */}
+        {isZeroState && (
+          <div className="p-6 rounded-2xl border border-nexus-secondary/30 bg-gradient-to-r from-nexus-secondary/10 via-nexus-surface-container/80 to-purple-500/10 shadow-tactile flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-nexus-secondary text-white uppercase">
+                  Clean Zero-State Initialized
+                </span>
+                <span className="text-xs font-mono text-nexus-on-surface-variant">
+                  No sample data injected
+                </span>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-nexus-secondary text-white uppercase tracking-wider">
-                    {operationalMode === "SANDBOX" ? "Demo Sandbox Active" : "Production Operations"}
-                  </span>
-                  <span className="text-xs font-mono text-nexus-on-surface-variant">
-                    Scenario: {activeScenario}
-                  </span>
-                </div>
-                <p className="text-xs text-nexus-on-surface mt-1 leading-relaxed">
-                  {operationalMode === "SANDBOX"
-                    ? "Viewing 30 pre-configured Class-8 trucks facing an active Level-3 blizzard on I-80. You can test What-If rerouting or bring your own real fleet."
-                    : "Live enterprise fleet connected. Real-time telemetry ingestion and weather hazard monitoring active."}
-                </p>
-              </div>
+              <p className="text-xs text-nexus-on-surface leading-relaxed max-w-2xl">
+                Your workspace is in pristine zero-state with zero fake assets. Import your real fleet CSV or switch to Sandbox mode to explore What-If simulations.
+              </p>
             </div>
-            <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <Link href="/welcome">
-                <Button variant="outline" size="sm" className="font-mono text-xs gap-1">
-                  <Upload className="h-3.5 w-3.5" /> Launchpad / Import Fleet
+                <Button variant="outline" size="sm" className="font-mono text-xs gap-1.5">
+                  <Upload className="h-3.5 w-3.5" /> CSV Fleet Importer
                 </Button>
               </Link>
-              <Link href="/simulations">
-                <Button variant="primary" size="sm" className="font-mono text-xs gap-1 shadow-tactile">
-                  Run Detour Sim <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
+              <Button
+                variant="simulation"
+                size="sm"
+                onClick={() => handleToggleSandbox("SANDBOX")}
+                className="font-mono text-xs shadow-tactile"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1" /> Load Sandbox Demo
+              </Button>
             </div>
           </div>
         )}
 
-        {/* Top KPI Metrics Row with Stagger Animation */}
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StaggerItem>
-            <TactileCard>
-              <MetricTile
-                title="Fleet In-Transit"
-                value={`${activeVehicles} / ${vehicles.length}`}
-                subtitle={
-                  vehicles.length === 0
-                    ? "0% Active Fleet Utilization"
-                    : `${Math.round((activeVehicles / vehicles.length) * 100)}% Active Fleet Utilization`
-                }
-                change={vehicles.length > 0 ? "+4.2%" : "0.0%"}
-                trend="up"
-                status={vehicles.length > 0 ? "HEALTHY" : "NEUTRAL"}
-                icon={Truck}
-              />
-            </TactileCard>
-          </StaggerItem>
-          <StaggerItem>
-            <TactileCard>
-              <MetricTile
-                title="Network SLA Adherence"
-                value={vehicles.length === 0 ? "100.0%" : "96.8%"}
-                subtitle={vehicles.length === 0 ? "0 Orders Tracked" : "1 Order Projected Delayed"}
-                change={vehicles.length === 0 ? "0.0%" : "-1.2%"}
-                trend={vehicles.length === 0 ? "up" : "down"}
-                status="HEALTHY"
-                icon={Activity}
-              />
-            </TactileCard>
-          </StaggerItem>
-          <StaggerItem>
-            <TactileCard>
-              <MetricTile
-                title="Hub Storage Capacity"
-                value={warehouses.length === 0 ? "0" : "72,450"}
-                subtitle={warehouses.length === 0 ? "0 Active Superhubs" : "81% Aggregate Dock Load"}
-                change={warehouses.length > 0 ? "+2.8%" : "0.0%"}
-                trend="up"
-                status={warehouses.length > 0 ? "ATTENTION" : "NEUTRAL"}
-                icon={Building2}
-              />
-            </TactileCard>
-          </StaggerItem>
-          <StaggerItem>
-            <TactileCard>
-              <MetricTile
-                title="Active Incidents"
-                value={criticalIncidents.length.toString()}
-                subtitle={criticalIncidents.length === 0 ? "0 Active Disruptions" : "Action Required"}
-                status={criticalIncidents.length > 0 ? "CRITICAL" : "HEALTHY"}
-                variant={criticalIncidents.length > 0 ? "critical" : "default"}
-                icon={ShieldAlert}
-              />
-            </TactileCard>
-          </StaggerItem>
-        </StaggerContainer>
-
-        {/* AI Operational Command Briefing Card */}
-        <motion.div whileHover={{ scale: 1.005 }} transition={{ duration: 0.2 }}>
-          <Card className="simulation-layer border border-purple-500/30 bg-purple-500/[0.02]">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-3 border-b border-purple-500/20">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-700 dark:text-purple-300">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-nexus-on-surface">
-                    Nexus Neural Engine™ · Autonomous Synthesis
-                  </h3>
-                  <p className="text-[11px] text-nexus-on-surface-variant font-mono-data">
-                    Real-time situational intelligence derived from sub-second IoT telemetry and kinetic simulations
-                  </p>
-                </div>
-              </div>
-              <Badge variant="simulation" size="sm">
-                Live Synthesis
-              </Badge>
-            </div>
-
-            <p className="mt-3 text-sm text-nexus-on-surface leading-relaxed font-sans">
-              {briefing}
-            </p>
-          </Card>
-        </motion.div>
-
-        {/* Critical Incident Banner if any */}
-        {criticalIncidents.length > 0 && (
+        {/* Bespoke Active Role Dashboard Cockpit */}
+        <AnimatePresence mode="wait">
           <motion.div
+            key={activeRole}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-rose-700 dark:text-rose-400 font-mono-data">
-                    CRITICAL INCIDENT: {criticalIncidents[0].code}
-                  </span>
-                  <Badge variant="critical" size="sm">
-                    Action Pending
-                  </Badge>
-                </div>
-                <p className="text-xs text-nexus-on-surface mt-1">
-                  {criticalIncidents[0].title} — {criticalIncidents[0].summary}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Link href={`/incidents/${criticalIncidents[0].id}`}>
-                <Button variant="secondary" size="sm" className="font-mono-data text-xs">
-                  Inspect Incident
-                </Button>
-              </Link>
-              <Link href="/simulations/sim-901">
-                <Button variant="simulation" size="sm" className="font-mono-data text-xs">
-                  Review Simulation (135 min save)
-                  <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              </Link>
-            </div>
+            {activeRole === "OPERATIONS_MANAGER" && (
+              <ManagerDashboard
+                incidents={incidents}
+                simulations={simulations}
+                warehouses={warehouses}
+                onApplyDecision={handleApplyDecision}
+              />
+            )}
+            {activeRole === "OPERATOR" && (
+              <OperatorDashboard vehicles={vehicles} warehouses={warehouses} />
+            )}
+            {activeRole === "ANALYST" && <AnalystDashboard />}
+            {activeRole === "ADMINISTRATOR" && <AdminDashboard />}
+            {activeRole === "VIEWER" && <ViewerDashboard />}
           </motion.div>
-        )}
+        </AnimatePresence>
 
-        {/* Spatial Digital Twin World Section */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Globe2 className="h-4 w-4 text-emerald-600" />
-              <h2 className="text-base font-bold text-nexus-on-surface tracking-tight">
-                Live Spatial Viewport
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Toggle Map / 3D */}
-              <div className="bg-stone-200/60 dark:bg-stone-800 p-0.5 rounded-lg flex items-center gap-0.5 text-xs">
-                <button
-                  onClick={() => setWorldView("3D")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
-                    worldView === "3D" ? "bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-sm" : "text-stone-500"
-                  )}
-                >
-                  <Box className="w-3 h-3" />
-                  3D View
-                </button>
-                <button
-                  onClick={() => setWorldView("GIS")}
-                  className={cn(
-                    "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
-                    worldView === "GIS" ? "bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-sm" : "text-stone-500"
-                  )}
-                >
-                  <MapIcon className="w-3 h-3" />
-                  GIS Map
-                </button>
-              </div>
-
-              <Link
-                href="/live-world"
-                className="text-xs font-semibold text-nexus-secondary hover:underline font-mono-data flex items-center gap-1 ml-2"
+        {/* Spatial Digital Twin & 4D Timeline Scrubber Section */}
+        <div className="space-y-4 pt-2">
+          {/* Spatial World View */}
+          <div className="rounded-3xl border border-nexus-outline/30 overflow-hidden shadow-tactile bg-nexus-surface-container relative">
+            {/* Map View Toggle Bar */}
+            <div className="absolute top-4 right-4 z-20 flex items-center p-1 rounded-xl bg-nexus-surface-container/90 backdrop-blur-md border border-nexus-outline/40 shadow-tactile text-xs font-mono">
+              <button
+                onClick={() => {
+                  setWorldView("3D");
+                  tactileAudio.playClick();
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                  worldView === "3D"
+                    ? "bg-nexus-secondary text-white font-bold shadow-xs"
+                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
+                }`}
               >
-                <span>Full Viewport</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {worldView === "3D" ? (
-              <motion.div
-                key="view-3d"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
+                <Box className="w-3.5 h-3.5" /> 3D Digital Twin
+              </button>
+              <button
+                onClick={() => {
+                  setWorldView("GIS");
+                  tactileAudio.playClick();
+                }}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                  worldView === "GIS"
+                    ? "bg-nexus-secondary text-white font-bold shadow-xs"
+                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
+                }`}
               >
+                <MapIcon className="w-3.5 h-3.5" /> 2D GIS Network
+              </button>
+            </div>
+
+            <div className="h-[480px] w-full">
+              {worldView === "3D" ? (
                 <NexusWorld
                   warehouses={warehouses}
                   vehicles={vehicles}
                   routes={routes}
                   incidents={incidents}
                 />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="view-gis"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-              >
+              ) : (
                 <InteractiveWorldMap
                   warehouses={warehouses}
                   vehicles={vehicles}
                   routes={routes}
                   incidents={incidents}
-                  className="h-[520px]"
                 />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Bottom Grid: Active Fleet Overview & NEXUS Pulse Live Narrative */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Active Fleet List */}
-          <Card>
-            <CardHeader>
-              <div>
-                <CardTitle>Fleet Telemetry Watch</CardTitle>
-                <CardDescription>Real-time vehicle status and assigned routes · PostgreSQL Synced</CardDescription>
-              </div>
-              <Link href="/operations" className="text-xs font-semibold text-nexus-secondary font-mono-data hover:underline">
-                View All Vehicles
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-3">
-                  <SkeletonCard />
-                  <SkeletonCard />
-                  <SkeletonCard />
-                </div>
-              ) : vehicles.length === 0 ? (
-                <EmptyState
-                  icon={Truck}
-                  title="No vehicles yet"
-                  description="Import your fleet to start tracking vehicle telemetry in real-time."
-                  action={
-                    <Button variant="primary" size="sm">
-                      <a href="/onboarding/import-data">Import Fleet Data</a>
-                    </Button>
-                  }
-                  size="sm"
-                />
-              ) : (
-                <div className="divide-y divide-nexus-outline-variant/20">
-                  {vehicles.slice(0, 5).map((v) => (
-                    <div key={v.id} className="py-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-nexus-surface-container text-nexus-on-surface">
-                          <Truck className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-nexus-on-surface">{v.code}</span>
-                            <StatusLed
-                              status={v.healthScore < 80 ? "CRITICAL" : v.status === "IN_TRANSIT" ? "HEALTHY" : "OFFLINE"}
-                              size="sm"
-                            />
-                          </div>
-                          <p className="text-[11px] text-nexus-on-surface-variant font-mono-data truncate max-w-xs">
-                            {v.currentRouteName || "Standby at Newark Depot"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right text-xs font-mono-data">
-                        <p className="font-semibold text-nexus-on-surface">{v.speedKmh} km/h</p>
-                        <p className="text-[10px] text-nexus-on-surface-variant">Battery: {v.batteryPct}%</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* NEXUS Pulse: What Changed? Live Narrative Feed */}
-          <NexusPulse />
+          {/* 4D Time-Travel Scrubber & Spatial Geofence Tools */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-8">
+              <TimeTravelScrubber onTimeChange={(offset) => setTimelineOffset(offset)} />
+            </div>
+            <div className="lg:col-span-4">
+              <GeofenceHazardPainter />
+            </div>
+          </div>
         </div>
       </FadeIn>
     </AppShell>
