@@ -670,3 +670,67 @@ async def probe_azure_service(
     }
 
 
+@router.get("/azure/maps/route")
+async def calculate_azure_truck_route(
+    origin_lat: float = Query(default=41.8781),
+    origin_lng: float = Query(default=-87.6298),
+    dest_lat: float = Query(default=40.7128),
+    dest_lng: float = Query(default=-74.0060),
+    weight_kg: float = Query(default=36000.0),
+    height_meters: float = Query(default=4.1),
+    hazmat: str = Query(default="otherHazmat"),
+) -> Dict[str, Any]:
+    """Calculate commercial truck route with Azure Maps clearance & bridge checks."""
+    from app.integrations.azure_maps import AzureMapsService
+    return await AzureMapsService.calculate_commercial_truck_route(
+        origin_lat=origin_lat,
+        origin_lng=origin_lng,
+        dest_lat=dest_lat,
+        dest_lng=dest_lng,
+        vehicle_weight_kg=weight_kg,
+        vehicle_height_meters=height_meters,
+        vehicle_load_type=hazmat,
+    )
+
+
+@router.get("/azure/maps/isoline")
+async def calculate_azure_ev_isoline(
+    lat: float = Query(default=41.8781),
+    lng: float = Query(default=-87.6298),
+    soc_percent: float = Query(default=75.0),
+    payload_weight_kg: float = Query(default=22000.0),
+) -> Dict[str, Any]:
+    """Compute EV battery reachable isoline boundary polygon."""
+    from app.integrations.azure_maps import AzureMapsService
+    return await AzureMapsService.compute_ev_reachable_isoline(
+        current_lat=lat,
+        current_lng=lng,
+        battery_state_of_charge_percent=soc_percent,
+        payload_weight_kg=payload_weight_kg,
+    )
+
+
+@router.post("/azure/vision/bol-ocr")
+async def analyze_bol_document() -> Dict[str, Any]:
+    """Analyze Bill of Lading (BoL) document via Azure AI Vision."""
+    from app.integrations.azure_ai_vision import AzureVisionService
+    return await AzureVisionService.analyze_bill_of_lading()
+
+
+@router.post("/azure/vision/cargo-damage")
+async def inspect_cargo_damage() -> Dict[str, Any]:
+    """Inspect pallet integrity and detect cargo defects via Azure AI Vision."""
+    from app.integrations.azure_ai_vision import AzureVisionService
+    return await AzureVisionService.inspect_cargo_damage()
+
+
+@router.get("/azure/pubsub/token")
+async def get_pubsub_token(
+    user_id: str = Query(default="usr-nexus-ops-01"),
+) -> Dict[str, Any]:
+    """Generate ephemeral WebSocket access token for Azure Web PubSub real-time streaming."""
+    from app.integrations.azure_pubsub import AzureWebPubSubService
+    return await AzureWebPubSubService.get_client_access_token(user_id=user_id)
+
+
+
