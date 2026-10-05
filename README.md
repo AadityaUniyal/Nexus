@@ -1,129 +1,221 @@
-# 🌐 NEXUS — Autonomous Logistics & Spatial Intelligence Platform
-
 <div align="center">
 
-## *Enterprise What‑If Simulation Platform · Real‑Time Telemetry · Free‑Tier Azure Stack*
+# 🌐 NEXUS
+### *Autonomous Logistics Operating System & Real-Time Digital Twin*
 
-[![Live Vercel App](https://img.shields.io/badge/Vercel-Live%20Production-black?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-brown-seven-19.vercel.app)
-[![Azure Backend API](https://img.shields.io/badge/Azure-App%20Service%20Online-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/api/v1/health)
-[![Backend Tests](https://img.shields.io/badge/pytest-35%2F35%20passed-success.svg?style=for-the-badge&logo=python&logoColor=white)](backend/tests)
-[![Next.js 15](https://img.shields.io/badge/next.js-v15.5%20(61%20pages)-000000.svg?style=for-the-badge&logo=nextdotjs&logoColor=white)](frontend)
-[![FastAPI](https://img.shields.io/badge/fastapi-v0.115%2B-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](backend)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15.5%20(App%20Router)-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon%20%2F%20Azure-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Three.js](https://img.shields.io/badge/Three.js-3D%20Digital%20Twin-black?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-Apple_HIG_Design-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg?style=for-the-badge)](LICENSE)
 
-### 🚀 **Live Production Deployment**
-**Frontend (Vercel):** [https://frontend-brown-seven-19.vercel.app](https://frontend-brown-seven-19.vercel.app)  
-**Backend API (Azure App Service):** [https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net)  
-**Interactive API Docs (Swagger):** [https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)
+<br />
+
+**[🚀 Live Production Web App](https://frontend-brown-seven-19.vercel.app)** · **[📖 Architecture Blueprint](docs/ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)**
 
 </div>
 
 ---
 
-## 📑 Table of Contents
-- [🚀 Live Production Deployment](#-live-production-deployment)
-- [🏛️ System Architecture](#-system-architecture)
-- [🧮 Core Capabilities & Feature Highlights](#-core-capabilities--feature-highlights)
-- [📊 Azure Free‑Tier Quota Table](#-azure-free‑tier-quota-table)
-- [🚀 Quickstart & Local Development](#-quickstart--local-development)
-- [🛠️ CI/CD Pipeline](#-cicd-pipeline)
-- [🔐 Security & Governance](#-security--governance)
+## ⚡ Executive Overview
+
+Traditional logistics and fleet visibility platforms (e.g. Samsara, Project44, Flexport, Manhattan TMS) are **passive monitoring dashboards** — they notify teams *after* a driver is stuck in a blizzard or after an SLA breach has occurred, leaving operators to manually scramble across phone calls and spreadsheets.
+
+**NEXUS is an Autonomous Logistics Operating System with a Real-Time Spatial Digital Twin and a Predictive Monte Carlo Decision Engine.**
+
+Instead of reactive alerts, NEXUS **preempts disruptions before they happen**, continuously simulating dynamic weather hazards, fuel spikes, and depot chokepoints, then generating one-click cryptographic rerouting actions.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              THE NEXUS PARADIGM SHIFT                                   │
+├────────────────────────────┬────────────────────────────────────────────────────────────┤
+│ Traditional Fleet Software │ NEXUS Autonomous Digital Twin                              │
+├────────────────────────────┼────────────────────────────────────────────────────────────┤
+│ ❌ Reactive alert pings    │ ✅ Predictive preemption (AI simulates bottlenecks ahead)  │
+│ ❌ Monolithic single view  │ ✅ 5 bespoke role cockpits tailored to exact workflows     │
+│ ❌ Clunky legacy UI        │ ✅ Apple-grade tactile design (iOS grouped hierarchy,     │
+│                            │    SF typography, subtle haptics & audio cues)             │
+│ ❌ Manual rerouting calls  │ ✅ 1-Click Monte Carlo AI simulation + auto-rerouting      │
+│ ❌ Slow transactional DB   │ ✅ Role-partitioned PostgreSQL materialized query layers  │
+│ ❌ Hardcoded mock clutter  │ ✅ Clean zero-state by default + interactive sandbox mode  │
+└────────────────────────────┴────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## 🏛️ System Architecture
 
 ```mermaid
-graph TD
-    FE[Next.js (Vercel) – UI] -->|REST| BE[FastAPI (Azure App Service)]
-    BE -->|Azure AD| AD[Azure Active Directory]
-    AD -->|Managed Identity| KV[Azure Key Vault]
-    BE -->|SQL| Neon[Neon PostgreSQL (Primary DB)]
-    BE -->|SQL| AZDB[Azure PostgreSQL Flexible Server]
-    BE -->|Blob SDK| Blob[Azure Blob Storage]
-    BE -->|Event Hub SDK| EH[Azure Event Hubs]
-    EH -->|Stream| Kusto[Azure Data Explorer (Kusto)]
-    Blob -->|Batch| Synapse[Azure Synapse Analytics]
-    Blob -->|Indexing| Search[Azure Cognitive Search]
-    FE -->|WebSocket| Chat[Co‑pilot Chat UI]
-    Chat -->|REST| LLM[Azure OpenAI / Groq (Free API keys)]
-    LLM -->|Responses| FE
-    BE -->|Metrics| AppInsights[Application Insights]
-    Kusto -->|Realtime Queries| Dash[Analytics Dashboard (Recharts)]
-    Synapse -->|Scheduled Queries| Dash
-    FE -->|Leaflet (OSM)| Map[OpenStreetMap 2‑D Tile Map]
-    Functions[Azure Functions] -->|Webhook| BE
-    Functions -->|Email| Mail[SendGrid (Free tier)]
-``` 
+flowchart TD
+    subgraph IngestionLayer["1. Real-Time Telemetry Stream"]
+        IoT["Azure IoT Hub / GPS Beacons"] --> EdgePipe["Sub-Second Ingestion Stream"]
+        Weather["Open-Meteo & Radar API"] --> EdgePipe
+        ERP["SAP / NetSuite / EDI 214 Webhooks"] --> EdgePipe
+    end
 
-The diagram above visualises the full production‑ready stack, with **no hard‑coded secrets** – everything is pulled from environment variables or Azure Key Vault.
+    subgraph CoreEngine["2. Nexus Processing Core & Digital Twin"]
+        EdgePipe --> SpatialTwin["3D WebGL Digital Twin & GIS Network"]
+        SpatialTwin --> MonteCarlo["Aegis AI & Monte Carlo Simulation Engine"]
+        MonteCarlo --> Ledger["SHA-256 Cryptographic Action Ledger"]
+    end
 
----
+    subgraph BespokeCockpits["3. Role-Driven Workspace Cockpits"]
+        SpatialTwin --> Mgr["Operations Manager: Tactical Incident Nerve Center"]
+        SpatialTwin --> Op["Field Operator: Live Driver HUD & Field Dispatch"]
+        SpatialTwin --> An["Supply Chain Analyst: Scenario Lab & SQL Studio"]
+        SpatialTwin --> Ad["Administrator: Aegis Security Matrix & RLS"]
+        SpatialTwin --> Ex["Executive Viewer: Boardroom Index & ESG Suite"]
+    end
 
-## 🧮 Core Capabilities & Feature Highlights
-1. **Dynamic 2‑D Map** – Leaflet + OpenStreetMap tiles (free, no 3‑D).  
-2. **Co‑pilot AI Chat** – Proxy endpoint `/api/v1/ai/chat` reads Azure OpenAI key from Key Vault (see `backend/app/api/v1/endpoints/ai_chat.py`).  
-3. **Live Telemetry Dashboard** – Real‑time analytics via Azure Synapse & Kusto.  
-4. **Admin Dashboard** – System health, pipeline status, storage usage (see `frontend/app/(app)/admin/dashboard`).  
-5. **CI/CD** – GitHub Actions builds Docker image, pushes to Azure Container Registry, deploys to Azure App Service, and creates Vercel preview builds.  
-6. **Free‑Tier Guardrails** – Runtime checks (future module) keep usage within Azure student limits.
+    subgraph PersistenceLayer["4. Zero-State & Session Continuity"]
+        Ledger --> Postgres[("PostgreSQL Multi-Tenant (Neon/Azure)")]
+        Ledger --> Checkpoints["UserSessionState Continuous Checkpoint Engine"]
+    end
+```
 
 ---
 
-## 📊 Azure Free‑Tier Quota Table
-| Service | Free‑Tier Limit (Student) | Usage Guard (planned) |
-|---------|---------------------------|-----------------------|
-| Azure App Service | 1 GB storage, 60 min CPU daily | Disable non‑essential background jobs after 50 min |
-| Azure Functions | 1 M executions/month | Throttle webhook triggers beyond 900 k |
-| Azure Blob Storage | 5 GB, 20 k reads/month | Evict stale cache files after 24 h |
-| Azure Event Hubs | 1 M events/month | Batch events in groups of ≤10 k |
-| Azure Data Explorer | 1 GB data, 1 M query units | Reject analytics queries > 5 s |
-| Azure Synapse (Trial) | 1 TB Spark, 2 TB DW | Schedule nightly jobs only |
-| Azure Cognitive Search | 3 indexes, 10 k docs | Limit indexing to < 5 k docs/day |
-| Azure OpenAI (Trial) | $18 credit ≈ 100 k tokens | Switch to Groq fallback after 80 k tokens |
-| Azure Key Vault | 10 secrets (free) | Rotate secret every 30 d |
+## 👥 The 5 Role-Driven Cockpits
+
+NEXUS discards the generic one-size-fits-all dashboard. Each organization role receives an entirely distinct, purpose-built cockpit designed for their cognitive load and responsibilities:
+
+| Role Cockpit | Primary Objective | Key Widgets & Capabilities |
+| :--- | :--- | :--- |
+| **🚨 Operations Manager** | Clear chokepoints & minimize SLA penalties within 90s | • **SLA Breach Countdown Queue** ranked by liability ($\$$)<br />• **Split-Screen AI Resolver**: Baseline vs. Bypass delta<br />• **1-Click Reroute Authorization** dispatched to trucks |
+| **🚚 Fleet Operator** | Driver shift safety & real-time dock turnarounds | • **High-Density Telemetry Stream** (Speed, Battery %, PSI, $-4.2^\circ\text{C}$ Temp)<br />• **Tactical Keyboard Hotkeys** (`[Space]` Acknowledge, `[D]` Dispatch)<br />• **1-Click Driver Voice Bridge** and SOS Emergency Broadcast |
+| **🔬 Supply Chain Analyst** | Multi-variate what-if modeling & network economics | • **Monte Carlo Simulation Lab** ($1\text{k} - 10\text{k}$ stochastic runs)<br />• **Predictive Delay Distribution Histogram** & Risk confidence curve<br />• **Instant Dataset Export** to `.parquet`, `.csv`, and `.json` |
+| **🛡️ System Administrator** | 99.99% uptime, data privacy & security governance | • **Data Pipeline Health Latency Monitor** (Azure IoT, Kafka, Redis)<br />• **Immutable Cryptographic Action Ledger** (SHA-256 hash chains)<br />• **FIDO2 / Passkey Hardware Enforcement** & Multi-tenant RLS |
+| **📊 Executive Viewer** | Boardroom ROI visibility, margin preservation & ESG | • **Enterprise Macro KPI Suite** (Global OTD $98.4\%$, Net Savings $\$1.42\text{M}$)<br />• **Scope 1 & 3 ESG Carbon Avoidance Index** ($42.8\text{ Tons}$ avoided)<br />• **1-Click Executive PDF Briefing Generator** |
+
+---
+
+## 🔮 Next-Level Platform Innovations
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                             NEXT-LEVEL INNOVATIONS                               │
+├──────────────────────────┬───────────────────────────────────────────────────────┤
+│ 1. 4D Time-Travel        │ Scrub backward (-24h) to replay historical telemetry  │
+│    Scrubber              │ or forward (+24h) to forecast weather & storm physics │
+├──────────────────────────┼───────────────────────────────────────────────────────┤
+│ 2. Multiplayer War Room  │ Live Figma-style cursor presence & shared interactive │
+│                          │ incident co-triage canvas                             │
+├──────────────────────────┼───────────────────────────────────────────────────────┤
+│ 3. Driver Beacon Pass    │ 1-click QR / link generator for zero-install mobile   │
+│                          │ driver PWA guidance with geo-verified PoD signature   │
+├──────────────────────────┼───────────────────────────────────────────────────────┤
+│ 4. Geofence Hazard       │ Spatial polygon drawer on 3D globe to paint dynamic   │
+│    Painter               │ hazard perimeters and force automatic AI avoidance    │
+├──────────────────────────┼───────────────────────────────────────────────────────┤
+│ 5. Apple HIG Settings    │ Inset grouped cards, spring-animated toggles, tactile │
+│    Experience            │ audio feedback, and role-scoped configuration panels  │
+├──────────────────────────┼───────────────────────────────────────────────────────┤
+│ 6. Default-to-Zero State │ Pristine clean zero-asset default for new workspaces  │
+│    & Session Checkpoints │ with instant toggle to Interactive Sandbox Mode       │
+└──────────────────────────┴───────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🛠️ Monorepo Structure
+
+```
+Nexus/
+├── backend/                       # FastAPI High-Performance Backend
+│   ├── app/
+│   │   ├── api/v1/endpoints/      # REST API Endpoints (Vehicles, Warehouses, Sims)
+│   │   ├── core/                  # Security, Passkeys, Rate Limiting & Config
+│   │   ├── db/                    # Async SQLAlchemy & PostgreSQL Connection
+│   │   ├── models/                # Database ORM Entity Models
+│   │   ├── services/              # AI Synthesis, Cache, Task Queues & Telemetry
+│   │   └── voice/                 # WebRTC / Voice AI Streaming Copilot
+│   └── tests/                     # 35+ Comprehensive Pytest Test Suites
+│
+├── frontend/                      # Next.js 15 App Router Frontend
+│   ├── app/
+│   │   ├── (app)/overview/        # Main Command Center (Mounts 5 Cockpits)
+│   │   ├── (app)/settings/        # iOS-Grade Apple HIG Grouped Settings
+│   │   ├── (app)/simulations/     # Monte Carlo Scenario Builder
+│   │   └── (app)/live-world/      # Spatial WebGL Digital Twin & DeckGL Network
+│   ├── components/
+│   │   ├── role-dashboards/       # Manager, Operator, Analyst, Admin & Viewer
+│   │   ├── innovations/           # 4D Scrubber, Multiplayer, Driver Beacon & Hazard
+│   │   ├── settings/              # AppleSettingsView Inset Hierarchy
+│   │   ├── ui/                    # Tactile Glassmorphism Component Library
+│   │   └── world/                 # Three.js 3D Globe & Spatial Canvas
+│   ├── lib/                       # DataProvider, EventBus, Cache & Permissions
+│   └── styles/                    # Tailwind CSS Design Tokens & SF Typography
+│
+├── database/                      # Prisma Schema & Database Migrations
+│   └── prisma/schema.prisma       # Multi-tenant RLS & Telemetry Stream Models
+│
+└── docs/                          # Comprehensive Technical Documentation
+    ├── ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md
+    ├── ARCHITECTURE.md
+    └── API_SPECIFICATION.md
+```
 
 ---
 
 ## 🚀 Quickstart & Local Development
+
+### Prerequisites
+- **Node.js**: `v20.x` or higher
+- **Python**: `v3.11` or higher
+- **PostgreSQL**: Local instance or Neon Cloud connection URL
+
+### 1. Repository Setup
 ```bash
-# Clone repo
-git clone https://github.com/AadityaUniyal/Nexus.git && cd Nexus
-
-# Frontend
-npm ci --prefix frontend
-npm run dev --prefix frontend   # http://localhost:3000
-
-# Backend (Python 3.11+)
-python -m venv venv && source venv/bin/activate
-pip install -r backend/requirements.txt
-uvicorn app.main:app --reload --port 8000   # http://localhost:8000
+# Clone the repository
+git clone https://github.com/AadityaUniyal/Nexus.git
+cd Nexus
 ```
-Ensure the following environment variables are present (or use `.env`):
-- `NEXT_PUBLIC_BACKEND_URL`
-- `AZURE_KEYVAULT_URL`
-- `AZURE_OPENAI_SECRET_NAME` (defaults to `AZURE_OPENAI_API_KEY`)
-- All other service keys as described in `backend/app/core/config.py`.
 
----
+### 2. Frontend Development (Next.js 15)
+```bash
+cd frontend
+npm install
+npm run dev
+# Open http://localhost:3000 in your browser
+```
 
-## 🛠️ CI/CD Pipeline
-The GitHub Actions workflow (`.github/workflows/ci.yml`) now:
-- Lints and tests both backend and frontend.
-- Builds a Docker image for the FastAPI backend and pushes to Azure Container Registry.
-- Deploys the image to Azure App Service.
-- Creates Vercel preview deployments for pull‑requests.
-See the workflow file for the full job matrix.
+### 3. Backend Development (FastAPI)
+```bash
+cd backend
+python -m venv venv
+
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+# API Docs available at http://localhost:8000/docs
+```
+
+### 4. Running Verification Test Suites
+```bash
+# Run backend test suite (35+ test cases)
+python -m pytest backend/tests
+
+# Run frontend TypeScript type verification
+cd frontend && npx tsc --noEmit
+```
 
 ---
 
 ## 🔐 Security & Governance
-- **Rate Limiting**: Sliding‑window per‑route limits (`app/core/rate_limit.py`).
-- **JWT RBAC**: Roles `ADMINISTRATOR`, `OPERATIONS_MANAGER`, `OPERATOR`, `VIEWER`.
-- **Headers**: Strict‑Transport‑Security, CSP, X‑Content‑Type‑Options.
-- **Secret Management**: All secrets stored in Azure Key Vault; never checked into repo.
+
+- **Biometric & Passkey Enclave**: FIDO2 / WebAuthn passwordless authentication with hardware-bound credentials.
+- **Multi-Tenant Isolation**: Enforced PostgreSQL Row-Level Security (RLS) on all `workspace_id` queries.
+- **Cryptographic Action Ledger**: Every automated AI decision and human override is hashed with SHA-256 and chained into an immutable audit trail.
+- **Rate-Limiting**: Sliding-window token governor protecting against brute-force and DDoS vectors.
 
 ---
 
 ## 📄 License
-Distributed under the MIT License. See [LICENSE](LICENSE).
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
