@@ -23,7 +23,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://frontend-brown-seven-19.vercel.app").rstrip("/")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://nexus-logistics-os.vercel.app").rstrip("/")
 BACKEND_URL = os.environ.get(
     "BACKEND_URL", "https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net"
 ).rstrip("/")

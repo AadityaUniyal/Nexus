@@ -1,4 +1,4 @@
-﻿import os
+import os
 import secrets
 from typing import List, Union
 from pydantic import field_validator
@@ -101,12 +101,14 @@ class Settings(BaseSettings):
     WEATHER_CACHE_TTL_SECONDS: int = int(os.getenv("WEATHER_CACHE_TTL_SECONDS", "1800"))
 
     # CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://nexus-logistics-os.vercel.app")
     CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "https://nexus-logistics-os.vercel.app",
+        "https://nexus-autonomous-logistics.vercel.app",
     ]
 
     @field_validator("DATABASE_URL", mode="before")

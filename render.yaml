@@ -21,7 +21,7 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: CORS_ORIGINS
-        value: "https://nexus-frontend.vercel.app,http://localhost:3000"
+        value: "https://nexus-logistics-os.vercel.app,https://nexus-autonomous-logistics.vercel.app,http://localhost:3000"
 
   # Background Worker Service
   - type: worker
