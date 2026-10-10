@@ -1,67 +1,69 @@
+from typing import Dict, Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
-from app.auth.dependencies import get_current_principal, require_authenticated
-from app.auth.principal import RequestPrincipal
-from app.schemas.me import BootstrapResponse, AvatarPreferencesDTO
-from app.services.bootstrap_service import bootstrap_user_session
-from app.models.user import AvatarPreferences
+from app.auth.dependencies import get_current_user_claims
+from app.models.workspace import Workspace, WorkspaceMember
 
-router = APIRouter()
+router = APIRouter(tags=["User Profile"])
 
-@router.get("/bootstrap", response_model=BootstrapResponse)
-async def get_bootstrap_context(
-    principal: RequestPrincipal = Depends(require_authenticated),
+
+@router.get("/me")
+async def get_current_user_profile(
+    claims: dict = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_db)
-):
+) -> Dict[str, Any]:
     """
-    Returns aggregated bootstrap context: identity, workspace, RBAC permissions, onboarding state, avatar prefs.
+    Returns authenticated user profile and workspace state.
+    If the user has no workspace membership, returns needs_onboarding: True.
     """
-    return await bootstrap_user_session(db, principal)
+    sub = claims.get("sub", "")
+    email = claims.get("email") or f"{sub}@nexus.user"
+    display_name = claims.get("name") or "Operator"
 
-@router.get("/avatar", response_model=AvatarPreferencesDTO)
-async def get_avatar_preferences(
-    principal: RequestPrincipal = Depends(require_authenticated),
-    db: AsyncSession = Depends(get_db)
-):
-    stmt = select(AvatarPreferences).where(AvatarPreferences.user_id == principal.nexus_user_id)
-    res = await db.execute(stmt)
-    av = res.scalars().first()
-    if not av:
-        return AvatarPreferencesDTO()
-    return AvatarPreferencesDTO(
-        enabled=av.enabled,
-        reducedMotion=av.reduced_motion,
-        companionHintsEnabled=av.companion_hints_enabled,
-        soundEnabled=av.sound_enabled,
-        avatarVariant=av.avatar_variant
+    # Query all workspace memberships for this user
+    stmt = (
+        select(WorkspaceMember, Workspace)
+        .join(Workspace, WorkspaceMember.workspace_id == Workspace.id)
+        .where(WorkspaceMember.user_id == sub)
     )
-
-@router.patch("/avatar", response_model=AvatarPreferencesDTO)
-async def update_avatar_preferences(
-    req: AvatarPreferencesDTO,
-    principal: RequestPrincipal = Depends(require_authenticated),
-    db: AsyncSession = Depends(get_db)
-):
-    stmt = select(AvatarPreferences).where(AvatarPreferences.user_id == principal.nexus_user_id)
     res = await db.execute(stmt)
-    av = res.scalars().first()
-    if not av:
-        av = AvatarPreferences(
-            user_id=principal.nexus_user_id,
-            enabled=req.enabled,
-            reduced_motion=req.reducedMotion,
-            companion_hints_enabled=req.companionHintsEnabled,
-            sound_enabled=req.soundEnabled,
-            avatar_variant=req.avatarVariant
-        )
-        db.add(av)
-    else:
-        av.enabled = req.enabled
-        av.reduced_motion = req.reducedMotion
-        av.companion_hints_enabled = req.companionHintsEnabled
-        av.sound_enabled = req.soundEnabled
-        av.avatar_variant = req.avatarVariant
-    await db.commit()
-    return req
+    rows = res.all()
+
+    if not rows:
+        return {
+            "id": sub,
+            "email": email,
+            "name": display_name,
+            "needs_onboarding": True,
+            "workspace": None,
+            "memberships": [],
+        }
+
+    first_member, first_workspace = rows[0]
+    memberships_data = [
+        {
+            "workspace_id": ws.id,
+            "workspace_name": ws.name,
+            "role": m.role,
+        }
+        for m, ws in rows
+    ]
+
+    return {
+        "id": sub,
+        "email": email,
+        "name": display_name,
+        "needs_onboarding": False,
+        "role": first_member.role,
+        "workspace": {
+            "id": first_workspace.id,
+            "name": first_workspace.name,
+            "country": first_workspace.country,
+            "timezone": first_workspace.timezone,
+            "locale": first_workspace.locale,
+            "distance_unit": first_workspace.distance_unit,
+        },
+        "memberships": memberships_data,
+    }

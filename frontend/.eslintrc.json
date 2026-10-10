@@ -1,3 +1,65 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "Math",
+        "property": "random",
+        "message": "Math.random is strictly forbidden in NEXUS product code. Real data only."
+      },
+      {
+        "property": "toLocaleString",
+        "message": "Direct toLocaleString is forbidden. Use lib/format/ utilities which wrap Intl."
+      },
+      {
+        "property": "toFixed",
+        "message": "Direct toFixed is forbidden for display formatting. Use lib/format/ utilities."
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "three",
+            "message": "Three.js is removed from NEXUS."
+          },
+          {
+            "name": "leaflet",
+            "message": "Leaflet is removed. Use MapLibre GL with Azure Maps."
+          },
+          {
+            "name": "react-leaflet",
+            "message": "react-leaflet is removed. Use MapLibre GL with Azure Maps."
+          },
+          {
+            "name": "groq-sdk",
+            "message": "groq-sdk is removed."
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["**/mock-data*", "**/data-provider*"],
+            "message": "Mock data and demo providers are banned in product code."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["tests/**/*", "**/*.test.*", "**/*.spec.*"],
+      "rules": {
+        "no-restricted-properties": "off",
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["lib/format/**/*"],
+      "rules": {
+        "no-restricted-properties": "off"
+      }
+    }
+  ]
 }

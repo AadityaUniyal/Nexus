@@ -1,221 +1,124 @@
-<div align="center">
+# 🌐 NEXUS: Real-Time Fleet Risk Preemption
 
-# 🌐 NEXUS
-### *Autonomous Logistics Operating System & Real-Time Digital Twin*
-
-[![Next.js 15](https://img.shields.io/badge/Next.js-15.5%20(App%20Router)-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon%20%2F%20Azure-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Three.js](https://img.shields.io/badge/Three.js-3D%20Digital%20Twin-black?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-Apple_HIG_Design-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg?style=for-the-badge)](LICENSE)
-
-<br />
-
-**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[📖 Architecture Blueprint](docs/ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)**
-
-</div>
+> **Predictive ETA & Risk Preemption Engine for Modern Fleets**  
+> *Non-commercial student rebuild running exclusively on real driver GPS and Azure Maps live traffic telemetry.*
 
 ---
 
-## ⚡ Executive Overview
+## 🎯 Job to be Done
 
-Traditional logistics and fleet visibility platforms (e.g. Samsara, Project44, Flexport, Manhattan TMS) are **passive monitoring dashboards** — they notify teams *after* a driver is stuck in a blizzard or after an SLA breach has occurred, leaving operators to manually scramble across phone calls and spreadsheets.
+Dispatchers and ops managers at small and mid-size fleets and 3PLs usually learn a delivery is late only after it is late. **NEXUS tells them which jobs will miss their time window before it happens**, using real driver GPS and live traffic. It computes actionable fixes, enables one-tap dispatch approvals, and empirically verifies prediction accuracy once jobs complete.
 
-**NEXUS is an Autonomous Logistics Operating System with a Real-Time Spatial Digital Twin and a Predictive Monte Carlo Decision Engine.**
-
-Instead of reactive alerts, NEXUS **preempts disruptions before they happen**, continuously simulating dynamic weather hazards, fuel spikes, and depot chokepoints, then generating one-click cryptographic rerouting actions.
-
+### The Closed Decision Loop
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                              THE NEXUS PARADIGM SHIFT                                   │
-├────────────────────────────┬────────────────────────────────────────────────────────────┤
-│ Traditional Fleet Software │ NEXUS Autonomous Digital Twin                              │
-├────────────────────────────┼────────────────────────────────────────────────────────────┤
-│ ❌ Reactive alert pings    │ ✅ Predictive preemption (AI simulates bottlenecks ahead)  │
-│ ❌ Monolithic single view  │ ✅ 5 bespoke role cockpits tailored to exact workflows     │
-│ ❌ Clunky legacy UI        │ ✅ Apple-grade tactile design (iOS grouped hierarchy,     │
-│                            │    SF typography, subtle haptics & audio cues)             │
-│ ❌ Manual rerouting calls  │ ✅ 1-Click Monte Carlo AI simulation + auto-rerouting      │
-│ ❌ Slow transactional DB   │ ✅ Role-partitioned PostgreSQL materialized query layers  │
-│ ❌ Hardcoded mock clutter  │ ✅ Clean zero-state by default + interactive sandbox mode  │
-└────────────────────────────┴────────────────────────────────────────────────────────────┘
+create job ──> assign driver ──> GPS stream (PWA) ──> live traffic ETA ──> risk flagged
+      │                                                                           │
+      └── empirical accuracy <── actual arrival recorded <── 1-tap fix approval <───┘
 ```
 
 ---
 
-## 🏛️ System Architecture
+## 🏗️ Architecture & Surfaces
 
-```mermaid
-flowchart TD
-    subgraph IngestionLayer["1. Real-Time Telemetry Stream"]
-        IoT["Azure IoT Hub / GPS Beacons"] --> EdgePipe["Sub-Second Ingestion Stream"]
-        Weather["Open-Meteo & Radar API"] --> EdgePipe
-        ERP["SAP / NetSuite / EDI 214 Webhooks"] --> EdgePipe
-    end
+NEXUS is purposefully stripped of demo bloat and mock data. It consists of two dedicated surfaces:
 
-    subgraph CoreEngine["2. Nexus Processing Core & Digital Twin"]
-        EdgePipe --> SpatialTwin["3D WebGL Digital Twin & GIS Network"]
-        SpatialTwin --> MonteCarlo["Aegis AI & Monte Carlo Simulation Engine"]
-        MonteCarlo --> Ledger["SHA-256 Cryptographic Action Ledger"]
-    end
+1. **Dispatcher Cockpit (Web / Desktop-First)**:
+   - Global interactive MapLibre GL map powered by Azure Maps Gen2 raster tiles via short-lived Entra ID bearer tokens (zero client account keys).
+   - Real-time Server-Sent Events (SSE) stream for live driver positions, heading, and stale state fading.
+   - Job creation modal with global address autocomplete and live route geometry preview.
+   - 1-tap risk resolution (reassign to nearest driver / reorder stops) powered by Azure Maps Route Matrix.
+   - Cryptographic SHA-256 hash-chained audit verification log.
+   - Sample-size guarded empirical prediction accuracy dashboard ($N \ge 5$).
 
-    subgraph BespokeCockpits["3. Role-Driven Workspace Cockpits"]
-        SpatialTwin --> Mgr["Operations Manager: Tactical Incident Nerve Center"]
-        SpatialTwin --> Op["Field Operator: Live Driver HUD & Field Dispatch"]
-        SpatialTwin --> An["Supply Chain Analyst: Scenario Lab & SQL Studio"]
-        SpatialTwin --> Ad["Administrator: Aegis Security Matrix & RLS"]
-        SpatialTwin --> Ex["Executive Viewer: Boardroom Index & ESG Suite"]
-    end
-
-    subgraph PersistenceLayer["4. Zero-State & Session Continuity"]
-        Ledger --> Postgres[("PostgreSQL Multi-Tenant (Neon/Azure)")]
-        Ledger --> Checkpoints["UserSessionState Continuous Checkpoint Engine"]
-    end
-```
+2. **Driver PWA (Mobile Phone Browser / Zero Hardware)**:
+   - Secure no-signup one-time magic link access.
+   - Screen Wake Lock API to prevent GPS suspension while foregrounded.
+   - Background IndexedDB offline queue for network drop tolerance (`idb`).
+   - One-tap operational status changes: *Duty Toggle*, *Start Route*, *Arrived at Stop*, *Delivered*.
 
 ---
 
-## 👥 The 5 Role-Driven Cockpits
+## 🛡️ Non-Negotiables & Guarantees
 
-NEXUS discards the generic one-size-fits-all dashboard. Each organization role receives an entirely distinct, purpose-built cockpit designed for their cognitive load and responsibilities:
-
-| Role Cockpit | Primary Objective | Key Widgets & Capabilities |
-| :--- | :--- | :--- |
-| **🚨 Operations Manager** | Clear chokepoints & minimize SLA penalties within 90s | • **SLA Breach Countdown Queue** ranked by liability ($\$$)<br />• **Split-Screen AI Resolver**: Baseline vs. Bypass delta<br />• **1-Click Reroute Authorization** dispatched to trucks |
-| **🚚 Fleet Operator** | Driver shift safety & real-time dock turnarounds | • **High-Density Telemetry Stream** (Speed, Battery %, PSI, $-4.2^\circ\text{C}$ Temp)<br />• **Tactical Keyboard Hotkeys** (`[Space]` Acknowledge, `[D]` Dispatch)<br />• **1-Click Driver Voice Bridge** and SOS Emergency Broadcast |
-| **🔬 Supply Chain Analyst** | Multi-variate what-if modeling & network economics | • **Monte Carlo Simulation Lab** ($1\text{k} - 10\text{k}$ stochastic runs)<br />• **Predictive Delay Distribution Histogram** & Risk confidence curve<br />• **Instant Dataset Export** to `.parquet`, `.csv`, and `.json` |
-| **🛡️ System Administrator** | 99.99% uptime, data privacy & security governance | • **Data Pipeline Health Latency Monitor** (Azure IoT, Kafka, Redis)<br />• **Immutable Cryptographic Action Ledger** (SHA-256 hash chains)<br />• **FIDO2 / Passkey Hardware Enforcement** & Multi-tenant RLS |
-| **📊 Executive Viewer** | Boardroom ROI visibility, margin preservation & ESG | • **Enterprise Macro KPI Suite** (Global OTD $98.4\%$, Net Savings $\$1.42\text{M}$)<br />• **Scope 1 & 3 ESG Carbon Avoidance Index** ($42.8\text{ Tons}$ avoided)<br />• **1-Click Executive PDF Briefing Generator** |
-
----
-
-## 🔮 Next-Level Platform Innovations
-
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                             NEXT-LEVEL INNOVATIONS                               │
-├──────────────────────────┬───────────────────────────────────────────────────────┤
-│ 1. 4D Time-Travel        │ Scrub backward (-24h) to replay historical telemetry  │
-│    Scrubber              │ or forward (+24h) to forecast weather & storm physics │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 2. Multiplayer War Room  │ Live Figma-style cursor presence & shared interactive │
-│                          │ incident co-triage canvas                             │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 3. Driver Beacon Pass    │ 1-click QR / link generator for zero-install mobile   │
-│                          │ driver PWA guidance with geo-verified PoD signature   │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 4. Geofence Hazard       │ Spatial polygon drawer on 3D globe to paint dynamic   │
-│    Painter               │ hazard perimeters and force automatic AI avoidance    │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 5. Apple HIG Settings    │ Inset grouped cards, spring-animated toggles, tactile │
-│    Experience            │ audio feedback, and role-scoped configuration panels  │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 6. Default-to-Zero State │ Pristine clean zero-asset default for new workspaces  │
-│    & Session Checkpoints │ with instant toggle to Interactive Sandbox Mode       │
-└──────────────────────────┴───────────────────────────────────────────────────────┘
-```
+- **Zero Mock / Fake Data**: No mock fixtures, no silent fallbacks, no `Math.random` telemetry in product code. If data is absent, the system renders an honest empty or error state.
+- **Strict Multi-Tenancy**: Every database query is strictly scoped by verified `workspace_id`. Cross-tenant data leakage is cryptographically and logically prohibited.
+- **Deterministic ETA & Risk Engine**:
+  - `on_time`: $\text{ETA} + \text{Margin} \le \text{Window End}$
+  - `at_risk`: $\text{ETA} - \text{Margin} \le \text{Window End} < \text{ETA} + \text{Margin}$
+  - `late`: $\text{ETA} - \text{Margin} > \text{Window End}$
+  - `unknown`: No driver GPS ping within 300 seconds, or provider usage cap reached.
+- **Azure for Students Cost Control**: Built strictly within the $100 student credit budget utilizing consumption-based Gen2 Azure Maps, Key Vault, Log Analytics, Blob Storage, and automated budget alert thresholds at $50 and $80.
 
 ---
 
-## 🛠️ Monorepo Structure
+## 📦 Project Structure
 
 ```
-Nexus/
-├── backend/                       # FastAPI High-Performance Backend
+.
+├── backend/                  # FastAPI 0.115+ async Python backend
 │   ├── app/
-│   │   ├── api/v1/endpoints/      # REST API Endpoints (Vehicles, Warehouses, Sims)
-│   │   ├── core/                  # Security, Passkeys, Rate Limiting & Config
-│   │   ├── db/                    # Async SQLAlchemy & PostgreSQL Connection
-│   │   ├── models/                # Database ORM Entity Models
-│   │   ├── services/              # AI Synthesis, Cache, Task Queues & Telemetry
-│   │   └── voice/                 # WebRTC / Voice AI Streaming Copilot
-│   └── tests/                     # 35+ Comprehensive Pytest Test Suites
-│
-├── frontend/                      # Next.js 15 App Router Frontend
+│   │   ├── api/v1/           # Modular REST API endpoints
+│   │   ├── auth/             # Clerk JWKS RS256 + Driver token hashing
+│   │   ├── core/             # Config, time utils (DST fold), rate limiting
+│   │   ├── db/               # Async SQLAlchemy + Alembic migrations
+│   │   ├── integrations/     # Azure Maps Gen2 Entra ID client
+│   │   ├── models/           # Workspaces, Drivers, Jobs, Audit, DailyUsage
+│   │   ├── services/         # ETA engine, Recommendations, Audit, Analytics
+│   │   └── main.py           # Sole backend entrypoint with OWASP headers
+│   └── tests/                # 13 comprehensive pytest test suites
+├── frontend/                 # Next.js 14 App Router TypeScript frontend
 │   ├── app/
-│   │   ├── (app)/overview/        # Main Command Center (Mounts 5 Cockpits)
-│   │   ├── (app)/settings/        # iOS-Grade Apple HIG Grouped Settings
-│   │   ├── (app)/simulations/     # Monte Carlo Scenario Builder
-│   │   └── (app)/live-world/      # Spatial WebGL Digital Twin & DeckGL Network
-│   ├── components/
-│   │   ├── role-dashboards/       # Manager, Operator, Analyst, Admin & Viewer
-│   │   ├── innovations/           # 4D Scrubber, Multiplayer, Driver Beacon & Hazard
-│   │   ├── settings/              # AppleSettingsView Inset Hierarchy
-│   │   ├── ui/                    # Tactile Glassmorphism Component Library
-│   │   └── world/                 # Three.js 3D Globe & Spatial Canvas
-│   ├── lib/                       # DataProvider, EventBus, Cache & Permissions
-│   └── styles/                    # Tailwind CSS Design Tokens & SF Typography
-│
-├── database/                      # Prisma Schema & Database Migrations
-│   └── prisma/schema.prisma       # Multi-tenant RLS & Telemetry Stream Models
-│
-└── docs/                          # Comprehensive Technical Documentation
-    ├── ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md
-    ├── ARCHITECTURE.md
-    └── API_SPECIFICATION.md
+│   │   ├── (app)/            # Dispatcher cockpit, Drivers, Analytics, Settings
+│   │   ├── (onboarding)/     # Intl-based workspace setup
+│   │   └── driver/           # Mobile Driver PWA with Wake Lock
+│   ├── components/map/       # MapLibre GL + Azure Maps tile layer
+│   └── lib/                  # Typed API client, driver IndexedDB store
+├── infra/                    # Declarative Azure Bicep infrastructure
+│   ├── main.bicep            # Resource Group & Module orchestration
+│   └── modules/resources.bicep # Azure Maps, Key Vault, Storage, App Insights
+└── docs/                     # Full technical documentation
+    ├── ARCHITECTURE.md       # Multi-tenant and security architecture
+    ├── API.md                # OpenAPI / REST endpoint specifications
+    ├── DEPLOYMENT.md         # Deployment runbook (Azure, GHCR, Vercel)
+    ├── ANALYTICS.md          # Prediction accuracy and Parquet schema
+    └── ADR/                  # Architectural Decision Records (ADX evaluation)
 ```
 
 ---
 
-## 🚀 Quickstart & Local Development
+## 🚀 Local Development Setup
 
-### Prerequisites
-- **Node.js**: `v20.x` or higher
-- **Python**: `v3.11` or higher
-- **PostgreSQL**: Local instance or Neon Cloud connection URL
-
-### 1. Repository Setup
+### 1. Backend Setup
 ```bash
-# Clone the repository
-git clone https://github.com/AadityaUniyal/Nexus.git
-cd Nexus
+cd backend
+python -m venv .venv
+source .venv/bin/activate  # Or on Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# Run migrations
+alembic upgrade head
+
+# Run tests
+pytest backend/tests -v
+
+# Start development server
+uvicorn app.main:app --reload --port 8000
 ```
 
-### 2. Frontend Development (Next.js 15)
+### 2. Frontend Setup
 ```bash
 cd frontend
 npm install
+
+# Verify type safety and linting
+npm run typecheck
+npm run lint
+
+# Start Next.js development server
 npm run dev
-# Open http://localhost:3000 in your browser
-```
-
-### 3. Backend Development (FastAPI)
-```bash
-cd backend
-python -m venv venv
-
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-# API Docs available at http://localhost:8000/docs
-```
-
-### 4. Running Verification Test Suites
-```bash
-# Run backend test suite (35+ test cases)
-python -m pytest backend/tests
-
-# Run frontend TypeScript type verification
-cd frontend && npx tsc --noEmit
 ```
 
 ---
 
-## 🔐 Security & Governance
-
-- **Biometric & Passkey Enclave**: FIDO2 / WebAuthn passwordless authentication with hardware-bound credentials.
-- **Multi-Tenant Isolation**: Enforced PostgreSQL Row-Level Security (RLS) on all `workspace_id` queries.
-- **Cryptographic Action Ledger**: Every automated AI decision and human override is hashed with SHA-256 and chained into an immutable audit trail.
-- **Rate-Limiting**: Sliding-window token governor protecting against brute-force and DDoS vectors.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+## 📜 License
+Non-commercial educational project built on Azure for Students. Released under the MIT License.

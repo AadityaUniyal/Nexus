@@ -1,55 +1,25 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const PUBLIC_ROUTES = [
-  '/',
-  '/login',
-  '/signup',
-  '/welcome',
-  '/workspace',
-  '/role',
-  '/environment',
-  '/alert-rules',
-  '/import-data',
-  '/quick-tour',
-  '/complete',
-  '/forgot-password',
-  '/reset-password',
-  '/verify-email',
-  '/features',
-  '/contact',
-  '/faq',
-  '/feedback',
-  '/health',
-];
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/architecture(.*)",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/driver(.*)",
+  "/api/v1/driver/(.*)",
+  "/api/v1/health(.*)",
+  "/health(.*)",
+]);
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  // Static files and internal Next.js requests bypass
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.') ||
-    PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))
-  ) {
-    return NextResponse.next();
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) {
+    await auth.protect();
   }
-
-  // Check for active session cookie
-  const sessionCookie = req.cookies.get('nexus_demo_session')?.value || req.cookies.get('nexus_session_token')?.value;
-
-  if (!sessionCookie) {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?|css|js)).*)',
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
 };

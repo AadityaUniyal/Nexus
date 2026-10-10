@@ -44,7 +44,9 @@ const isBrowser = () => typeof window !== "undefined";
 const disabled = () => process.env.NEXT_PUBLIC_ANALYTICS_DISABLED === "true" || (isBrowser() && navigator.doNotTrack === "1");
 
 function rid(): string {
-  return isBrowser() && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `anon-${Date.now()}`;
 }
 
 function anonymousId(): string {

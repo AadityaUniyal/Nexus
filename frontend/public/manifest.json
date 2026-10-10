@@ -1,0 +1,16 @@
+{
+  "name": "NEXUS Driver",
+  "short_name": "Nexus Driver",
+  "description": "NEXUS Real-Time Driver PWA & GPS Tracking",
+  "start_url": "/driver",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

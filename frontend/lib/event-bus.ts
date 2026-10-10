@@ -45,8 +45,11 @@ export class NexusEventBus {
    * Asynchronously publish an event to all subscribers with error isolation
    */
   public async publish<T = any>(topic: string, data: T, correlationId?: string): Promise<string> {
+    const eventId = typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `ev-${Date.now()}`;
     const event: NexusEventPayload<T> = {
-      id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: eventId,
       topic,
       timestamp: new Date().toISOString(),
       correlationId: correlationId || `corr-${Date.now()}`,

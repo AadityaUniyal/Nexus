@@ -1,72 +1,124 @@
 import asyncio
 import json
-from typing import AsyncGenerator, Dict, Set, Optional
+import logging
+from typing import Dict, Set, Optional, List
+from collections import deque
 from datetime import datetime, timezone
 
-class EventBroadcaster:
+logger = logging.getLogger("nexus.sse")
+
+MAX_QUEUE_SIZE = 100
+MAX_HISTORY_PER_WORKSPACE = 50
+
+
+class SSEMessage:
+    def __init__(self, event_id: str, event_type: str, data: dict):
+        self.id = event_id
+        self.event = event_type
+        self.data = data
+        self.created_at = datetime.now(timezone.utc)
+
+    def to_sse_format(self) -> str:
+        data_json = json.dumps(self.data, separators=(",", ":"))
+        return f"id: {self.id}\nevent: {self.event}\ndata: {data_json}\n\n"
+
+
+class SSEManager:
+    """
+    Manages Server-Sent Events subscribers strictly scoped by workspace_id.
+    Guarantees cross-tenant isolation and bounded memory queues.
+    """
+
     def __init__(self):
-        # Maps workspace_id -> set of queues (and None/all for global)
-        self._subscribers: Dict[Optional[str], Set[asyncio.Queue]] = {}
+        # workspace_id -> set of asyncio.Queue
+        self._subscribers: Dict[str, Set[asyncio.Queue]] = {}
+        # workspace_id -> deque of recent SSEMessages for Last-Event-ID replay
+        self._history: Dict[str, deque[SSEMessage]] = {}
+        self._counter = 0
+        self._lock = asyncio.Lock()
 
-    async def subscribe(self, workspace_id: Optional[str] = None) -> AsyncGenerator[str, None]:
-        """Subscribe to real-time server-sent events stream scoped to workspace."""
-        queue: asyncio.Queue = asyncio.Queue()
-        if workspace_id not in self._subscribers:
-            self._subscribers[workspace_id] = set()
-        self._subscribers[workspace_id].add(queue)
+    async def subscribe(
+        self,
+        workspace_id: str,
+        last_event_id: Optional[str] = None
+    ) -> asyncio.Queue:
+        if not workspace_id or not workspace_id.strip():
+            raise ValueError("workspace_id is mandatory for SSE subscription")
 
-        try:
-            # Yield initial connection heartbeat
-            initial_payload = {
-                "type": "CONNECTION_ESTABLISHED",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "status": "STREAM_ACTIVE",
-                "workspace_id": workspace_id or "global"
-            }
-            yield f"data: {json.dumps(initial_payload)}\n\n"
+        queue: asyncio.Queue = asyncio.Queue(maxsize=MAX_QUEUE_SIZE)
 
-            while True:
-                data = await queue.get()
-                yield f"data: {json.dumps(data)}\n\n"
-        except asyncio.CancelledError:
-            pass
-        finally:
-            if workspace_id in self._subscribers and queue in self._subscribers[workspace_id]:
-                self._subscribers[workspace_id].remove(queue)
+        async with self._lock:
+            if workspace_id not in self._subscribers:
+                self._subscribers[workspace_id] = set()
+                self._history[workspace_id] = deque(maxlen=MAX_HISTORY_PER_WORKSPACE)
+            self._subscribers[workspace_id].add(queue)
+
+        # Handle Last-Event-ID replay if provided
+        if last_event_id and workspace_id in self._history:
+            history = list(self._history[workspace_id])
+            found_idx = -1
+            for idx, msg in enumerate(history):
+                if msg.id == last_event_id:
+                    found_idx = idx
+                    break
+
+            if found_idx != -1:
+                # Replay events since last_event_id
+                for msg in history[found_idx + 1:]:
+                    try:
+                        queue.put_nowait(msg)
+                    except asyncio.QueueFull:
+                        break
+            else:
+                # Gap too large or unknown event id -> send resync instruction
+                resync_msg = SSEMessage(
+                    event_id=f"resync-{int(datetime.now(timezone.utc).timestamp())}",
+                    event_type="resync",
+                    data={"reason": "EVENT_GAP_TOO_LARGE"}
+                )
+                try:
+                    queue.put_nowait(resync_msg)
+                except asyncio.QueueFull:
+                    pass
+
+        return queue
+
+    async def unsubscribe(self, workspace_id: str, queue: asyncio.Queue) -> None:
+        async with self._lock:
+            if workspace_id in self._subscribers:
+                self._subscribers[workspace_id].discard(queue)
                 if not self._subscribers[workspace_id]:
                     del self._subscribers[workspace_id]
 
-    async def broadcast(self, event_type: str, payload: dict, workspace_id: Optional[str] = None) -> None:
-        """Broadcast an operational event to active SSE subscribers scoped to workspace."""
-        target_ws = workspace_id or payload.get("workspace_id") or payload.get("workspaceId")
-        message = {
-            "type": event_type,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "data": payload,
-        }
+    async def broadcast(self, workspace_id: str, event_type: str, data: dict) -> None:
+        """
+        Broadcasts an event strictly to subscribers of the specified workspace.
+        """
+        if not workspace_id or not workspace_id.strip():
+            raise ValueError("workspace_id is mandatory for event broadcast; broadcast without workspace is forbidden")
 
-        # Send to workspace subscribers
-        queues_to_notify: Set[asyncio.Queue] = set()
-        if target_ws and target_ws in self._subscribers:
-            queues_to_notify.update(self._subscribers[target_ws])
-        
-        # Also notify global (None) subscribers
-        if None in self._subscribers:
-            queues_to_notify.update(self._subscribers[None])
+        async with self._lock:
+            self._counter += 1
+            event_id = f"{workspace_id}-{int(datetime.now(timezone.utc).timestamp())}-{self._counter}"
+            message = SSEMessage(event_id, event_type, data)
 
-        # If no workspace specified, notify all subscribers
-        if not target_ws:
-            for s_set in self._subscribers.values():
-                queues_to_notify.update(s_set)
+            if workspace_id not in self._history:
+                self._history[workspace_id] = deque(maxlen=MAX_HISTORY_PER_WORKSPACE)
+            self._history[workspace_id].append(message)
 
-        for queue in queues_to_notify:
+            targets = list(self._subscribers.get(workspace_id, []))
+
+        for q in targets:
             try:
-                await queue.put(message)
-            except Exception:
-                pass
+                q.put_nowait(message)
+            except asyncio.QueueFull:
+                # Queue full: client is too slow or hung; drop oldest or skip
+                logger.warning("SSE queue full for subscriber in workspace %s", workspace_id)
+                try:
+                    _ = q.get_nowait()
+                    q.put_nowait(message)
+                except (asyncio.QueueEmpty, asyncio.QueueFull):
+                    pass
 
-    async def broadcast_event(self, event_type: str, data: dict, workspace_id: Optional[str] = None) -> None:
-        """Alias for broadcast method accepting 'data' parameter for event_service compatibility."""
-        await self.broadcast(event_type=event_type, payload=data, workspace_id=workspace_id)
 
-broadcaster = EventBroadcaster()
+sse_manager = SSEManager()

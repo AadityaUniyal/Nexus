@@ -1,107 +1,51 @@
-# 🏛️ NEXUS System Architecture & Technical Specifications
+# NEXUS System Architecture
 
----
-
-## 1. Architectural Philosophy
-
-NEXUS is engineered as an **Autonomous Logistics Operating System** that unifies real-time IoT spatial telemetry, physics-based simulations, and role-scoped operational cockpits into a single coherent reactive platform.
-
-```mermaid
-graph TD
-    subgraph DataIngest["Ingestion & Telemetry Pipeline"]
-        GPS["Azure IoT Hub / Truck GPS"] --> StreamWorker["Async Telemetry Stream Worker"]
-        Weather["Open-Meteo & Doppler Radar"] --> StreamWorker
-        ERP["SAP / NetSuite / Shopify Webhooks"] --> StreamWorker
-    end
-
-    subgraph StorageLayer["Multi-Tenant Persistence Layer"]
-        StreamWorker --> Postgres[("PostgreSQL Database (Neon / Azure)")]
-        StreamWorker --> Redis[("Redis Distributed LRU Cache")]
-        Postgres --> Views["Role Materialized Views (v_manager, v_operator, etc.)"]
-    end
-
-    subgraph DecisionEngine["Autonomous Decision Core"]
-        StreamWorker --> DigitalTwin["Three.js Spatial Digital Twin"]
-        DigitalTwin --> MonteCarlo["Monte Carlo What-If Simulation Engine"]
-        MonteCarlo --> Ledger["Cryptographic Audit Ledger (SHA-256)"]
-    end
-
-    subgraph ClientLayer["Role-Specific Cockpits (Next.js 15)"]
-        Views --> NextApp["Next.js App Router (Apple HIG Design)"]
-        NextApp --> Mgr["Tactical Manager Cockpit"]
-        NextApp --> Op["Field Operator HUD"]
-        NextApp --> An["Predictive Analyst Lab"]
-        NextApp --> Ad["Aegis Security Matrix"]
-        NextApp --> Ex["Executive Boardroom Suite"]
-    end
-```
-
----
-
-## 2. Multi-Tier Technology Stack
-
-### 2.1 Frontend Client (Next.js 15 App Router)
-- **Framework**: Next.js 15 (React 18, React Server Components + Client Islands).
-- **Styling & Tokens**: Tailwind CSS v3 with custom Apple Human Interface Guidelines (HIG) glassmorphism and tactile elevation tokens.
-- **Motion & Physics**: Framer Motion with spring physics (`cubic-bezier(0.16, 1, 0.3, 1)`).
-- **Spatial Rendering**: Three.js WebGL 3D Globe with DeckGL / Leaflet 2D GIS vector fallback.
-- **Audio & Haptics**: Web Audio API tactile feedback synthesizer (`lib/sound-effects.ts`).
-
-### 2.2 Backend Application (FastAPI)
-- **Runtime**: Python 3.11+ ASGI asynchronous web server.
-- **Framework**: FastAPI with Pydantic v2 data serialization.
-- **Database Access**: SQLAlchemy Async ORM with connection pooling and circuit breakers.
-- **Task Scheduling & Ingestion**: Celery / Redis asynchronous worker queue with dead-letter queue (DLQ) support.
-- **Voice & Copilot**: WebRTC / WebSocket streaming bridge with low-latency LLM synthesis.
-
-### 2.3 Database & Query Architecture (PostgreSQL)
-- **Multi-Tenancy**: Workspace-level tenant partitioning enforced via PostgreSQL Row-Level Security (RLS).
-- **Telemetry Hypertables**: Sub-second GPS telemetry partitioned by `workspace_id` and `recordedAt`.
-- **Pre-Computed Materialized Views**:
-  - `v_manager_incident_cockpit`: Sub-5ms aggregation of active high-severity SLA liabilities.
-  - `v_operator_live_fleet`: Geospatial bounding-box indexed view for 60fps vector rendering.
-  - `v_analyst_corridor_efficiency`: 30-day historical corridor delay and weather regressions.
-  - `v_executive_macro_kpis`: Hourly snapshot rollups of On-Time Delivery and ESG carbon savings.
-
----
-
-## 3. The 5 Bespoke Role Workflows
+## 1. Overview & Core Mission
+NEXUS is a real-data operational intelligence platform built specifically for dispatchers and fleet managers at small and mid-size logistics providers and 3PLs. Its core mission is to close a single deterministic loop:
 
 ```
-┌──────────────────────────────┬─────────────────────────────────────────────────────────────┐
-│ Role Type                    │ Operational Mental Model & Cockpit Objective                │
-├──────────────────────────────┼─────────────────────────────────────────────────────────────┤
-│ 1. OPERATIONS_MANAGER        │ Triage SLA breach countdown queue, inspect AI mitigation    │
-│                              │ baseline vs. bypass delta, execute 1-click fleet reroute.   │
-├──────────────────────────────┼─────────────────────────────────────────────────────────────┤
-│ 2. OPERATOR                  │ High-density live telemetry stream (Speed, Battery %, PSI,  │
-│                              │ Temp), driver radio bridge, dock turnarounds, SOS dispatch. │
-├──────────────────────────────┼─────────────────────────────────────────────────────────────┤
-│ 3. ANALYST                   │ Multi-variate Monte Carlo simulations (1k-10k runs), risk   │
-│                              │ distribution histograms, carrier regression, data exports.  │
-├──────────────────────────────┼─────────────────────────────────────────────────────────────┤
-│ 4. ADMINISTRATOR             │ Pipeline latency monitors (IoT, Kafka, Redis), FIDO2        │
-│                              │ passkeys, multi-tenant RBAC, SHA-256 audit ledger.          │
-├──────────────────────────────┼─────────────────────────────────────────────────────────────┤
-│ 5. VIEWER                    │ Boardroom ROI visibility, Scope 1 & 3 ESG carbon avoidance, │
-│                              │ 1-click executive PDF briefing generation.                  │
-└──────────────────────────────┴─────────────────────────────────────────────────────────────┘
+Create Job -> Assign Driver -> GPS Telemetry Stream -> Live Traffic ETA & Risk Engine
+     ^                                                                |
+     |------------------ One-Tap Approval <----- Suggest Fix <--------|
+     v
+Actual Arrival Recorded -> Empirical Accuracy Measured -> Cryptographic Audit Ledger
 ```
 
----
+## 2. Surfaces
+1. **Dispatcher Cockpit** (Web, Desktop-First):
+   - MapLibre GL rendering Azure Maps Gen2 raster tiles via short-lived Microsoft Entra ID tokens (zero keys in the browser).
+   - Real-time Server-Sent Events (SSE) telemetry stream (`/api/v1/stream`) with connection state tracking (`live`, `reconnecting`, `offline`).
+   - Stop time windows entered in local stop IANA timezone and persisted as UTC with DST gap/overlap verification.
+   - Live risk badges (`on_time`, `at_risk`, `late`, `unknown`) with labeled uncertainty margins and plain-language root causes.
+   - Recommended actions (driver reassignments, stop reordering) evaluated via Azure Maps route matrices with one-tap approval.
 
-## 4. Zero-State & Session Checkpointing Flow
+2. **Driver Phone PWA** (Mobile Browser):
+   - Instant activation via dispatcher-generated one-time signed links (`/driver#token=...`). Zero driver sign-up or app store downloads.
+   - Geolocation watch stream with Screen Wake Lock API (`navigator.wakeLock.request('screen')`).
+   - IndexedDB offline queue for offline resiliency and burst flushing (`POST /api/v1/driver/pings`).
+   - One-tap progress buttons: **Start En Route**, **I Have Arrived**, and **Delivered / Complete**.
 
-1. **New User Registration**: Workspace initializes with clean **0-asset state** (0 vehicles, 0 incidents, 0 delayed orders).
-2. **Onboarding Guidance**: Empty state cards provide 1-click launchpad to `[Import CSV Fleet]` or toggle `[Interactive Sandbox Mode]` to test simulated emergencies without writing to production tables.
-3. **Session Checkpoint Engine**: As the user modifies viewport zoom, adjusts simulation variables, or applies route filters, the client asynchronously checkpoints state into `UserSessionState` in PostgreSQL, enabling 100% instant resume across browsers and devices.
+## 3. Technology Stack & Azure Infrastructure
+- **Cloud Backbone**: Microsoft Azure for Students ($100 budget capped).
+  - **Azure Maps Gen2** (`G2`, global location): Live traffic routing, route matrix, address search, tile serving.
+  - **Azure Blob Storage** (`Standard_LRS`): Cold storage for daily Apache Parquet telemetry lakehouse partitions.
+  - **Azure Key Vault** (Standard): Centralized secret storage with RBAC.
+  - **Azure Log Analytics & Application Insights**: OpenTelemetry observability and latency metrics.
+  - **User-Assigned Managed Identity**: Passwordless Entra ID authorization.
+- **Backend API**: Python 3.11+ / FastAPI with asynchronous SQLAlchemy and Uvicorn.
+- **Database**: PostgreSQL (Neon serverless, auto-suspend to zero compute cost) with Alembic baseline migrations.
+- **Frontend**: Next.js 15 (App Router), React 18, Tailwind CSS, TanStack Query, MapLibre GL JS, Clerk Auth.
 
----
+## 4. Multi-Tenant Security & Isolation
+- **Tenant Scope Enforcement**: Every database query on workspace-scoped entities (`drivers`, `jobs`, `job_stops`, `predictions`, `audit_log`) filters explicitly by verified `workspace_id`.
+- **Role-Based Access Control**:
+  - `owner`: Full workspace management, member invitations, preferences, and dispatch mutations.
+  - `dispatcher`: Create jobs, assign drivers, approve recommendations.
+  - `viewer`: Read-only access to cockpit, roster, and analytics.
+- **Driver Session Isolation**: Driver PWA tokens are stored as SHA-256 hashes in `driver_sessions`. Sessions can be revoked instantly by dispatchers.
 
-## 5. Security & Cryptographic Audit Ledger
-
-Every automated decision proposed by the neural engine and every override signed by a human operator is cryptographically recorded:
-
-$$\text{Block}_{n} = \text{SHA-256}\Big(\text{Block}_{n-1}\text{.hash} \parallel \text{Timestamp} \parallel \text{ActorID} \parallel \text{ActionType} \parallel \text{StateDeltaJSON}\Big)$$
-
-This immutable audit chain ensures complete regulatory compliance, carrier dispute resolution, and verifiable ESG carbon audit trails.
+## 5. Cryptographic Audit Ledger
+- State transitions (job creation, driver assignment, recommendation approval, stop arrival, manual overrides) append an immutable record to `audit_log`.
+- Hash chaining algorithm:
+  $$\text{hash}_n = \text{SHA-256}(\text{hash}_{n-1} \parallel \text{canonical\_json}(\text{record}_n))$$
+- Tampering with any historical record invalidates subsequent hashes and is flagged immediately by `GET /api/v1/audit/verify`.

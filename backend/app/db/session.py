@@ -10,7 +10,7 @@ import os
 import sys
 from sqlalchemy.pool import NullPool
 
-db_url = os.environ.get("DATABASE_URL") or settings.DATABASE_URL
+db_url = os.environ.get("DATABASE_URL") or settings.DATABASE_URL or "sqlite+aiosqlite:///./nexus_dev.db"
 db_url_lower = db_url.lower()
 
 # Create async engine with robust, low-latency pool configuration

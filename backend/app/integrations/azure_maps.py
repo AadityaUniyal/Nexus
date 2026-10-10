@@ -1,122 +1,225 @@
-"""
-Azure Maps Enterprise Integration for NEXUS.
-Provides Commercial Freight Routing, Dynamic EV Range Isolines, and Severe Weather Polygon Intersections.
-"""
-from typing import Dict, Any, List, Optional
-import httpx
-import logging
 import os
+import time
+import logging
+import httpx
+from typing import Dict, Any, List, Optional, Tuple
+from datetime import datetime, timezone
+from azure.identity import DefaultAzureCredential
+from app.core.config import settings
 
 logger = logging.getLogger("nexus.azure_maps")
 
-class AzureMapsService:
-    BASE_URL = "https://atlas.microsoft.com"
-    API_KEY = os.getenv("AZURE_MAPS_KEY", "dummy-maps-key-nexus")
 
-    @classmethod
-    async def calculate_commercial_truck_route(
-        cls,
-        origin_lat: float,
-        origin_lng: float,
-        dest_lat: float,
-        dest_lng: float,
-        vehicle_weight_kg: float = 36000.0,
-        vehicle_height_meters: float = 4.1,
-        vehicle_load_type: str = "otherHazmat",
-        avoid_tolls: bool = False
-    ) -> Dict[str, Any]:
+class AzureMapsException(Exception):
+    def __init__(self, message: str, status_code: int = 500, reason: str = "PROVIDER_UNAVAILABLE"):
+        super().__init__(message)
+        self.status_code = status_code
+        self.reason = reason
+
+
+class AzureMapsClient:
+    """
+    Client for Azure Maps Gen2 using Microsoft Entra ID authentication only.
+    Zero API keys. Zero mock/fake routes. Raises typed exceptions on failure.
+    """
+
+    def __init__(self):
+        self._credential: Optional[DefaultAzureCredential] = None
+        self._cached_token: Optional[str] = None
+        self._token_expires_at: float = 0
+        self.base_url = "https://atlas.microsoft.com"
+
+    def _get_credential(self) -> DefaultAzureCredential:
+        if self._credential is None:
+            self._credential = DefaultAzureCredential(exclude_interactive_browser_credential=True)
+        return self._credential
+
+    async def get_bearer_token(self) -> Tuple[str, int]:
         """
-        Calculates a specialized commercial truck route avoiding low bridges, 
-        weight-restricted bridges, and steep mountain passes.
+        Retrieves or refreshes an Entra ID token for Azure Maps scope.
+        Returns (token_string, expires_in_seconds).
         """
-        query = f"{origin_lat},{origin_lng}:{dest_lat},{dest_lng}"
-        params = {
-            "api-version": "1.0",
-            "subscription-key": cls.API_KEY,
-            "query": query,
-            "travelMode": "truck",
-            "vehicleWeight": int(vehicle_weight_kg),
-            "vehicleHeight": vehicle_height_meters,
-            "vehicleLoadType": vehicle_load_type,
-            "traffic": "true",
-            "computeBestOrder": "true"
-        }
-        if avoid_tolls:
-            params["avoid"] = "tolls"
+        now = time.time()
+        if self._cached_token and self._token_expires_at > (now + 120):
+            return self._cached_token, int(self._token_expires_at - now)
 
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                resp = await client.get(f"{cls.BASE_URL}/route/directions/json", params=params)
-                if resp.status_code == 200:
-                    return {
-                        "status": "success",
-                        "source": "azure_maps_live",
-                        "data": resp.json()
-                    }
-        except Exception as ex:
-            logger.warning(f"Azure Maps API request failed ({ex}), falling back to deterministic freight model.")
+            cred = self._get_credential()
+            token_obj = cred.get_token("https://atlas.microsoft.com/.default")
+            self._cached_token = token_obj.token
+            self._token_expires_at = token_obj.expires_on
+            expires_in = max(60, int(token_obj.expires_on - now))
+            return self._cached_token, expires_in
+        except Exception as exc:
+            logger.error("Failed to acquire Entra ID token for Azure Maps: %s", exc)
+            raise AzureMapsException(f"Authentication failure: {str(exc)}", status_code=502, reason="AUTH_FAILURE")
 
-        # Fallback realistic commercial freight route data
+    def _get_client_id(self) -> str:
+        cid = settings.AZURE_MAPS_CLIENT_ID or os.getenv("AZURE_MAPS_CLIENT_ID", "")
+        return cid.strip()
+
+    async def get_frontend_token(self) -> Dict[str, Any]:
+        """Issues short-lived token details for the frontend MapLibre GL JS client."""
+        token, expires_in = await self.get_bearer_token()
+        client_id = self._get_client_id()
         return {
-            "status": "success",
-            "source": "nexus_spatial_engine_fallback",
-            "summary": {
-                "lengthInMeters": 482000,
-                "travelTimeInSeconds": 19800,
-                "trafficDelayInSeconds": 420,
-                "departureTime": "2026-10-06T00:00:00Z",
-                "arrivalTime": "2026-10-06T05:30:00Z"
-            },
-            "commercial_clearance": {
-                "max_height_cleared_meters": vehicle_height_meters,
-                "max_weight_cleared_kg": vehicle_weight_kg,
-                "low_bridges_avoided_count": 3,
-                "weight_restricted_bridges_bypassed": 1,
-                "hazmat_route_certified": True
-            },
-            "waypoints": [
-                {"lat": origin_lat, "lng": origin_lng, "instruction": "Depart Origin Terminal with HazMat placard active"},
-                {"lat": (origin_lat + dest_lat)/2 + 0.05, "lng": (origin_lng + dest_lng)/2 - 0.03, "instruction": "Bypass I-80 Low Overpass (Clearance: 3.8m)"},
-                {"lat": dest_lat, "lng": dest_lng, "instruction": "Arrive at Destination Freight Hub"}
-            ]
+            "token": token,
+            "clientId": client_id,
+            "expiresIn": expires_in,
+            "expiresAt": datetime.fromtimestamp(self._token_expires_at, tz=timezone.utc).isoformat(),
         }
 
-    @classmethod
-    async def compute_ev_reachable_isoline(
-        cls,
-        current_lat: float,
-        current_lng: float,
-        battery_state_of_charge_percent: float,
-        payload_weight_kg: float = 24000.0,
-        battery_capacity_kwh: float = 600.0
+    async def search_address(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Search and autocomplete addresses globally."""
+        if not query or not query.strip():
+            return []
+
+        token, _ = await self.get_bearer_token()
+        client_id = self._get_client_id()
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "x-ms-client-id": client_id,
+            "User-Agent": "NEXUS-Backend/2.0",
+        }
+        params = {
+            "api-version": "1.0",
+            "query": query.strip(),
+            "limit": min(limit, 10),
+            "typeahead": "true",
+        }
+
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            try:
+                resp = await client.get(f"{self.base_url}/search/address/json", headers=headers, params=params)
+                if resp.status_code != 200:
+                    logger.warning("Azure Maps search HTTP %d: %s", resp.status_code, resp.text)
+                    raise AzureMapsException(f"Azure Maps search error: HTTP {resp.status_code}", status_code=resp.status_code)
+                data = resp.json()
+                results = []
+                for item in data.get("results", []):
+                    pos = item.get("position", {})
+                    addr = item.get("address", {})
+                    results.append({
+                        "address": addr.get("freeformAddress", query),
+                        "lat": pos.get("lat"),
+                        "lon": pos.get("lon"),
+                        "country": addr.get("countryCode", ""),
+                        "score": item.get("score", 0),
+                    })
+                return results
+            except httpx.RequestError as exc:
+                logger.error("Azure Maps request failed: %s", exc)
+                raise AzureMapsException("Connection to Azure Maps failed", status_code=504, reason="PROVIDER_UNAVAILABLE")
+
+    async def calculate_route(
+        self,
+        origin_lat: float,
+        origin_lon: float,
+        dest_lat: float,
+        dest_lon: float,
+        depart_at: Optional[datetime] = None
     ) -> Dict[str, Any]:
         """
-        Calculates the reachable geographic polygon for Class-8 Electric Trucks based on
-        current battery SoC, payload mass, and elevation grade profiles.
+        Calculates directions with live traffic between origin and destination.
         """
-        # Range formula factoring payload weight penalty
-        base_range_km = (battery_capacity_kwh * (battery_state_of_charge_percent / 100.0)) / 1.8 # ~1.8 kWh/km
-        payload_penalty = 1.0 - (payload_weight_kg / 40000.0) * 0.25 # Up to 25% range reduction under max load
-        effective_range_km = round(base_range_km * payload_penalty, 1)
+        token, _ = await self.get_bearer_token()
+        client_id = self._get_client_id()
 
-        # Generate radial bounding vertices for polygon representation
-        polygon_points = []
-        import math
-        radius_deg = effective_range_km / 111.0 # Approximate degrees
-        for angle in range(0, 360, 30):
-            rad = math.radians(angle)
-            # Add realistic terrain variance
-            variance = 0.92 + 0.15 * math.sin(rad * 3)
-            p_lat = current_lat + (radius_deg * variance) * math.cos(rad)
-            p_lng = current_lng + (radius_deg * variance) * math.sin(rad) / math.cos(math.radians(current_lat))
-            polygon_points.append({"lat": round(p_lat, 5), "lng": round(p_lng, 5)})
-
-        return {
-            "status": "success",
-            "battery_soc_percent": battery_state_of_charge_percent,
-            "effective_range_km": effective_range_km,
-            "payload_penalty_applied_percent": round((1.0 - payload_penalty) * 100, 1),
-            "emergency_reserve_buffer_km": 35.0,
-            "reachable_polygon": polygon_points,
-            "ev_chargers_in_range_count": 14
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "x-ms-client-id": client_id,
+            "User-Agent": "NEXUS-Backend/2.0",
         }
+        coordinates_query = f"{origin_lat},{origin_lon}:{dest_lat},{dest_lon}"
+        params: Dict[str, Any] = {
+            "api-version": "1.0",
+            "query": coordinates_query,
+            "traffic": "true",
+            "computeTravelTimeFor": "all",
+            "routeType": "fastest",
+        }
+        if depart_at:
+            params["departAt"] = depart_at.isoformat()
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                resp = await client.get(f"{self.base_url}/route/directions/json", headers=headers, params=params)
+                if resp.status_code != 200:
+                    logger.warning("Azure Maps route HTTP %d: %s", resp.status_code, resp.text)
+                    raise AzureMapsException(f"Azure Maps route error: HTTP {resp.status_code}", status_code=resp.status_code)
+
+                data = resp.json()
+                routes = data.get("routes", [])
+                if not routes:
+                    raise AzureMapsException("No route found between coordinates", status_code=404, reason="NO_ROUTE_FOUND")
+
+                summary = routes[0].get("summary", {})
+                legs = routes[0].get("legs", [])
+                points: List[List[float]] = []
+                for leg in legs:
+                    for pt in leg.get("points", []):
+                        points.append([pt.get("longitude"), pt.get("latitude")])
+
+                return {
+                    "travel_time_seconds": summary.get("travelTimeInSeconds", 0),
+                    "traffic_delay_seconds": summary.get("trafficDelayInSeconds", 0),
+                    "distance_meters": summary.get("lengthInMeters", 0),
+                    "coordinates": points,
+                }
+            except httpx.RequestError as exc:
+                logger.error("Azure Maps request failed: %s", exc)
+                raise AzureMapsException("Azure Maps connection error", status_code=504, reason="PROVIDER_UNAVAILABLE")
+
+    async def calculate_route_matrix(
+        self,
+        origins: List[Tuple[float, float]],
+        destinations: List[Tuple[float, float]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Calculates 1-to-N or N-to-N route matrix for dispatch optimization.
+        """
+        token, _ = await self.get_bearer_token()
+        client_id = self._get_client_id()
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "x-ms-client-id": client_id,
+            "Content-Type": "application/json",
+            "User-Agent": "NEXUS-Backend/2.0",
+        }
+        body = {
+            "origins": {"type": "MultiPoint", "coordinates": [[o[1], o[0]] for o in origins]},
+            "destinations": {"type": "MultiPoint", "coordinates": [[d[1], d[0]] for d in destinations]},
+        }
+
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            try:
+                resp = await client.post(
+                    f"{self.base_url}/route/matrix/json?api-version=1.0&traffic=true",
+                    headers=headers,
+                    json=body
+                )
+                if resp.status_code != 200:
+                    raise AzureMapsException(f"Azure Maps matrix error: HTTP {resp.status_code}", status_code=resp.status_code)
+
+                data = resp.json()
+                matrix = data.get("matrix", [])
+                results = []
+                for row_idx, row in enumerate(matrix):
+                    for col_idx, cell in enumerate(row):
+                        resp_data = cell.get("response", {})
+                        route_summary = resp_data.get("routeSummary", {})
+                        results.append({
+                            "origin_index": row_idx,
+                            "destination_index": col_idx,
+                            "status_code": cell.get("statusCode", 200),
+                            "travel_time_seconds": route_summary.get("travelTimeInSeconds"),
+                            "length_meters": route_summary.get("lengthInMeters"),
+                        })
+                return results
+            except httpx.RequestError as exc:
+                raise AzureMapsException("Azure Maps matrix connection error", status_code=504, reason="PROVIDER_UNAVAILABLE")
+
+
+azure_maps_client = AzureMapsClient()

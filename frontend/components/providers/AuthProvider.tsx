@@ -1,101 +1,80 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useUser as useClerkUser } from "@clerk/nextjs";
+import { api } from "@/lib/api/client";
 
 export interface UserContextType {
   id: string;
   email: string;
   name: string;
   role: string;
-  workspace_id: string;
-  publicMetadata?: { role?: string; workspace_id?: string };
-  unsafeMetadata?: { role?: string };
+  workspace_id?: string;
+  needs_onboarding: boolean;
 }
 
 export interface AuthContextType {
   user: UserContextType | null;
-  logout: () => void;
   isLoading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
-const DEFAULT_OPERATOR: UserContextType = {
-  id: 'usr-sarah-104',
-  email: 'sarah.chen@nexus.continental',
-  name: 'Sarah Chen',
-  role: 'ADMINISTRATOR',
-  workspace_id: 'ws-continental-fleet-01',
-  publicMetadata: { role: 'ADMINISTRATOR', workspace_id: 'ws-continental-fleet-01' },
-};
-
 const AuthContext = createContext<AuthContextType>({
-  user: DEFAULT_OPERATOR,
-  logout: () => {},
-  isLoading: false,
+  user: null,
+  isLoading: true,
+  refreshUser: async () => {},
 });
 
 export function useAuth() {
   return useContext(AuthContext);
 }
 
-export function useUser() {
-  const { user, isLoading } = useAuth();
-  return {
-    user,
-    isLoaded: !isLoading,
-    isSignedIn: !!user,
-  };
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserContextType | null>(null);
+  const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn } = useClerkUser();
+  const [profile, setProfile] = useState<UserContextType | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
+  const fetchProfile = async () => {
+    if (!isSignedIn || !clerkUser) {
+      setProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const stored = localStorage.getItem('nexus_demo_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setUser({
-          ...parsed,
-          publicMetadata: { role: parsed.role, workspace_id: parsed.workspace_id },
-        });
-      } else {
-        // If no user in localStorage, check if cookie exists
-        if (typeof document !== 'undefined') {
-          const hasSession = document.cookie.includes('nexus_demo_session=') || document.cookie.includes('nexus_session_token=');
-          if (!hasSession) {
-            setUser(null);
-          }
-        }
+      const data = await api.getMe();
+      setProfile({
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role || "viewer",
+        workspace_id: data.workspace?.id,
+        needs_onboarding: data.needs_onboarding,
+      });
+      if (data.workspace?.id) {
+        localStorage.setItem("nexus_workspace_id", data.workspace.id);
       }
     } catch {
-      setUser(null);
+      setProfile({
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        name: clerkUser.fullName || "User",
+        role: "viewer",
+        needs_onboarding: true,
+      });
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const logout = () => {
-    try {
-      localStorage.removeItem('nexus_demo_user');
-      localStorage.removeItem('nexus_access_token');
-      localStorage.removeItem('nexus_active_workspace_id');
-      localStorage.removeItem('nexus_company_profile');
-      if (typeof document !== 'undefined') {
-        document.cookie = 'nexus_demo_session=; path=/; max-age=0;';
-        document.cookie = 'nexus_session_token=; path=/; max-age=0;';
-      }
-    } catch {
-      // ignore
-    }
-    setUser(null);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
   };
 
+  useEffect(() => {
+    if (clerkLoaded) {
+      fetchProfile();
+    }
+  }, [clerkLoaded, isSignedIn, clerkUser]);
+
   return (
-    <AuthContext.Provider value={{ user, logout, isLoading }}>
+    <AuthContext.Provider value={{ user: profile, isLoading: !clerkLoaded || isLoading, refreshUser: fetchProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,115 +1,49 @@
 import os
-import secrets
 from typing import List, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "NEXUS Operational Intelligence Platform"
+    PROJECT_NAME: str = "NEXUS"
     VERSION: str = "2.0.0"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     APP_ENV: str = os.getenv("APP_ENV", "development")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    # Clerk Authentication
+    # Cryptographic secret key for signing & hashing (must be set in production)
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "nexus-dev-secret-key-change-in-production-min-32-chars")
+
+    # Database: Neon Postgres async connection URL (required)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+
+    # Clerk Authentication (Entra/Clerk JWT verification)
     CLERK_ISSUER: str = os.getenv("CLERK_ISSUER", "")
     CLERK_JWKS_URL: str = os.getenv("CLERK_JWKS_URL", "")
-    CLERK_WEBHOOK_SECRET: str = os.getenv("CLERK_WEBHOOK_SECRET", "")
+    CLERK_SECRET_KEY: str = os.getenv("CLERK_SECRET_KEY", "")
 
-    # Database
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://nexus_user:nexus_password@localhost:5432/nexus_db"
-    )
+    # Azure Maps (Entra auth - client id of the Azure Maps account)
+    AZURE_MAPS_CLIENT_ID: str = os.getenv("AZURE_MAPS_CLIENT_ID", "")
+    DAILY_MAPS_CALL_CAP: int = int(os.getenv("DAILY_MAPS_CALL_CAP", "2000"))
 
-    # Redis
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    # Azure Blob Storage (for daily Parquet exports)
+    AZURE_STORAGE_CONNECTION_STRING: str = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
+    AZURE_STORAGE_CONTAINER_NAME: str = os.getenv("AZURE_STORAGE_CONTAINER_NAME", "telemetry-exports")
 
-    # Dual-Provider AI Subsystem (Groq Primary + Gemini Fallback)
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+    # Azure Application Insights / Monitor
+    APPLICATIONINSIGHTS_CONNECTION_STRING: str = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
+    AZURE_MONITOR_ENABLED: bool = os.getenv("AZURE_MONITOR_ENABLED", "false").lower() == "true"
 
-    # Geoapify & Location Provider Subsystem
-    GEOAPIFY_API_KEY: str = os.getenv("GEOAPIFY_API_KEY", "")
-    GEOAPIFY_BASE_URL: str = os.getenv("GEOAPIFY_BASE_URL", "https://api.geoapify.com/v1")
-    LOCATION_PROVIDER: str = os.getenv("LOCATION_PROVIDER", "auto")  # 'geoapify', 'mock', 'auto'
-    GEOAPIFY_REQUEST_TIMEOUT_SECONDS: int = 8
-    GEOAPIFY_AUTOCOMPLETE_LIMIT: int = 5
-    GEOAPIFY_PLACES_LIMIT: int = 20
-    GEOAPIFY_MAX_MATRIX_SOURCES: int = 10
-    GEOAPIFY_MAX_MATRIX_TARGETS: int = 10
-
-    # Cloud Integrations
-    FABRIC_ONELAKE_ENABLED: bool = True
-    AZURE_IOT_HUB_ENABLED: bool = True
-    AZURE_IOT_HUB_CONNECTION_STRING: str = ""
-    AZURE_IOT_HUB_HOSTNAME: str = ""
-    AZURE_SUBSCRIPTION_ID: str = ""
-    AZURE_RESOURCE_GROUP: str = ""
-    AZURE_LOCATION: str = "austriaeast"
-    AZURE_UPN: str = ""
-    AZURE_WEBAPP_URL: str = ""
-    AZURE_TENANT_ID: str = ""
-    AZURE_CLIENT_ID: str = ""
-    AZURE_CLIENT_SECRET: str = ""
-    FABRIC_WORKSPACE_ID: str = ""
-
-    # Azure Monitor / Application Insights
-    APPLICATIONINSIGHTS_CONNECTION_STRING: str = ""
-    AZURE_MONITOR_ENABLED: bool = True
-    
-    # Azure Blob Storage
-    AZURE_STORAGE_CONNECTION_STRING: str = ""
-    AZURE_STORAGE_ENABLED: bool = True
-    # Azure Event Hub
-    EVENT_HUB_ENABLED: bool = False
-    # Azure PostgreSQL Flexible Server (Free Tier)
-    AZURE_POSTGRESQL_URL: str = os.getenv(
-        "AZURE_POSTGRESQL_URL",
-        "postgresql+asyncpg://azure_user:azure_password@az-postgres.free-tier.azure.com:5432/azure_nexus_db",
-    )
-    
-    # Azure Key Vault
-    AZURE_KEYVAULT_URL: str = os.getenv("AZURE_KEYVAULT_URL", "")
-
-    # Azure Cognitive Search (Free Tier)
-    AZURE_COGNITIVE_SEARCH_ENABLED: bool = False
-    AZURE_COGNITIVE_SEARCH_ENDPOINT: str = ""
-    AZURE_COGNITIVE_SEARCH_API_KEY: str = ""
-
-    # Azure Foundry (Free preview)
-    AZURE_FOUNDRY_ENABLED: bool = False
-    AZURE_FOUNDRY_ENDPOINT: str = ""
-    AZURE_FOUNDRY_API_KEY: str = ""
-
-
-    # Email & Verification Configuration
-    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.example.com")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-    SMTP_USER: str = os.getenv("SMTP_USER", "")
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "noreply@nexus.platform")
-    EMAIL_VERIFICATION_ENABLED: bool = os.getenv("EMAIL_VERIFICATION_ENABLED", "false").lower() == "true"
-    ENABLE_DEMO_AUTH: bool = os.getenv("ENABLE_DEMO_AUTH", "false").lower() == "true"
-
-    # Weather Cache Configuration (Redis / Memory)
-    WEATHER_CACHE_TTL_SECONDS: int = int(os.getenv("WEATHER_CACHE_TTL_SECONDS", "1800"))
-
-    # CORS
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://nexus-logistics-os.vercel.app")
+    # CORS Allowed Origins
     CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "https://nexus-logistics-os.vercel.app",
-        "https://nexus-autonomous-logistics.vercel.app",
     ]
+
+    # Driver tracking & retention settings
+    PING_RETENTION_DAYS: int = int(os.getenv("PING_RETENTION_DAYS", "14"))
+    MAX_PING_BATCH_SIZE: int = int(os.getenv("MAX_PING_BATCH_SIZE", "100"))
+    MAX_OFFLINE_QUEUE_SIZE: int = int(os.getenv("MAX_OFFLINE_QUEUE_SIZE", "5000"))
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
@@ -122,13 +56,6 @@ class Settings(BaseSettings):
             v = v.replace("sslmode=require", "ssl=require")
         if "neon.tech" in v and "ssl=" not in v and "sslmode=" not in v:
             v = f"{v}&ssl=require" if "?" in v else f"{v}?ssl=require"
-        return v
-
-    @field_validator("SECRET_KEY", mode="after")
-    @classmethod
-    def validate_secret_key(cls, v: str) -> str:
-        if not v or not v.strip():
-            return secrets.token_urlsafe(32)
         return v
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -144,11 +71,22 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",") if i.strip()]
         return v
 
+    def validate_runtime_config(self) -> None:
+        """Fail fast at startup if critical settings are missing in production."""
+        if self.APP_ENV == "production":
+            if not self.DATABASE_URL:
+                raise ValueError("DATABASE_URL is required in production environment.")
+            if not self.SECRET_KEY or self.SECRET_KEY == "nexus-dev-secret-key-change-in-production-min-32-chars":
+                raise ValueError("SECRET_KEY must be securely configured in production.")
+            if not self.CLERK_ISSUER and not self.CLERK_JWKS_URL:
+                raise ValueError("CLERK_ISSUER or CLERK_JWKS_URL is required in production.")
+
     model_config = SettingsConfigDict(
-        env_file=(".env", "backend/.env", "../.env", ".env.azure"),
+        env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"
     )
+
 
 settings = Settings()

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, useSpring, useTransform } from 'motion/react';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { formatNumber } from '@/lib/utils';
 
 interface NumberTransitionProps {
   value: number;
@@ -29,7 +30,7 @@ export function NumberTransition({
   });
 
   const formatted = useTransform(spring, (current) => {
-    return `${prefix}${current.toFixed(decimals)}${suffix}`;
+    return `${prefix}${formatNumber(current, "en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${suffix}`;
   });
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function NumberTransition({
     return (
       <span className={className}>
         {prefix}
-        {value.toFixed(decimals)}
+        {formatNumber(value, "en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
         {suffix}
       </span>
     );
