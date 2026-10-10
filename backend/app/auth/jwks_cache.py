@@ -16,11 +16,14 @@ class JWKSCache:
         return self._keys.get(kid)
 
     async def _refresh(self):
-        if not settings.CLERK_JWKS_URL:
+        url = settings.CLERK_JWKS_URL
+        if not url and settings.CLERK_ISSUER:
+            url = f"{settings.CLERK_ISSUER.rstrip('/')}/.well-known/jwks.json"
+        if not url:
             return
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.get(settings.CLERK_JWKS_URL)
+                res = await client.get(url)
                 if res.status_code == 200:
                     data = res.json()
                     self._keys = {k["kid"]: k for k in data.get("keys", [])}

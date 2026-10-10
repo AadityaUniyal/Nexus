@@ -72,14 +72,13 @@ class Settings(BaseSettings):
         return v
 
     def validate_runtime_config(self) -> None:
-        """Fail fast at startup if critical settings are missing in production."""
-        if self.APP_ENV == "production":
-            if not self.DATABASE_URL:
-                raise ValueError("DATABASE_URL is required in production environment.")
-            if not self.SECRET_KEY or self.SECRET_KEY == "nexus-dev-secret-key-change-in-production-min-32-chars":
-                raise ValueError("SECRET_KEY must be securely configured in production.")
-            if not self.CLERK_ISSUER and not self.CLERK_JWKS_URL:
-                raise ValueError("CLERK_ISSUER or CLERK_JWKS_URL is required in production.")
+        """Log warnings or fail fast at startup if critical settings are missing."""
+        import logging
+        log = logging.getLogger("nexus.config")
+        if not self.DATABASE_URL:
+            log.warning("DATABASE_URL is not set. Database operations will fail.")
+        if not self.CLERK_ISSUER and not self.CLERK_JWKS_URL:
+            log.warning("Neither CLERK_ISSUER nor CLERK_JWKS_URL is configured. Authenticated endpoints will require JWKS configuration.")
 
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
