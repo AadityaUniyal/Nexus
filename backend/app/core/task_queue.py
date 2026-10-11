@@ -71,6 +71,7 @@ class AsyncTaskQueue:
                     task_record["started_at"] = time.time()
                     task_record["worker"] = worker_name
 
+                task_name = task_record.get("name", "unnamed") if task_record else "unknown"
                 try:
                     result = await coro_func(*args, **kwargs)
                     if task_record:
@@ -78,13 +79,25 @@ class AsyncTaskQueue:
                         task_record["completed_at"] = time.time()
                         task_record["result"] = result
                 except Exception as e:
-                    logger.error(f"AsyncTaskQueue error in task {task_id} ({name}): {e}", exc_info=True)
+                    logger.error(f"AsyncTaskQueue error in task {task_id} ({task_name}): {e}", exc_info=True)
                     if task_record:
                         task_record["status"] = "FAILED"
                         task_record["completed_at"] = time.time()
                         task_record["error"] = str(e)
                 finally:
                     self._queue.task_done()
+                    # Keep running_tasks bounded to prevent memory leaks
+                    if len(self._running_tasks) > 2000:
+                        now = time.time()
+                        # Prune tasks older than 1 hour that have finished
+                        prune_ids = [
+                            tid for tid, rec in self._running_tasks.items()
+                            if rec.get("status") in ("COMPLETED", "FAILED")
+                            and rec.get("completed_at")
+                            and (now - rec["completed_at"]) > 3600
+                        ]
+                        for tid in prune_ids[:500]:
+                            self._running_tasks.pop(tid, None)
 
             except asyncio.CancelledError:
                 break

@@ -10,7 +10,7 @@ logger = logging.getLogger("nexus.rate_limit")
 
 class SlidingWindowRateLimiter:
     """
-    Sliding Window Rate Limiter with automatic key cleanup and Redis support.
+    Sliding Window Rate Limiter with automatic key cleanup.
     """
     def __init__(self):
         # Maps "tier:client_id" -> list of epoch timestamps
@@ -67,6 +67,32 @@ class SlidingWindowRateLimiter:
 
 rate_limiter = SlidingWindowRateLimiter()
 
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP honoring trusted reverse proxies (Cloudflare, Azure App Service, Vercel)."""
+    # 1. Cloudflare
+    cf_connecting_ip = request.headers.get("CF-Connecting-IP")
+    if cf_connecting_ip:
+        return cf_connecting_ip.strip()
+
+    # 2. X-Forwarded-For (first IP is the real client)
+    x_forwarded_for = request.headers.get("X-Forwarded-For")
+    if x_forwarded_for:
+        parts = [p.strip() for p in x_forwarded_for.split(",") if p.strip()]
+        if parts:
+            return parts[0]
+
+    # 3. X-Real-IP
+    x_real_ip = request.headers.get("X-Real-IP")
+    if x_real_ip:
+        return x_real_ip.strip()
+
+    # 4. Direct socket client
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "127.0.0.1"
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Health check and docs bypass rate limiting
@@ -74,7 +100,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Determine client identifier
-        client_ip = request.client.host if request.client else "127.0.0.1"
+        client_ip = get_client_ip(request)
         auth_header = request.headers.get("Authorization", "")
         client_id = f"auth:{auth_header[-12:]}" if auth_header else f"ip:{client_ip}"
 

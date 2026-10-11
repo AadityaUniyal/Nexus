@@ -24,19 +24,43 @@ export function ViewerDashboard() {
   const { toast } = useToast();
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
 
-  const handleDownloadBoardBriefing = () => {
-    setIsGeneratingPdf(true);
-    tactileAudio.playClick();
-    setTimeout(() => {
-      setIsGeneratingPdf(false);
+  const handleDownloadBoardBriefing = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      tactileAudio.playClick();
+      const res = await fetch("/api/v1/reports/board-briefing.pdf");
+      if (!res.ok) {
+        throw new Error("PDF generation service unavailable");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "nexus-executive-board-briefing.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
       tactileAudio.playSuccess();
       toast({
-        title: "Executive PDF Briefing Generated",
-        message: "Executive summary prepared with Q3 SLA figures and ESG carbon audits.",
+        title: "Executive PDF Download Complete",
+        message: "Authentic board briefing downloaded with live SLA metrics and SOC 2 seal.",
         type: "success",
       });
-    }, 900);
+    } catch {
+      // Fallback window print
+      window.print();
+      toast({
+        title: "Print Preview Generated",
+        message: "Printing current executive briefing dashboard view.",
+        type: "info",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
+
 
   return (
     <div className="space-y-6">

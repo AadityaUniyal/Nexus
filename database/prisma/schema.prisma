@@ -1,3 +1,10 @@
+// ==============================================================================
+// DEPRECATION NOTICE:
+// As of NEXUS v1.0 Production Architecture, this Prisma schema is DEPRECATED.
+// The canonical, single source of truth for all database modeling and migrations
+// is SQLAlchemy 2.0 (backend/app/models/) and Alembic (backend/alembic/).
+// ==============================================================================
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

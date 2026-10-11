@@ -12,7 +12,7 @@ from app.schemas.system import AuditLogRead, PipelineHealthRead
 from app.integrations.location import get_location_provider
 from app.services.location_service import LocationService
 from app.core.errors import EntityNotFoundException
-from app.auth.dependencies import require_permission, get_current_principal
+from app.auth.dependencies import require_permission, get_current_principal, get_optional_principal
 from app.auth.principal import PermissionEnum, RequestPrincipal
 
 router = APIRouter(prefix="/admin", tags=["Admin & Governance"])
@@ -125,6 +125,34 @@ async def update_user_role(
         is_active=user.is_active,
         workspace_id=user.workspace_id,
     )
+
+@router.get("/roles")
+async def get_admin_roles(
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+) -> Dict[str, Any]:
+    """Retrieve canonical RBAC roles and permissions from backend security matrix."""
+    from app.auth.principal import RoleEnum, PermissionEnum, ROLE_PERMISSIONS_MAP
+
+    roles_data = []
+    for r in RoleEnum:
+        perms = [p.value for p in ROLE_PERMISSIONS_MAP.get(r, [])]
+        roles_data.append({
+            "role": r.value,
+            "title": r.value.replace("_", " ").title(),
+            "perms": perms,
+        })
+
+    permissions_list = [
+        {"key": p.value, "label": p.value.replace("_", " ").title()}
+        for p in PermissionEnum
+    ]
+
+    return {
+        "roles": roles_data,
+        "permissions": permissions_list,
+        "total_roles": len(roles_data),
+    }
+
 
 DEFAULT_PIPELINE = [
     PipelineHealthRead(id="pip-1", source_name="Realtime Telemetry Ingestion Engine", source_type="IOT_TELEMETRY", status="HEALTHY", latency_ms=12, throughput_per_sec=1450, records_today=1240000),

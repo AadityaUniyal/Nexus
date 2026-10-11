@@ -29,9 +29,23 @@ interface CommandItem {
   category: "navigation" | "actions" | "search";
 }
 
-export function CommandPalette() {
+export interface CommandPaletteProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOnClose }: CommandPaletteProps = {}) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = (val: boolean | ((prev: boolean) => boolean)) => {
+    const nextVal = typeof val === "function" ? val(isOpen) : val;
+    if (controlledIsOpen !== undefined) {
+      if (!nextVal && controlledOnClose) controlledOnClose();
+    } else {
+      setInternalIsOpen(nextVal);
+    }
+  };
   const [search, setSearch] = React.useState("");
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -270,7 +284,7 @@ export function CommandPalette() {
                     <div className="py-12 text-center">
                       <Search className="h-8 w-8 mx-auto mb-3 text-nexus-on-surface-variant opacity-40" />
                       <p className="text-sm text-nexus-on-surface-variant">
-                        No results found for "{search}"
+                        No results found for &quot;{search}&quot;
                       </p>
                     </div>
                   ) : (
@@ -370,3 +384,6 @@ export function CommandPalette() {
     </>
   );
 }
+
+export { CommandPalette as CommandMenu };
+

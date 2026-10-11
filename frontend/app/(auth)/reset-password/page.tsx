@@ -54,14 +54,14 @@ export default function ResetPasswordPage() {
         type: 'success',
       });
       router.push('/login');
-    } catch {
+    } catch (err: any) {
       setIsLoading(false);
+      const msg = err?.message || 'Password reset failed. Please ensure your token is valid and try again.';
       toast({
-        title: 'Credentials Updated',
-        message: 'Your new security passphrase is active. Please log in.',
-        type: 'success',
+        title: 'Reset Failed',
+        message: msg,
+        type: 'critical',
       });
-      router.push('/login');
     }
   };
 

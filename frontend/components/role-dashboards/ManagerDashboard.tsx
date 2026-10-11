@@ -31,6 +31,8 @@ export interface ManagerDashboardProps {
   simulations: SimulationItem[];
   warehouses: WarehouseItem[];
   onApplyDecision?: (simId: string) => Promise<void>;
+  onOpenCreateIncident?: () => void;
+  onOpenCreateWarehouse?: () => void;
 }
 
 export function ManagerDashboard({
@@ -38,6 +40,8 @@ export function ManagerDashboard({
   simulations,
   warehouses,
   onApplyDecision,
+  onOpenCreateIncident,
+  onOpenCreateWarehouse,
 }: ManagerDashboardProps) {
   const { toast } = useToast();
   const [selectedIncident, setSelectedIncident] = React.useState<IncidentItem | null>(
@@ -143,16 +147,39 @@ export function ManagerDashboard({
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant="critical" className="font-mono text-[10px]">
-                  {activeIncidents.length} Active
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="critical" className="font-mono text-[10px]">
+                    {activeIncidents.length} Active
+                  </Badge>
+                  {onOpenCreateIncident && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onOpenCreateIncident}
+                      className="font-mono text-[11px] h-7 px-2 border-rose-500/40 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                    >
+                      + Log Incident
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-3 space-y-2.5 max-h-[440px] overflow-y-auto">
               {activeIncidents.length === 0 ? (
-                <div className="py-8 text-center text-xs font-mono text-nexus-on-surface-variant">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
-                  All corridors operating normally. Zero active SLA breaches.
+                <div className="py-8 text-center text-xs font-mono text-nexus-on-surface-variant space-y-3">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto opacity-80" />
+                  <p>All corridors operating normally. Zero active SLA breaches.</p>
+                  {onOpenCreateIncident && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={onOpenCreateIncident}
+                      className="font-mono text-xs shadow-tactile mx-auto"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5 mr-1 text-rose-500" />
+                      Report Corridor Disruption
+                    </Button>
+                  )}
                 </div>
               ) : (
                 activeIncidents.map((inc) => {

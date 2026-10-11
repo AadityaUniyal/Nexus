@@ -79,7 +79,7 @@ export default function IncidentDetailPage() {
     return (
       <AppShell>
         <div className="p-8 space-y-4 font-mono text-sm">
-          <p className="text-nexus-on-surface">Incident '{incidentId}' was not found.</p>
+          <p className="text-nexus-on-surface">Incident &apos;{incidentId}&apos; was not found.</p>
           <Link href="/incidents">
             <Button variant="ghost" size="sm" className="gap-1 text-xs">
               <ArrowLeft className="h-4 w-4" /> Back to Incidents

@@ -37,9 +37,23 @@ export function middleware(req: NextRequest) {
   }
 
   // Check for active session cookie
-  const sessionCookie = req.cookies.get('nexus_demo_session')?.value || req.cookies.get('nexus_session_token')?.value;
+  // Valid session cookies: standard clerk/auth jwt token or authenticated session/demo cookie
+  const sessionToken = req.cookies.get('nexus_session_token')?.value || req.cookies.get('__session')?.value;
+  const demoCookie = req.cookies.get('nexus_demo_session')?.value;
 
-  if (!sessionCookie) {
+  let hasValidSession = false;
+
+  // 1. Session token
+  if (sessionToken && sessionToken.length > 10) {
+    hasValidSession = true;
+  }
+
+  // 2. Authenticated user session cookie
+  if (demoCookie && demoCookie.trim().length > 0) {
+    hasValidSession = true;
+  }
+
+  if (!hasValidSession) {
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);

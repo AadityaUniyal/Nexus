@@ -1,7 +1,7 @@
 from app.db.base import Base
 from app.models.organization import Organization, OrganizationMembership, SubscriptionPlan
 from app.models.user import Workspace, User, WorkspaceMembership, AvatarPreferences, Invitation
-from app.models.fleet import VehicleType, Driver, VehicleDevice, DriverVehicleAssignment
+from app.models.fleet import VehicleType, Driver, VehicleDevice, DriverVehicleAssignment, DriverShift
 from app.models.logistics import Customer, Shipment, Trip, Stop
 from app.models.operations import Warehouse, Vehicle, Route, Order
 from app.models.telemetry import TelemetryEvent, VehicleStatus
@@ -44,6 +44,7 @@ __all__ = [
     "Invitation",
     "VehicleType",
     "Driver",
+    "DriverShift",
     "VehicleDevice",
     "DriverVehicleAssignment",
     "Customer",

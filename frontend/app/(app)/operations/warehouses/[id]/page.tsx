@@ -67,7 +67,7 @@ export default function WarehouseDetailPage() {
     return (
       <AppShell>
         <div className="p-8 space-y-4 font-mono text-sm">
-          <p className="text-nexus-on-surface">Warehouse '{warehouseId}' was not found.</p>
+          <p className="text-nexus-on-surface">Warehouse &apos;{warehouseId}&apos; was not found.</p>
           <Link href="/operations/warehouses">
             <Button variant="ghost" size="sm" className="gap-1 text-xs">
               <ArrowLeft className="h-4 w-4" /> Back to Warehouses

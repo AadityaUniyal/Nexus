@@ -134,12 +134,17 @@ export default function LoginPage() {
 
       if (typeof window !== "undefined") {
         document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `nexus_session_token=nexus_jwt_${user.id}_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
         localStorage.setItem("nexus_demo_user", JSON.stringify(user));
         localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
       }
 
       tactileAudio.playSuccess();
-      router.push(activeRole.targetUrl);
+      if (typeof window !== "undefined") {
+        window.location.href = activeRole.targetUrl;
+      } else {
+        router.push(activeRole.targetUrl);
+      }
     } catch {
       setError("Authentication failed. Please verify credentials.");
     } finally {
@@ -163,11 +168,16 @@ export default function LoginPage() {
 
       if (typeof window !== "undefined") {
         document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `nexus_session_token=nexus_jwt_${user.id}_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
         localStorage.setItem("nexus_demo_user", JSON.stringify(user));
         localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
       }
 
-      router.push(activeRole.targetUrl);
+      if (typeof window !== "undefined") {
+        window.location.href = activeRole.targetUrl;
+      } else {
+        router.push(activeRole.targetUrl);
+      }
     }, 900);
   };
 

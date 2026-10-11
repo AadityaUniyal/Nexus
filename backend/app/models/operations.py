@@ -105,6 +105,11 @@ class Order(Base, TimestampMixin):
     vehicle: Mapped[Optional["Vehicle"]] = relationship("Vehicle", back_populates="orders")
     vehicle_code: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
+    trip_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("trips.id", ondelete="SET NULL"), nullable=True, index=True)
+    trip: Mapped[Optional["app.models.logistics.Trip"]] = relationship("app.models.logistics.Trip", back_populates="orders")
+    shipments: Mapped[List["app.models.logistics.Shipment"]] = relationship("app.models.logistics.Shipment", back_populates="order")
+
     workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     workspace: Mapped["app.models.user.Workspace"] = relationship("app.models.user.Workspace", back_populates="orders")
     customer_rel: Mapped[Optional["app.models.logistics.Customer"]] = relationship("app.models.logistics.Customer", back_populates="orders")
+

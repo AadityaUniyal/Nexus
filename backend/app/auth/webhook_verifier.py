@@ -1,3 +1,4 @@
+import time
 import hmac
 import hashlib
 import base64
@@ -7,13 +8,15 @@ from app.core.errors import UnauthenticatedException
 
 def verify_clerk_webhook(headers: Dict[str, str], payload_bytes: bytes) -> bool:
     """
-    Verifies the Svix / Clerk webhook signature headers.
+    Verifies the Svix / Clerk webhook signature headers with timestamp replay protection.
     Headers:
       - svix-id
       - svix-timestamp
       - svix-signature
     """
     if not settings.CLERK_WEBHOOK_SECRET:
+        if settings.APP_ENV == "production":
+            raise UnauthenticatedException("CLERK_WEBHOOK_SECRET must be configured in production!")
         # Development mode bypass
         return True
 
@@ -23,6 +26,15 @@ def verify_clerk_webhook(headers: Dict[str, str], payload_bytes: bytes) -> bool:
 
     if not svix_id or not svix_timestamp or not svix_signature:
         raise UnauthenticatedException("Missing required Svix webhook verification headers")
+
+    # Anti-replay attack check: verify timestamp is within 5 minutes (300 seconds)
+    try:
+        ts = int(svix_timestamp)
+        now = int(time.time())
+        if abs(now - ts) > 300:
+            raise UnauthenticatedException("Webhook timestamp drift exceeds 5 minutes (replay protection)")
+    except ValueError:
+        raise UnauthenticatedException("Invalid webhook timestamp format")
 
     # The signed content is: f"{svix_id}.{svix_timestamp}.{payload_bytes.decode('utf-8')}"
     signed_content = f"{svix_id}.{svix_timestamp}.".encode("utf-8") + payload_bytes
@@ -41,7 +53,8 @@ def verify_clerk_webhook(headers: Dict[str, str], payload_bytes: bytes) -> bool:
     ).decode("utf-8")
 
     signatures = [s.replace("v1,", "") for s in svix_signature.split(" ")]
-    if expected_sig in signatures:
-        return True
+    for sig in signatures:
+        if hmac.compare_digest(expected_sig, sig):
+            return True
 
     raise UnauthenticatedException("Invalid Clerk webhook signature")

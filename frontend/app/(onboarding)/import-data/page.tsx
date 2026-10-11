@@ -187,19 +187,20 @@ export default function ImportDataPage() {
         }),
       });
 
+      if (result.errors && result.errors.length > 0 && (!result.imported_count || result.imported_count === 0)) {
+        setErrorMessage(`Import failed with ${result.errors.length} validation errors: ${result.errors[0]?.message || 'Invalid row data'}`);
+        return;
+      }
+
       setImportedStats({
-        count: result.imported_count || previewResult?.valid_rows_count || 1,
+        count: result.imported_count || 0,
         entity: entityType,
       });
       setStep("success");
     } catch (err: any) {
-      console.warn("Import execution fallback:", err);
-      // Soft fallback for offline dev demo
-      setImportedStats({
-        count: previewResult?.valid_rows_count || 3,
-        entity: entityType,
-      });
-      setStep("success");
+      console.error("Import execution failed:", err);
+      const msg = err?.message || err?.error?.message || "Failed to execute import. Please check CSV format and network connection.";
+      setErrorMessage(msg);
     } finally {
       setImporting(false);
     }

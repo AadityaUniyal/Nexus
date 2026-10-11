@@ -100,7 +100,7 @@ export default function AdminUserDetailPage() {
     return (
       <AppShell>
         <div className="p-8 space-y-4 font-mono text-sm">
-          <p className="text-nexus-on-surface">User '{userId}' was not found.</p>
+          <p className="text-nexus-on-surface">User &apos;{userId}&apos; was not found.</p>
           <Link href="/admin/users">
             <Button variant="ghost" size="sm" className="gap-1 text-xs">
               <ArrowLeft className="h-4 w-4" /> Back to User Directory

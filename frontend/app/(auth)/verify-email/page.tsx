@@ -18,10 +18,20 @@ export default function VerifyEmailPage() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [avatarMood, setAvatarMood] = React.useState<AvatarMood>('LOADING');
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    setAvatarMood('LOADING');
+    try {
+      const res = await fetch('/api/v1/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: code }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.detail || errorData?.error?.message || 'Invalid or expired verification token');
+      }
       setIsLoading(false);
       setAvatarMood('SUCCESS');
       toast({
@@ -32,7 +42,15 @@ export default function VerifyEmailPage() {
       setTimeout(() => {
         router.push('/welcome');
       }, 500);
-    }, 700);
+    } catch (err: any) {
+      setIsLoading(false);
+      setAvatarMood('ERROR');
+      toast({
+        title: 'Verification Failed',
+        message: err.message || 'Verification token could not be confirmed.',
+        type: 'critical',
+      });
+    }
   };
 
   return (

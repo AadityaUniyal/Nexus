@@ -152,6 +152,7 @@ export function AppleSetupAssistant() {
 
     if (typeof window !== "undefined") {
       document.cookie = `nexus_demo_session=${userObject.id}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `nexus_session_token=nexus_jwt_${userObject.id}_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
       localStorage.setItem("nexus_demo_user", JSON.stringify(userObject));
       localStorage.setItem("nexus_company_profile", JSON.stringify(companyProfile));
       localStorage.setItem("nexus_company_name", companyName);
@@ -160,14 +161,19 @@ export function AppleSetupAssistant() {
     }
 
     // Role-tailored destination
-    if (selectedRole === "ADMINISTRATOR") {
-      router.push("/admin/company");
-    } else if (selectedRole === "SUPERVISOR_L1") {
-      router.push("/overview");
-    } else if (selectedRole === "SUPERVISOR_L2") {
-      router.push("/operations");
+    const targetUrl =
+      selectedRole === "ADMINISTRATOR"
+        ? "/admin/company"
+        : selectedRole === "SUPERVISOR_L1"
+        ? "/overview"
+        : selectedRole === "SUPERVISOR_L2"
+        ? "/operations"
+        : "/incidents";
+
+    if (typeof window !== "undefined") {
+      window.location.href = targetUrl;
     } else {
-      router.push("/incidents");
+      router.push(targetUrl);
     }
   };
 

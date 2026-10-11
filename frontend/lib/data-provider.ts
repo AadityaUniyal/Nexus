@@ -50,6 +50,7 @@ export interface NexusDataProvider {
   provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }>;
   getOrders(): Promise<OrderItem[]>;
   getOrder(id: string): Promise<OrderItem | null>;
+  createOrder(data: Partial<OrderItem>): Promise<OrderItem>;
   getIncidents(severity?: string): Promise<IncidentItem[]>;
   getIncident(id: string): Promise<IncidentItem | null>;
   createIncident(data: Partial<IncidentItem>): Promise<IncidentItem>;
@@ -202,9 +203,9 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         return [...customVehicles.filter((v) => !existingIds.has(v.id)), ...apiVehicles];
       }
     } catch {
-      // Fall through to custom vehicles + initial fallback
+      // Fall through to custom vehicles
     }
-    return customVehicles.length > 0 ? customVehicles : [...INITIAL_VEHICLES];
+    return customVehicles;
   }
 
   async createVehicle(data: Partial<VehicleItem>): Promise<VehicleItem> {
@@ -294,9 +295,9 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         return [...customWarehouses.filter((w) => !existingIds.has(w.id)), ...apiWarehouses];
       }
     } catch {
-      // Fall through to custom + mock
+      // Fall through to custom
     }
-    return customWarehouses.length > 0 ? customWarehouses : [...INITIAL_WAREHOUSES];
+    return customWarehouses;
   }
 
   async createWarehouse(data: Partial<WarehouseItem>): Promise<WarehouseItem> {
@@ -363,6 +364,33 @@ export class ApiNexusDataProvider implements NexusDataProvider {
       trafficCondition: (data.trafficCondition as any) || "CLEAR",
       waypoints: data.waypoints || [],
     };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_routes");
+        const list = raw ? JSON.parse(raw) : [];
+        localStorage.setItem("nexus_custom_routes", JSON.stringify([newRoute, ...list.filter((r: any) => r.id !== newRoute.id)]));
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi("/api/v1/operations/routes", {
+        method: "POST",
+        body: JSON.stringify({
+          code: newRoute.code,
+          name: newRoute.name,
+          origin_warehouse_id: newRoute.originWarehouseId,
+          origin_warehouse_name: newRoute.originWarehouseName,
+          dest_warehouse_id: newRoute.destWarehouseId,
+          dest_warehouse_name: newRoute.destWarehouseName,
+          distance_km: newRoute.distanceKm,
+          avg_duration_mins: newRoute.avgDurationMins,
+          traffic_condition: newRoute.trafficCondition,
+          waypoints: newRoute.waypoints,
+        }),
+      });
+    } catch {}
+
     return newRoute;
   }
 
@@ -641,10 +669,18 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async getRoutes(): Promise<RouteItem[]> {
+    let customRoutes: RouteItem[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_routes");
+        if (raw) customRoutes = JSON.parse(raw);
+      } catch {}
+    }
+
     try {
       const data = await this.fetchApi<any[]>("/api/v1/operations/routes");
       if (Array.isArray(data)) {
-        return data.map((r) => ({
+        const apiRoutes = data.map((r) => ({
           id: r.id,
           code: r.code,
           name: r.name,
@@ -658,11 +694,13 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           trafficCondition: (r.traffic_condition as any) || "CLEAR",
           waypoints: r.waypoints || [],
         }));
+        const existingIds = new Set(apiRoutes.map((r) => r.id));
+        return [...customRoutes.filter((r) => !existingIds.has(r.id)), ...apiRoutes];
       }
     } catch {
-      // Fall through to initial routes
+      // Fall through to custom routes
     }
-    return [...INITIAL_ROUTES];
+    return customRoutes;
   }
 
   async getRoute(id: string): Promise<RouteItem | null> {
@@ -692,29 +730,41 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async getOrders(): Promise<OrderItem[]> {
-    const data = await this.fetchApi<any[]>("/api/v1/operations/orders");
-    if (Array.isArray(data)) {
-      return data.map((o) => ({
-        id: o.id,
-        orderNumber: o.order_number,
-        customerName: o.customer_name,
-        destination: o.destination,
-        priority: (o.priority as any) || "NORMAL",
-        status: (o.status as any) || "ASSIGNED",
-        warehouseId: o.warehouse_id || null,
-        warehouseName: o.warehouse_name,
-        routeId: o.route_id || null,
-        routeName: o.route_name,
-        vehicleId: o.vehicle_id || null,
-        vehicleCode: o.vehicle_code,
-        deadline: o.deadline,
-        estimatedEta: o.estimated_eta || o.deadline,
-        itemsCount: o.items_count || 12,
-        totalCost: o.total_cost,
-        slaCompliant: o.status !== "DELAYED",
-      }));
+    let customOrders: OrderItem[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_orders");
+        if (raw) customOrders = JSON.parse(raw);
+      } catch {}
     }
-    return [];
+
+    try {
+      const data = await this.fetchApi<any[]>("/api/v1/operations/orders");
+      if (Array.isArray(data)) {
+        const apiOrders = data.map((o) => ({
+          id: o.id,
+          orderNumber: o.order_number,
+          customerName: o.customer_name,
+          destination: o.destination,
+          priority: (o.priority as any) || "NORMAL",
+          status: (o.status as any) || "ASSIGNED",
+          warehouseId: o.warehouse_id || null,
+          warehouseName: o.warehouse_name || "Regional Hub",
+          routeId: o.route_id || null,
+          routeName: o.route_name || "Direct Corridor",
+          vehicleId: o.vehicle_id || null,
+          vehicleCode: o.vehicle_code || "Unassigned",
+          deadline: o.deadline,
+          estimatedEta: o.estimated_eta || o.deadline,
+          itemsCount: o.items_count || 12,
+          totalCost: o.total_cost || 1200,
+          slaCompliant: o.status !== "DELAYED",
+        }));
+        const existingIds = new Set(apiOrders.map((o) => o.id));
+        return [...customOrders.filter((o) => !existingIds.has(o.id)), ...apiOrders];
+      }
+    } catch {}
+    return customOrders;
   }
 
   async getOrder(id: string): Promise<OrderItem | null> {
@@ -729,15 +779,15 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         priority: (o.priority as any) || "NORMAL",
         status: (o.status as any) || "ASSIGNED",
         warehouseId: o.warehouse_id || null,
-        warehouseName: o.warehouse_name,
+        warehouseName: o.warehouse_name || "Regional Hub",
         routeId: o.route_id || null,
-        routeName: o.route_name,
+        routeName: o.route_name || "Direct Corridor",
         vehicleId: o.vehicle_id || null,
-        vehicleCode: o.vehicle_code,
+        vehicleCode: o.vehicle_code || "Unassigned",
         deadline: o.deadline,
         estimatedEta: o.estimated_eta || o.deadline,
         itemsCount: o.items_count || 12,
-        totalCost: o.total_cost,
+        totalCost: o.total_cost || 1200,
         slaCompliant: o.status !== "DELAYED",
       };
     } catch (err: any) {
@@ -748,37 +798,98 @@ export class ApiNexusDataProvider implements NexusDataProvider {
     }
   }
 
-  async getIncidents(severity?: string): Promise<IncidentItem[]> {
-    const query = severity && severity !== "ALL" ? `?severity=${severity}` : "";
-    const data = await this.fetchApi<any[]>(`/api/v1/incidents${query}`);
-    if (Array.isArray(data)) {
-      return data.map((i) => ({
-        id: i.id,
-        code: i.code,
-        title: i.title,
-        summary: i.summary,
-        severity: (i.severity as any) || "HIGH",
-        status: (i.status as any) || "DETECTED",
-        affectedEntityType: (i.affected_entity_type as any) || "VEHICLE",
-        affectedEntityId: i.affected_entity_id,
-        affectedEntityName: i.affected_entity_name,
-        rootCause: i.root_cause || "Atmospheric corridor obstruction",
-        aiAnalysis: i.ai_analysis || "Reroute scenario available",
-        potentialImpact: "Delay risk on active corridor",
-        costEstimate: i.cost_estimate || 0,
-        ordersAffected: i.orders_affected ?? i.ordersAffected ?? 0,
-        delayMinutes: i.delay_minutes || 0,
-        createdAt: i.created_at || new Date().toISOString(),
-        timeline: (i.timeline || []).map((t: any) => ({
-          id: t.id,
-          status: t.status,
-          note: t.note,
-          actorName: t.actor_name,
-          createdAt: t.created_at,
-        })),
-      }));
+  async createOrder(data: Partial<OrderItem>): Promise<OrderItem> {
+    const newOrder: OrderItem = {
+      id: data.id || `ord-${Date.now()}`,
+      orderNumber: data.orderNumber || `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
+      customerName: data.customerName || "Enterprise Client",
+      destination: data.destination || "Regional Distribution Center",
+      priority: (data.priority as any) || "NORMAL",
+      status: (data.status as any) || "ASSIGNED",
+      warehouseId: data.warehouseId || null,
+      warehouseName: data.warehouseName || "Origin Hub",
+      routeId: data.routeId || null,
+      routeName: data.routeName || "Express Corridor",
+      vehicleId: data.vehicleId || null,
+      vehicleCode: data.vehicleCode || undefined,
+      deadline: data.deadline || new Date(Date.now() + 86400000).toISOString(),
+      estimatedEta: data.estimatedEta || new Date(Date.now() + 86400000).toISOString(),
+      itemsCount: data.itemsCount || 12,
+      totalCost: data.totalCost || 1450,
+      slaCompliant: true,
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_orders");
+        const list = raw ? JSON.parse(raw) : [];
+        localStorage.setItem("nexus_custom_orders", JSON.stringify([newOrder, ...list.filter((o: any) => o.id !== newOrder.id)]));
+      } catch {}
     }
-    return [];
+
+    try {
+      await this.fetchApi("/api/v1/operations/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          order_number: newOrder.orderNumber,
+          customer_name: newOrder.customerName,
+          destination: newOrder.destination,
+          priority: newOrder.priority,
+          status: newOrder.status,
+          total_cost: newOrder.totalCost,
+          deadline: newOrder.deadline,
+          vehicle_id: newOrder.vehicleId,
+          vehicle_code: newOrder.vehicleCode,
+        }),
+      });
+    } catch {}
+
+    return newOrder;
+  }
+
+  async getIncidents(severity?: string): Promise<IncidentItem[]> {
+    let customIncidents: IncidentItem[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_incidents");
+        if (raw) customIncidents = JSON.parse(raw);
+      } catch {}
+    }
+
+    const query = severity && severity !== "ALL" ? `?severity=${severity}` : "";
+    try {
+      const data = await this.fetchApi<any[]>(`/api/v1/incidents${query}`);
+      if (Array.isArray(data)) {
+        const apiIncidents = data.map((i) => ({
+          id: i.id,
+          code: i.code,
+          title: i.title,
+          summary: i.summary,
+          severity: (i.severity as any) || "HIGH",
+          status: (i.status as any) || "DETECTED",
+          affectedEntityType: (i.affected_entity_type as any) || "VEHICLE",
+          affectedEntityId: i.affected_entity_id,
+          affectedEntityName: i.affected_entity_name,
+          rootCause: i.root_cause || "Corridor obstruction",
+          aiAnalysis: i.ai_analysis || "Reroute scenario available",
+          potentialImpact: "Delay risk on active corridor",
+          costEstimate: i.cost_estimate || 0,
+          ordersAffected: i.orders_affected ?? i.ordersAffected ?? 0,
+          delayMinutes: i.delay_minutes || 0,
+          createdAt: i.created_at || new Date().toISOString(),
+          timeline: (i.timeline || []).map((t: any) => ({
+            id: t.id,
+            status: t.status,
+            note: t.note,
+            actorName: t.actor_name,
+            createdAt: t.created_at,
+          })),
+        }));
+        const existingIds = new Set(apiIncidents.map((i) => i.id));
+        return [...customIncidents.filter((i) => !existingIds.has(i.id)), ...apiIncidents];
+      }
+    } catch {}
+    return customIncidents;
   }
 
   async getIncident(id: string): Promise<IncidentItem | null> {
@@ -819,41 +930,58 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async createIncident(data: Partial<IncidentItem>): Promise<IncidentItem> {
-    const payload = {
-      title: data.title,
-      summary: data.summary,
-      severity: data.severity || "HIGH",
-      affected_entity_type: data.affectedEntityType || "VEHICLE",
-      affected_entity_id: data.affectedEntityId || "v-104",
-      affected_entity_name: data.affectedEntityName || "Vehicle NX-104",
-      delay_minutes: data.delayMinutes || 0,
-      cost_estimate: data.costEstimate || 0,
-      root_cause: data.rootCause || "Reported via Dispatcher UI",
-      ai_analysis: data.aiAnalysis || "Pending automated telemetry analysis.",
+    const newInc: IncidentItem = {
+      id: data.id || `inc-${Date.now()}`,
+      code: data.code || `INC-${Math.floor(100 + Math.random() * 900)}`,
+      title: data.title || "Field Operational Incident",
+      summary: data.summary || "Incident reported via Operational Commander",
+      severity: (data.severity as any) || "HIGH",
+      status: (data.status as any) || "DETECTED",
+      affectedEntityType: (data.affectedEntityType as any) || "VEHICLE",
+      affectedEntityId: data.affectedEntityId || "v-101",
+      affectedEntityName: data.affectedEntityName || "Fleet Vehicle",
+      rootCause: data.rootCause || "Reported via Dispatcher UI",
+      aiAnalysis: data.aiAnalysis || "Pending automated telemetry analysis.",
+      potentialImpact: "Delay risk on corridor",
+      costEstimate: data.costEstimate || 0,
+      ordersAffected: data.ordersAffected || 0,
+      delayMinutes: data.delayMinutes || 0,
+      timeline: [],
+      createdAt: new Date().toISOString(),
     };
-    const res = await this.fetchApi<any>("/api/v1/incidents", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    return {
-      id: res.id,
-      code: res.code,
-      title: res.title,
-      summary: res.summary,
-      severity: res.severity as any,
-      status: res.status as any,
-      affectedEntityType: res.affected_entity_type as any,
-      affectedEntityId: res.affected_entity_id,
-      affectedEntityName: res.affected_entity_name,
-      rootCause: res.root_cause,
-      aiAnalysis: res.ai_analysis,
-      potentialImpact: "Delay risk",
-      costEstimate: res.cost_estimate,
-      ordersAffected: res.orders_affected ?? res.ordersAffected ?? 0,
-      delayMinutes: res.delay_minutes,
-      timeline: res.timeline || [],
-      createdAt: res.created_at,
-    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_incidents");
+        const list = raw ? JSON.parse(raw) : [];
+        localStorage.setItem("nexus_custom_incidents", JSON.stringify([newInc, ...list.filter((x: any) => x.id !== newInc.id)]));
+      } catch {}
+    }
+
+    try {
+      const payload = {
+        title: newInc.title,
+        summary: newInc.summary,
+        severity: newInc.severity,
+        affected_entity_type: newInc.affectedEntityType,
+        affected_entity_id: newInc.affectedEntityId,
+        affected_entity_name: newInc.affectedEntityName,
+        delay_minutes: newInc.delayMinutes,
+        cost_estimate: newInc.costEstimate,
+        root_cause: newInc.rootCause,
+        ai_analysis: newInc.aiAnalysis,
+      };
+      const res = await this.fetchApi<any>("/api/v1/incidents", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      if (res && res.id) {
+        newInc.id = res.id;
+        newInc.code = res.code || newInc.code;
+      }
+    } catch {}
+
+    return newInc;
   }
 
   async transitionIncident(id: string, status: string, note: string, actorName = "Sarah Chen"): Promise<IncidentItem> {
@@ -1344,11 +1472,48 @@ export class MockNexusDataProvider implements NexusDataProvider {
   }
 
   async getOrders(): Promise<OrderItem[]> {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_orders");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
     return [...INITIAL_ORDERS];
   }
 
   async getOrder(id: string): Promise<OrderItem | null> {
-    return INITIAL_ORDERS.find((o) => o.id === id) || null;
+    const list = await this.getOrders();
+    return list.find((o) => o.id === id || o.orderNumber === id) || null;
+  }
+
+  async createOrder(data: Partial<OrderItem>): Promise<OrderItem> {
+    const o: OrderItem = {
+      id: data.id || `ord-${Date.now()}`,
+      orderNumber: data.orderNumber || `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
+      customerName: data.customerName || "Enterprise Client",
+      destination: data.destination || "Regional Distribution Center",
+      priority: (data.priority as any) || "NORMAL",
+      status: (data.status as any) || "ASSIGNED",
+      warehouseId: data.warehouseId || null,
+      warehouseName: data.warehouseName || "Origin Hub",
+      routeId: data.routeId || null,
+      routeName: data.routeName || "Express Corridor",
+      vehicleId: data.vehicleId || null,
+      vehicleCode: data.vehicleCode || undefined,
+      deadline: data.deadline || new Date(Date.now() + 86400000).toISOString(),
+      estimatedEta: data.estimatedEta || new Date(Date.now() + 86400000).toISOString(),
+      itemsCount: data.itemsCount || 12,
+      totalCost: data.totalCost || 1450,
+      slaCompliant: true,
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_orders");
+        const list = raw ? JSON.parse(raw) : [];
+        localStorage.setItem("nexus_custom_orders", JSON.stringify([o, ...list.filter((x: any) => x.id !== o.id)]));
+      } catch {}
+    }
+    return o;
   }
 
   async getIncidents(severity?: string): Promise<IncidentItem[]> {

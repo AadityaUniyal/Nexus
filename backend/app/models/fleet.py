@@ -41,6 +41,24 @@ class Driver(Base, TimestampMixin):
 
     assignments: Mapped[List["DriverVehicleAssignment"]] = relationship("DriverVehicleAssignment", back_populates="driver", cascade="all, delete-orphan")
     trips: Mapped[List["app.models.logistics.Trip"]] = relationship("app.models.logistics.Trip", back_populates="driver")
+    shifts: Mapped[List["DriverShift"]] = relationship("DriverShift", back_populates="driver", cascade="all, delete-orphan")
+
+
+class DriverShift(Base, TimestampMixin):
+    __tablename__ = "driver_shifts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"shf-{uuid.uuid4().hex[:10]}")
+    driver_id: Mapped[str] = mapped_column(String(64), ForeignKey("drivers.id", ondelete="CASCADE"), nullable=False, index=True)
+    shift_start: Mapped[str] = mapped_column(String(64), nullable=False)
+    shift_end: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="ACTIVE")  # ACTIVE, COMPLETED, BREAK
+    driving_hours: Mapped[float] = mapped_column(Float, default=0.0)
+    on_duty_hours: Mapped[float] = mapped_column(Float, default=0.0)
+    break_hours: Mapped[float] = mapped_column(Float, default=0.0)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    driver: Mapped["Driver"] = relationship("Driver", back_populates="shifts")
+
 
 
 class VehicleDevice(Base, TimestampMixin):

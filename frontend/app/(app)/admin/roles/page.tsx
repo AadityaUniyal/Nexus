@@ -11,19 +11,8 @@ import { FadeIn, SpringCard } from '@/components/motion';
 
 export default function AdminRolesPage() {
   const { toast } = useToast();
-
-  const permissionsList = [
-    { key: 'VIEW_OPERATIONS', label: 'View Live Operational Telemetry' },
-    { key: 'EDIT_OPERATIONS', label: 'Modify Asset & Route Metadata' },
-    { key: 'RUN_SIMULATION', label: 'Launch Sandboxed What-If Simulations' },
-    { key: 'APPLY_DECISION', label: 'Apply Transactional Decisions to Live Fleet' },
-    { key: 'VIEW_ANALYTICS', label: 'View SLA & Telemetry Analytics' },
-    { key: 'VIEW_AUDIT', label: 'Inspect Immutable Audit Trails' },
-    { key: 'MANAGE_USERS', label: 'Provision Users & Security Tokens' },
-    { key: 'MANAGE_INTEGRATIONS', label: 'Configure Azure & Microsoft Fabric Adapters' },
-  ];
-
-  const roleMatrices = [
+  const [loading, setLoading] = React.useState(true);
+  const [roleMatrices, setRoleMatrices] = React.useState([
     {
       role: 'ADMINISTRATOR',
       title: 'Platform Administrator',
@@ -49,7 +38,41 @@ export default function AdminRolesPage() {
       title: 'Auditor / Viewer',
       perms: ['VIEW_OPERATIONS', 'VIEW_ANALYTICS'],
     },
-  ];
+  ]);
+
+  const [permissionsList, setPermissionsList] = React.useState([
+    { key: 'VIEW_OPERATIONS', label: 'View Live Operational Telemetry' },
+    { key: 'EDIT_OPERATIONS', label: 'Modify Asset & Route Metadata' },
+    { key: 'RUN_SIMULATION', label: 'Launch Sandboxed What-If Simulations' },
+    { key: 'APPLY_DECISION', label: 'Apply Transactional Decisions to Live Fleet' },
+    { key: 'VIEW_ANALYTICS', label: 'View SLA & Telemetry Analytics' },
+    { key: 'VIEW_AUDIT', label: 'Inspect Immutable Audit Trails' },
+    { key: 'MANAGE_USERS', label: 'Provision Users & Security Tokens' },
+    { key: 'MANAGE_INTEGRATIONS', label: 'Configure Azure & Microsoft Fabric Adapters' },
+  ]);
+
+  React.useEffect(() => {
+    async function loadRoles() {
+      try {
+        const res = await fetch('/api/v1/admin/roles');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.roles && data.roles.length > 0) {
+            setRoleMatrices(data.roles);
+          }
+          if (data.permissions && data.permissions.length > 0) {
+            setPermissionsList(data.permissions);
+          }
+        }
+      } catch (e) {
+        // Fallback to initial defined list
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadRoles();
+  }, []);
+
 
   return (
     <AppShell>

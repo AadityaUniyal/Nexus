@@ -197,15 +197,36 @@ async def root():
 
 @app.get("/health/azure")
 async def azure_health():
-    """Reports health status for unified zero-Azure platform."""
+    """Reports health status and platform service telemetry."""
     return {
         "status": "ok",
-        "platform": "nexus-unified",
+        "platform": "Azure Free Tier",
+        "monthlyCost": "$0.00 (Free Tier)",
         "services": {
-            "applicationInsights": {"status": "LOCAL_FALLBACK"},
-            "blobStorage": {"status": "LOCAL_FALLBACK"},
-            "keyVault": {"status": "ENV_FALLBACK"},
+            "applicationInsights": {
+                "status": "LOCAL_FALLBACK",
+                "freeTierLimit": "5 GB ingestion per month ($0.00)",
+            },
+            "blobStorage": {
+                "status": "LOCAL_FALLBACK",
+                "medallionContainers": ["telemetry-bronze", "telemetry-silver", "analytics-gold"],
+                "freeTierLimit": "5 GB LRS storage per month",
+            },
+            "keyVault": {
+                "status": "ENV_FALLBACK",
+                "freeTierLimit": "Standard Tier operations included",
+            },
             "aiProviders": {"status": "ACTIVE"},
+            "functions": {
+                "status": "ACTIVE",
+                "scheduledTasks": [
+                    {"name": "daily_analytics_summary", "schedule": "0 0 * * *"},
+                    {"name": "telemetry_cleanup", "schedule": "0 2 * * *"},
+                    {"name": "incident_auto_escalation", "schedule": "*/5 * * * *"},
+                    {"name": "conformal_model_retrain", "schedule": "0 3 * * 0"},
+                    {"name": "cold_chain_anomaly_scan", "schedule": "*/1 * * * *"},
+                ],
+            },
         },
         "timestamp": time.time(),
     }

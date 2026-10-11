@@ -4,7 +4,7 @@ import * as React from "react";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import { Drawer } from "@/components/ui/drawer";
-import { CommandMenu } from "@/components/ui/command-menu";
+import { CommandMenu } from "@/components/ui/command-palette";
 import { VoiceCompanionWidget } from "@/components/voice/VoiceCompanionWidget";
 import { OperationalCopilot } from "@/components/copilot/OperationalCopilot";
 import { dataProvider } from "@/lib/data-provider";

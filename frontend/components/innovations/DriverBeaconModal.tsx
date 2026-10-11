@@ -136,9 +136,19 @@ export function DriverBeaconModal({
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 mr-1.5" /> Copy Dispatch URL
+                  <Copy className="w-4 h-4 mr-1.5" /> Copy Link
                 </>
               )}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                tactileAudio.playClick();
+                window.open(beaconUrl, '_blank');
+              }}
+              className="font-mono text-xs flex items-center gap-1.5"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Open Driver HUD
             </Button>
             <Button
               variant="outline"

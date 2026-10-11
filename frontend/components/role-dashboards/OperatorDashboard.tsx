@@ -31,12 +31,16 @@ export interface OperatorDashboardProps {
   vehicles: VehicleItem[];
   warehouses: WarehouseItem[];
   onQuickDispatch?: (vehicleId: string) => void;
+  onOpenCreateVehicle?: () => void;
+  onOpenCreateOrder?: () => void;
 }
 
 export function OperatorDashboard({
   vehicles,
   warehouses,
   onQuickDispatch,
+  onOpenCreateVehicle,
+  onOpenCreateOrder,
 }: OperatorDashboardProps) {
   const { toast } = useToast();
   const [selectedVehicle, setSelectedVehicle] = React.useState<VehicleItem | null>(
@@ -126,6 +130,27 @@ export function OperatorDashboard({
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                {onOpenCreateVehicle && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={onOpenCreateVehicle}
+                    className="font-mono text-xs h-8 shadow-tactile"
+                  >
+                    <Truck className="w-3.5 h-3.5 mr-1.5" />
+                    + Register Vehicle
+                  </Button>
+                )}
+                {onOpenCreateOrder && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onOpenCreateOrder}
+                    className="font-mono text-xs h-8"
+                  >
+                    + New Consignment
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   size="sm"
@@ -133,7 +158,7 @@ export function OperatorDashboard({
                   className="font-mono text-xs h-8"
                 >
                   <QrCode className="w-3.5 h-3.5 mr-1.5 text-nexus-secondary" />
-                  Generate Driver Beacon Pass
+                  Driver Pass
                 </Button>
               </div>
             </CardHeader>
@@ -150,67 +175,90 @@ export function OperatorDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-nexus-outline/10">
-                  {vehicles.map((v) => {
-                    const isSelected = selectedVehicle?.id === v.id;
-                    return (
-                      <tr
-                        key={v.id}
-                        onClick={() => {
-                          setSelectedVehicle(v);
-                          tactileAudio.playClick();
-                        }}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-nexus-secondary/10 dark:bg-nexus-secondary/20"
-                            : "hover:bg-nexus-surface-container-high/40"
-                        }`}
-                      >
-                        <td className="py-3 px-4 font-bold text-nexus-on-surface flex items-center gap-2">
-                          <Truck className="w-3.5 h-3.5 text-nexus-secondary shrink-0" />
-                          <span>{v.code}</span>
-                        </td>
-                        <td className="py-3 px-3 text-nexus-on-surface">
-                          <div>{v.driverName}</div>
-                          <div className="text-[10px] text-nexus-on-surface-variant font-sans">
-                            {v.driverPhone}
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <Badge
-                            variant={v.status === "IN_TRANSIT" ? "healthy" : "attention"}
-                            className="text-[10px] uppercase font-mono"
-                          >
-                            {v.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="font-bold text-nexus-on-surface">{v.speedKmh} km/h</div>
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                            {v.batteryPct}% Battery
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">
-                            -4.2°C
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
+                  {vehicles.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-xs font-mono text-nexus-on-surface-variant space-y-3">
+                        <Truck className="w-8 h-8 text-nexus-outline/60 mx-auto" />
+                        <p className="font-bold text-nexus-on-surface">No commercial fleet vehicles registered yet.</p>
+                        <p className="text-[11px] text-nexus-on-surface-variant max-w-sm mx-auto">
+                          Enroll your fleet trucks and drivers with payload capacity to begin live GPS telemetry tracking.
+                        </p>
+                        {onOpenCreateVehicle && (
                           <Button
-                            variant="ghost"
+                            variant="default"
                             size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedVehicle(v);
-                              setBeaconModalOpen(true);
-                            }}
-                            className="h-7 px-2 text-[11px] font-mono text-nexus-secondary hover:text-nexus-on-surface"
+                            onClick={onOpenCreateVehicle}
+                            className="font-mono text-xs shadow-tactile mx-auto mt-2"
                           >
-                            <QrCode className="w-3.5 h-3.5 mr-1" /> Pass
+                            <Truck className="w-3.5 h-3.5 mr-1" />
+                            Enroll First Commercial Truck
                           </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        )}
+                      </td>
+                    </tr>
+                  ) : (
+                    vehicles.map((v) => {
+                      const isSelected = selectedVehicle?.id === v.id;
+                      return (
+                        <tr
+                          key={v.id}
+                          onClick={() => {
+                            setSelectedVehicle(v);
+                            tactileAudio.playClick();
+                          }}
+                          className={`cursor-pointer transition-colors ${
+                            isSelected
+                              ? "bg-nexus-secondary/10 dark:bg-nexus-secondary/20"
+                              : "hover:bg-nexus-surface-container-high/40"
+                          }`}
+                        >
+                          <td className="py-3 px-4 font-bold text-nexus-on-surface flex items-center gap-2">
+                            <Truck className="w-3.5 h-3.5 text-nexus-secondary shrink-0" />
+                            <span>{v.code}</span>
+                          </td>
+                          <td className="py-3 px-3 text-nexus-on-surface">
+                            <div>{v.driverName}</div>
+                            <div className="text-[10px] text-nexus-on-surface-variant font-sans">
+                              {v.driverPhone}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <Badge
+                              variant={v.status === "IN_TRANSIT" ? "healthy" : "attention"}
+                              className="text-[10px] uppercase font-mono"
+                            >
+                              {v.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-bold text-nexus-on-surface">{v.speedKmh} km/h</div>
+                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                              {v.batteryPct}% Battery
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">
+                              -4.2°C
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedVehicle(v);
+                                setBeaconModalOpen(true);
+                              }}
+                              className="h-7 px-2 text-[11px] font-mono text-nexus-secondary hover:text-nexus-on-surface"
+                            >
+                              <QrCode className="w-3.5 h-3.5 mr-1" /> Pass
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </CardContent>
@@ -304,8 +352,18 @@ export function OperatorDashboard({
                   </div>
                 </div>
               ) : (
-                <div className="py-8 text-center text-xs font-mono text-nexus-on-surface-variant">
-                  Select a vehicle from the telemetry stream.
+                <div className="py-8 text-center text-xs font-mono text-nexus-on-surface-variant space-y-2">
+                  <p>Select a vehicle from the telemetry stream or enroll a new commercial hauler.</p>
+                  {onOpenCreateVehicle && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onOpenCreateVehicle}
+                      className="font-mono text-xs mx-auto"
+                    >
+                      + Enroll Fleet Asset
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

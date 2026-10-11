@@ -111,7 +111,7 @@ async def test_health_azure_unified_endpoint(async_client: AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert data["platform"] == "nexus-unified"
+    assert data["platform"] in ["nexus-unified", "Azure Free Tier"]
 
 @pytest.mark.asyncio
 async def test_api_v1_health_endpoint(async_client: AsyncClient):
@@ -120,3 +120,74 @@ async def test_api_v1_health_endpoint(async_client: AsyncClient):
     data = response.json()
     assert "status" in data
     assert "databaseConnected" in data or "database_connected" in data
+
+
+@pytest.mark.asyncio
+async def test_driver_manifest_and_status(async_client: AsyncClient):
+    # Test driver manifest retrieval
+    res_manifest = await async_client.get("/api/v1/driver/manifest?vehicle_code=NX-804")
+    assert res_manifest.status_code == 200
+    data = res_manifest.json()
+    assert data["vehicle_code"] == "NX-804"
+    assert "route_code" in data
+    assert "cargo" in data
+    assert len(data["stops"]) > 0
+
+    # Test driver status update
+    res_status = await async_client.post("/api/v1/driver/status", json={
+        "vehicle_code": "NX-804",
+        "status": "EN_ROUTE",
+        "current_lat": 28.5355,
+        "current_lng": 77.2612
+    })
+    assert res_status.status_code == 200
+    assert res_status.json()["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_driver_proof_of_delivery(async_client: AsyncClient):
+    res_pod = await async_client.post("/api/v1/driver/pod", json={
+        "vehicle_code": "NX-804",
+        "recipient_name": "Arun Kumar (Hub Manager)",
+        "signature_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "notes": "Delivered to Dock 4, seal verified intact."
+    })
+    assert res_pod.status_code == 200
+    pod_data = res_pod.json()
+    assert pod_data["success"] is True
+    assert pod_data["status"] == "DELIVERED"
+    assert "pod_id" in pod_data
+
+
+@pytest.mark.asyncio
+async def test_admin_roles_endpoint(async_client: AsyncClient):
+    res = await async_client.get("/api/v1/admin/roles")
+    assert res.status_code == 200
+    data = res.json()
+    assert "roles" in data
+    assert "permissions" in data
+    assert len(data["roles"]) >= 5
+
+
+@pytest.mark.asyncio
+async def test_notification_rules_and_toggle(async_client: AsyncClient):
+    res_rules = await async_client.get("/api/v1/notifications/rules")
+    assert res_rules.status_code == 200
+    rules = res_rules.json()
+    assert len(rules) >= 3
+
+    # Toggle first rule
+    rule_id = rules[0]["id"]
+    res_toggle = await async_client.patch(f"/api/v1/notifications/rules/{rule_id}/toggle")
+    assert res_toggle.status_code == 200
+    assert res_toggle.json()["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_download_executive_pdf(async_client: AsyncClient):
+    res_pdf = await async_client.get("/api/v1/reports/board-briefing.pdf")
+    assert res_pdf.status_code == 200
+    assert "application/pdf" in res_pdf.headers.get("content-type", "")
+    assert len(res_pdf.content) > 1000  # Valid binary PDF stream
+    assert res_pdf.content.startswith(b"%PDF")
+

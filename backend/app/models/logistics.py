@@ -33,9 +33,13 @@ class Shipment(Base, TimestampMixin):
     origin_city: Mapped[str] = mapped_column(String(128), nullable=False)
     dest_city: Mapped[str] = mapped_column(String(128), nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="IN_TRANSIT")  # BOOKED, LOADED, IN_TRANSIT, DELIVERED, EXCEPTION
+    order_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("orders.id", ondelete="SET NULL"), nullable=True, index=True)
+    trip_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("trips.id", ondelete="SET NULL"), nullable=True, index=True)
     workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
 
     customer: Mapped["Customer"] = relationship("Customer", back_populates="shipments")
+    order: Mapped[Optional["app.models.operations.Order"]] = relationship("app.models.operations.Order", back_populates="shipments")
+    trip: Mapped[Optional["Trip"]] = relationship("Trip", back_populates="shipments")
 
 
 class Trip(Base, TimestampMixin):
@@ -62,6 +66,8 @@ class Trip(Base, TimestampMixin):
     driver: Mapped[Optional["app.models.fleet.Driver"]] = relationship("app.models.fleet.Driver", back_populates="trips")
     route: Mapped[Optional["app.models.operations.Route"]] = relationship("app.models.operations.Route")
     stops: Mapped[List["Stop"]] = relationship("Stop", back_populates="trip", cascade="all, delete-orphan")
+    orders: Mapped[List["app.models.operations.Order"]] = relationship("app.models.operations.Order", back_populates="trip")
+    shipments: Mapped[List["Shipment"]] = relationship("Shipment", back_populates="trip")
 
 
 class Stop(Base, TimestampMixin):

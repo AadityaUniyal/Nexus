@@ -1,0 +1,31 @@
+# Dependency & Environment Folders
+node_modules
+**/node_modules
+.venv
+**/.venv
+venv
+**/venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+**/.pytest_cache
+
+# Large archives and logs
+*.zip
+*.log
+LogFiles
+LogFiles/**
+app-service-logs*.zip
+backend-deploy*.zip
+
+# Local database and cache
+.next
+**/.next
+dist
+build
+.git
+.agents
+models/checkpoints
+data/processed
+data/raw

@@ -67,7 +67,7 @@ export default function RouteDetailPage() {
     return (
       <AppShell>
         <div className="p-8 space-y-4 font-mono text-sm">
-          <p className="text-nexus-on-surface">Route '{routeId}' was not found.</p>
+          <p className="text-nexus-on-surface">Route &apos;{routeId}&apos; was not found.</p>
           <Link href="/operations/routes">
             <Button variant="ghost" size="sm" className="gap-1 text-xs">
               <ArrowLeft className="h-4 w-4" /> Back to Routes

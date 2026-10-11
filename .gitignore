@@ -69,3 +69,11 @@ backend/.env
 frontend/.env.local
 .agents/
 .agents
+.worktrees/
+.worktrees
+*.zip
+LogFiles/
+app-logs-extracted/
+local_storage/
+data/
+models/

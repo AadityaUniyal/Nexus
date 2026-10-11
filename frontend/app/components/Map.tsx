@@ -69,7 +69,7 @@ const Map: React.FC<MapProps> = ({ workspaceId, useAzure = false }) => {
       };
       return (
         <MapContainer {...(mapProps as any)}>
-// @ts-ignore
+          {/* @ts-ignore */}
           <TileLayer {...({ attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' } as any)} />
           {locations.map((loc) => (
             <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>

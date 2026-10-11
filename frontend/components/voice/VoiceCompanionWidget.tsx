@@ -212,7 +212,7 @@ export function VoiceCompanionWidget({ className = '' }: { className?: string })
                     }}
                     className="text-[11px] font-mono px-2 py-1 rounded-lg bg-nexus-surface-container hover:bg-purple-100 dark:hover:bg-purple-900/40 text-nexus-on-surface transition-colors text-left"
                   >
-                    "{sug}"
+                    &quot;{sug}&quot;
                   </button>
                 ))}
               </div>

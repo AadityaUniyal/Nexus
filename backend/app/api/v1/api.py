@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     contact,
     copilot,
     decisions,
+    driver,
     feedback,
     governance,
     health,
@@ -18,6 +19,7 @@ from app.api.v1.endpoints import (
     intelligence,
     location,
     me,
+    ml,
     notifications,
     onboarding,
     operations,
@@ -61,12 +63,14 @@ api_router.include_router(location.router, prefix="/location", tags=["location"]
 api_router.include_router(voice.router)
 api_router.include_router(weather.router)
 api_router.include_router(operations.router)
+api_router.include_router(driver.router)
 api_router.include_router(incidents.router)
 api_router.include_router(simulations.router)
 api_router.include_router(decisions.router)
 api_router.include_router(world.router, prefix="/world", tags=["world"])
 
-# AI Copilot & Human-in-the-Loop Governance
+# AI Copilot, ML Intelligence & Human-in-the-Loop Governance
+api_router.include_router(ml.router, prefix="/ml", tags=["ml"])
 api_router.include_router(copilot.router)
 api_router.include_router(governance.router)
 

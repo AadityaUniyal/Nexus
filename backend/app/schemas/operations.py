@@ -21,7 +21,7 @@ class WarehouseBase(BaseModel):
 class WarehouseCreate(WarehouseBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    workspace_id: str = Field(..., alias="workspaceId")
+    workspace_id: Optional[str] = Field(None, alias="workspaceId")
 
 class WarehouseRead(WarehouseBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -49,7 +49,7 @@ class VehicleBase(BaseModel):
 class VehicleCreate(VehicleBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    workspace_id: str = Field(..., alias="workspaceId")
+    workspace_id: Optional[str] = Field(None, alias="workspaceId")
 
 class VehicleUpdateTelemetry(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -85,7 +85,7 @@ class RouteBase(BaseModel):
 class RouteCreate(RouteBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    workspace_id: str = Field(..., alias="workspaceId")
+    workspace_id: Optional[str] = Field(None, alias="workspaceId")
 
 class RouteRead(RouteBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -110,7 +110,7 @@ class OrderBase(BaseModel):
 class OrderCreate(OrderBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    workspace_id: str = Field(..., alias="workspaceId")
+    workspace_id: Optional[str] = Field(None, alias="workspaceId")
 
 class OrderRead(OrderBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)

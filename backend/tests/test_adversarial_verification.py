@@ -472,7 +472,7 @@ def test_no_active_azure_imports_in_backend():
     backend_dir = Path(__file__).resolve().parents[1]
 
     for py_file in backend_dir.rglob("*.py"):
-        if "test_adversarial_verification.py" in py_file.name:
+        if "test_adversarial_verification.py" in py_file.name or ".venv" in py_file.parts or "venv" in py_file.parts or "site-packages" in py_file.parts:
             continue
         content = py_file.read_text(encoding="utf-8")
         for line_num, line in enumerate(content.splitlines(), start=1):

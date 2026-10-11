@@ -222,16 +222,35 @@ export function NexusHero3D({
     };
     window.addEventListener('resize', handleResize);
 
-    // 10. Animation Loop with off-screen pause via IntersectionObserver
+    // 10. Animation Loop with off-screen pause via IntersectionObserver and tab visibility
     let clock = new THREE.Clock();
-    let isVisible = true;
+    let isVisible = typeof document !== 'undefined' ? !document.hidden : true;
+    let lastRenderTime = 0;
+    let lastUserActionTime = typeof performance !== 'undefined' ? performance.now() : 0;
 
-    const animate = () => {
-      if (!isVisible) {
+    const markUserActive = () => {
+      lastUserActionTime = typeof performance !== 'undefined' ? performance.now() : 0;
+    };
+
+    if (interactive) {
+      window.addEventListener('mousemove', markUserActive);
+    }
+
+    const animate = (timestamp: number = 0) => {
+      if (!isVisible || (typeof document !== 'undefined' && document.hidden)) {
         reqIdRef.current = null;
         return;
       }
       reqIdRef.current = requestAnimationFrame(animate);
+
+      // Battery preservation: Throttle to ~20 FPS when idle for > 8s
+      const isIdle = (typeof performance !== 'undefined' ? performance.now() : 0) - lastUserActionTime > 8000;
+      const targetInterval = isIdle ? 50 : 16;
+      if (timestamp - lastRenderTime < targetInterval) {
+        return;
+      }
+      lastRenderTime = timestamp;
+
       const elapsed = clock.getElapsedTime();
 
       // Smooth Camera Lerping to target position
@@ -274,8 +293,23 @@ export function NexusHero3D({
       renderer.render(scene, camera);
     };
 
+    const handleVisibilityChange = () => {
+      isVisible = typeof document !== 'undefined' ? !document.hidden : true;
+      if (isVisible && !reqIdRef.current) {
+        lastRenderTime = typeof performance !== 'undefined' ? performance.now() : 0;
+        reqIdRef.current = requestAnimationFrame(animate);
+      } else if (!isVisible && reqIdRef.current) {
+        cancelAnimationFrame(reqIdRef.current);
+        reqIdRef.current = null;
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
     const observer = new IntersectionObserver(([entry]) => {
-      isVisible = entry.isIntersecting;
+      isVisible = entry.isIntersecting && (!document.hidden);
       if (isVisible && !reqIdRef.current) {
         animate();
       }
@@ -289,9 +323,16 @@ export function NexusHero3D({
 
     return () => {
       observer.disconnect();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
       if (reqIdRef.current) cancelAnimationFrame(reqIdRef.current);
-      if (interactive) window.removeEventListener('mousemove', handleMouseMove);
+      if (interactive) {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mousemove', markUserActive);
+      }
       window.removeEventListener('resize', handleResize);
+
       if (sceneRef.current) {
         disposeThreeScene(sceneRef.current);
         sceneRef.current.clear();

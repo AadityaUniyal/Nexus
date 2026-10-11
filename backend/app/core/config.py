@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     # Geoapify & Location Provider Subsystem
     GEOAPIFY_API_KEY: str = os.getenv("GEOAPIFY_API_KEY", "")
@@ -124,10 +124,24 @@ class Settings(BaseSettings):
             v = f"{v}&ssl=require" if "?" in v else f"{v}?ssl=require"
         return v
 
+    @field_validator("ENABLE_DEMO_AUTH", mode="after")
+    @classmethod
+    def validate_demo_auth_safety(cls, v: bool) -> bool:
+        env = os.getenv("APP_ENV", "development").lower()
+        if env == "production" and v:
+            raise ValueError(
+                "CRITICAL SECURITY VIOLATION: ENABLE_DEMO_AUTH cannot be enabled when APP_ENV is production! "
+                "Disable ENABLE_DEMO_AUTH before deploying to production."
+            )
+        return v
+
     @field_validator("SECRET_KEY", mode="after")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
+        env = os.getenv("APP_ENV", "development").lower()
         if not v or not v.strip():
+            if env == "production":
+                raise ValueError("CRITICAL SECURITY VIOLATION: Explicit SECRET_KEY must be configured in production!")
             return secrets.token_urlsafe(32)
         return v
 

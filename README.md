@@ -13,7 +13,7 @@
 
 <br />
 
-**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[📖 Architecture Blueprint](docs/ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)**
+**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[📖 Architecture Blueprint](docs/ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)** · **[🧠 ML Architecture](docs/INDUSTRY_LEVEL_ML_ARCHITECTURE.md)**
 
 </div>
 
@@ -23,9 +23,9 @@
 
 Traditional logistics and fleet visibility platforms (e.g. Samsara, Project44, Flexport, Manhattan TMS) are **passive monitoring dashboards** — they notify teams *after* a driver is stuck in a blizzard or after an SLA breach has occurred, leaving operators to manually scramble across phone calls and spreadsheets.
 
-**NEXUS is an Autonomous Logistics Operating System with a Real-Time Spatial Digital Twin and a Predictive Monte Carlo Decision Engine.**
+**NEXUS is an Autonomous Logistics Operating System with a Real-Time Spatial Digital Twin and a Predictive Monte Carlo & Physics-Informed ML Decision Engine.**
 
-Instead of reactive alerts, NEXUS **preempts disruptions before they happen**, continuously simulating dynamic weather hazards, fuel spikes, and depot chokepoints, then generating one-click cryptographic rerouting actions.
+Instead of reactive alerts, NEXUS **preempts disruptions before they happen**, continuously simulating dynamic weather hazards, fuel spikes, telemetry drift, and depot chokepoints, then generating one-click cryptographic rerouting actions and zero-install mobile driver passes.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
@@ -39,6 +39,7 @@ Instead of reactive alerts, NEXUS **preempts disruptions before they happen**, c
 │                            │    SF typography, subtle haptics & audio cues)             │
 │ ❌ Manual rerouting calls  │ ✅ 1-Click Monte Carlo AI simulation + auto-rerouting      │
 │ ❌ Slow transactional DB   │ ✅ Role-partitioned PostgreSQL materialized query layers  │
+│ ❌ App store friction      │ ✅ Zero-install mobile Driver PWA & QR Proof of Delivery   │
 │ ❌ Hardcoded mock clutter  │ ✅ Clean zero-state by default + interactive sandbox mode  │
 └────────────────────────────┴────────────────────────────────────────────────────────────┘
 ```
@@ -49,28 +50,31 @@ Instead of reactive alerts, NEXUS **preempts disruptions before they happen**, c
 
 ```mermaid
 flowchart TD
-    subgraph IngestionLayer["1. Real-Time Telemetry Stream"]
-        IoT["Azure IoT Hub / GPS Beacons"] --> EdgePipe["Sub-Second Ingestion Stream"]
+    subgraph IngestionLayer["1. Real-Time Telemetry & Sensor Layer"]
+        IoT["Azure IoT Hub / GPS Beacons"] --> EdgePipe["Sub-Second Telemetry Ingestion"]
         Weather["Open-Meteo & Radar API"] --> EdgePipe
         ERP["SAP / NetSuite / EDI 214 Webhooks"] --> EdgePipe
+        DriverApp["Driver Manifest PWA (GPS & PoD)"] --> EdgePipe
     end
 
-    subgraph CoreEngine["2. Nexus Processing Core & Digital Twin"]
+    subgraph CoreEngine["2. Nexus Processing Core & ML Engine"]
         EdgePipe --> SpatialTwin["3D WebGL Digital Twin & GIS Network"]
-        SpatialTwin --> MonteCarlo["Aegis AI & Monte Carlo Simulation Engine"]
-        MonteCarlo --> Ledger["SHA-256 Cryptographic Action Ledger"]
+        SpatialTwin --> PINN["Physics-Informed Neural Network (PINN)"]
+        PINN --> MonteCarlo["Monte Carlo & Spatiotemporal Delay Predictor"]
+        MonteCarlo --> SHAP["Explainable SLA & TreeSHAP Attribution"]
+        SHAP --> Ledger["SHA-256 Cryptographic Action Ledger"]
     end
 
     subgraph BespokeCockpits["3. Role-Driven Workspace Cockpits"]
         SpatialTwin --> Mgr["Operations Manager: Tactical Incident Nerve Center"]
-        SpatialTwin --> Op["Field Operator: Live Driver HUD & Field Dispatch"]
+        SpatialTwin --> Op["Fleet Operator: Live Driver HUD & Field Dispatch"]
         SpatialTwin --> An["Supply Chain Analyst: Scenario Lab & SQL Studio"]
         SpatialTwin --> Ad["Administrator: Aegis Security Matrix & RLS"]
         SpatialTwin --> Ex["Executive Viewer: Boardroom Index & ESG Suite"]
     end
 
     subgraph PersistenceLayer["4. Zero-State & Session Continuity"]
-        Ledger --> Postgres[("PostgreSQL Multi-Tenant (Neon/Azure)")]
+        Ledger --> Postgres[("PostgreSQL Multi-Tenant (Neon / Azure)")]
         Ledger --> Checkpoints["UserSessionState Continuous Checkpoint Engine"]
     end
 ```
@@ -91,31 +95,22 @@ NEXUS discards the generic one-size-fits-all dashboard. Each organization role r
 
 ---
 
-## 🔮 Next-Level Platform Innovations
+## 📱 Mobile Driver Portal & Proof of Delivery (PWA)
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                             NEXT-LEVEL INNOVATIONS                               │
-├──────────────────────────┬───────────────────────────────────────────────────────┤
-│ 1. 4D Time-Travel        │ Scrub backward (-24h) to replay historical telemetry  │
-│    Scrubber              │ or forward (+24h) to forecast weather & storm physics │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 2. Multiplayer War Room  │ Live Figma-style cursor presence & shared interactive │
-│                          │ incident co-triage canvas                             │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 3. Driver Beacon Pass    │ 1-click QR / link generator for zero-install mobile   │
-│                          │ driver PWA guidance with geo-verified PoD signature   │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 4. Geofence Hazard       │ Spatial polygon drawer on 3D globe to paint dynamic   │
-│    Painter               │ hazard perimeters and force automatic AI avoidance    │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 5. Apple HIG Settings    │ Inset grouped cards, spring-animated toggles, tactile │
-│    Experience            │ audio feedback, and role-scoped configuration panels  │
-├──────────────────────────┼───────────────────────────────────────────────────────┤
-│ 6. Default-to-Zero State │ Pristine clean zero-asset default for new workspaces  │
-│    & Session Checkpoints │ with instant toggle to Interactive Sandbox Mode       │
-└──────────────────────────┴───────────────────────────────────────────────────────┘
-```
+NEXUS features a dedicated zero-install driver experience accessible directly via QR code dispatch:
+- **Instant Manifest Access**: Direct link without requiring app store installations (`/driver-pass` and `/driver`).
+- **Live GPS Beaconing**: Sub-second location updates streamed directly to the central dispatch map.
+- **Geo-Verified Proof of Delivery (PoD)**: Captures digital signatures, cargo verification photos, and timestamped coordinates.
+
+---
+
+## 🧠 Industry-Grade Machine Learning Subsystem
+
+The NEXUS backend embeds an enterprise-grade AI engine (`backend/app/ml/`):
+- **Physics-Informed Neural Networks (PINNs)**: Modeled kinematic degradation and telematics wear based on differential equations rather than naive heuristics.
+- **Spatiotemporal Delay Predictor**: Multi-hop graph convolution and neural regression predicting delay variance across corridors.
+- **Explainable SLA Breaches (TreeSHAP)**: Granular risk attribution identifying the exact factors driving delay probabilities.
+- **Sub-Millisecond Lazy Loading**: High startup resilience engineered specifically for Azure App Service cloud deployments.
 
 ---
 
@@ -125,23 +120,26 @@ NEXUS discards the generic one-size-fits-all dashboard. Each organization role r
 Nexus/
 ├── backend/                       # FastAPI High-Performance Backend
 │   ├── app/
-│   │   ├── api/v1/endpoints/      # REST API Endpoints (Vehicles, Warehouses, Sims)
+│   │   ├── api/v1/endpoints/      # REST Endpoints (Vehicles, Warehouses, ML, Driver)
 │   │   ├── core/                  # Security, Passkeys, Rate Limiting & Config
 │   │   ├── db/                    # Async SQLAlchemy & PostgreSQL Connection
+│   │   ├── ml/                    # Physics-Informed ML, Spatiotemporal Models & SHAP
 │   │   ├── models/                # Database ORM Entity Models
-│   │   ├── services/              # AI Synthesis, Cache, Task Queues & Telemetry
+│   │   ├── services/              # AI Synthesis, ML Engine, Task Queues & Telemetry
 │   │   └── voice/                 # WebRTC / Voice AI Streaming Copilot
-│   └── tests/                     # 35+ Comprehensive Pytest Test Suites
+│   └── tests/                     # 79+ Comprehensive Pytest Test Suites
 │
 ├── frontend/                      # Next.js 15 App Router Frontend
 │   ├── app/
 │   │   ├── (app)/overview/        # Main Command Center (Mounts 5 Cockpits)
 │   │   ├── (app)/settings/        # iOS-Grade Apple HIG Grouped Settings
 │   │   ├── (app)/simulations/     # Monte Carlo Scenario Builder
-│   │   └── (app)/live-world/      # Spatial WebGL Digital Twin & DeckGL Network
+│   │   ├── (app)/live-world/      # Spatial WebGL Digital Twin & DeckGL Network
+│   │   └── driver-pass/           # Zero-Install Mobile Driver PWA & QR PoD
 │   ├── components/
 │   │   ├── role-dashboards/       # Manager, Operator, Analyst, Admin & Viewer
 │   │   ├── innovations/           # 4D Scrubber, Multiplayer, Driver Beacon & Hazard
+│   │   ├── forms/                 # Modal Creation Flows (Vehicles, Warehouses, Orders)
 │   │   ├── settings/              # AppleSettingsView Inset Hierarchy
 │   │   ├── ui/                    # Tactile Glassmorphism Component Library
 │   │   └── world/                 # Three.js 3D Globe & Spatial Canvas
@@ -153,6 +151,7 @@ Nexus/
 │
 └── docs/                          # Comprehensive Technical Documentation
     ├── ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md
+    ├── INDUSTRY_LEVEL_ML_ARCHITECTURE.md
     ├── ARCHITECTURE.md
     └── API_SPECIFICATION.md
 ```
@@ -168,7 +167,6 @@ Nexus/
 
 ### 1. Repository Setup
 ```bash
-# Clone the repository
 git clone https://github.com/AadityaUniyal/Nexus.git
 cd Nexus
 ```
@@ -198,11 +196,13 @@ uvicorn app.main:app --reload --port 8000
 
 ### 4. Running Verification Test Suites
 ```bash
-# Run backend test suite (35+ test cases)
+# Run backend test suite (79+ passing tests)
 python -m pytest backend/tests
 
-# Run frontend TypeScript type verification
-cd frontend && npx tsc --noEmit
+# Run frontend TypeScript type verification & lint
+cd frontend
+npm run typecheck
+npm run lint
 ```
 
 ---

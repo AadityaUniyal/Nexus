@@ -142,3 +142,52 @@ async def mark_notification_read(
         created_at=notif.created_at.isoformat() if hasattr(notif.created_at, "isoformat") else str(notif.created_at),
     )
 
+
+DEFAULT_NOTIFICATION_RULES = [
+    {
+        "id": "rule-1",
+        "event": "incident.critical_detected",
+        "target": "OPERATIONS_MANAGERS",
+        "channels": ["SSE_TOAST", "PERSISTENT_NOTIFICATION", "SMS_FALLBACK"],
+        "enabled": True,
+    },
+    {
+        "id": "rule-2",
+        "event": "simulation.decision_ready",
+        "target": "ACTOR_AND_MANAGERS",
+        "channels": ["SSE_TOAST", "NOTIFICATION_CENTER"],
+        "enabled": True,
+    },
+    {
+        "id": "rule-3",
+        "event": "pipeline.latency_warning",
+        "target": "ADMINISTRATORS",
+        "channels": ["NOTIFICATION_CENTER", "EMAIL_DIGEST"],
+        "enabled": True,
+    },
+    {
+        "id": "rule-4",
+        "event": "driver.proof_of_delivery_received",
+        "target": "DISPATCH_OPERATORS",
+        "channels": ["SSE_TOAST", "AUDIT_FEED"],
+        "enabled": True,
+    },
+]
+
+
+@router.get("/rules")
+async def get_notification_rules() -> List[dict]:
+    """Retrieve all configurable notification dispatch and routing rules."""
+    return DEFAULT_NOTIFICATION_RULES
+
+
+@router.patch("/rules/{rule_id}/toggle")
+async def toggle_notification_rule(rule_id: str) -> dict:
+    """Toggle enable/disable status for an automated alert routing rule."""
+    for r in DEFAULT_NOTIFICATION_RULES:
+        if r["id"] == rule_id:
+            r["enabled"] = not r["enabled"]
+            return {"success": True, "rule": r}
+    raise EntityNotFoundException("NotificationRule", rule_id)
+
+

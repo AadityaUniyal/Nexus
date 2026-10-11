@@ -6,7 +6,7 @@ import { motion, HTMLMotionProps } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export interface ButtonProps extends Omit<HTMLMotionProps<"button">, "children"> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "simulation" | "ai";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "simulation" | "ai" | "default" | "critical";
   size?: "sm" | "md" | "lg" | "icon";
   isLoading?: boolean;
   children?: React.ReactNode;
@@ -17,8 +17,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles =
       "inline-flex items-center justify-center font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nexus-secondary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer rounded-lg";
 
-    const variantStyles = {
+    const variantStyles: Record<string, string> = {
       primary:
+        "bg-brand-700 text-white shadow-tactile hover:bg-brand-800 active:bg-brand-900 dark:bg-brand-600 dark:hover:bg-brand-500",
+      default:
         "bg-brand-700 text-white shadow-tactile hover:bg-brand-800 active:bg-brand-900 dark:bg-brand-600 dark:hover:bg-brand-500",
       secondary:
         "bg-nexus-surface-lowest text-nexus-on-surface hover:bg-nexus-surface-container border border-nexus-outline-variant shadow-tactile",
@@ -27,6 +29,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ghost:
         "bg-transparent text-nexus-on-surface hover:bg-nexus-surface-container hover:text-nexus-primary",
       danger:
+        "bg-nexus-error text-white shadow-tactile hover:bg-red-700 active:bg-red-800",
+      critical:
         "bg-nexus-error text-white shadow-tactile hover:bg-red-700 active:bg-red-800",
       simulation:
         "bg-[#3a55c0] text-white shadow-tactile hover:bg-[#324aab] active:bg-[#2b3f93]",
