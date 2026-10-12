@@ -6,14 +6,14 @@
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.5%20(App%20Router)-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon%20%2F%20Azure-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Three.js](https://img.shields.io/badge/Three.js-3D%20Digital%20Twin-black?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
+[![Leaflet GIS](https://img.shields.io/badge/Leaflet-Global%20GIS%20Map-199900?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-Apple_HIG_Design-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg?style=for-the-badge)](LICENSE)
 
 <br />
 
-**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[📖 Architecture Blueprint](docs/ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)** · **[🧠 ML Architecture](docs/INDUSTRY_LEVEL_ML_ARCHITECTURE.md)**
+**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[🌐 System Status & SLA](https://nexus-logistics-os.vercel.app/status)** · **[📖 Architecture Blueprint](docs/ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)** · **[☁️ Azure Roadmap](docs/AZURE_ENTERPRISE_INTEGRATIONS_ROADMAP.md)** · **[🚀 Deployment Playbook](docs/DEPLOYMENT.md)**
 
 </div>
 
@@ -132,18 +132,19 @@ Nexus/
 ├── frontend/                      # Next.js 15 App Router Frontend
 │   ├── app/
 │   │   ├── (app)/overview/        # Main Command Center (Mounts 5 Cockpits)
+│   │   ├── (app)/operations/      # Fleet Vehicles, Warehouses & Orders with CSV Ingestion
+│   │   ├── (app)/status/          # Live SLA Health & Uptime Dashboard
+│   │   ├── (app)/admin/audit/     # Cryptographic SHA-256 Audit Trail Ledger
 │   │   ├── (app)/settings/        # iOS-Grade Apple HIG Grouped Settings
 │   │   ├── (app)/simulations/     # Monte Carlo Scenario Builder
-│   │   ├── (app)/live-world/      # Spatial WebGL Digital Twin & DeckGL Network
 │   │   └── driver-pass/           # Zero-Install Mobile Driver PWA & QR PoD
 │   ├── components/
 │   │   ├── role-dashboards/       # Manager, Operator, Analyst, Admin & Viewer
-│   │   ├── innovations/           # 4D Scrubber, Multiplayer, Driver Beacon & Hazard
-│   │   ├── forms/                 # Modal Creation Flows (Vehicles, Warehouses, Orders)
-│   │   ├── settings/              # AppleSettingsView Inset Hierarchy
-│   │   ├── ui/                    # Tactile Glassmorphism Component Library
-│   │   └── world/                 # Three.js 3D Globe & Spatial Canvas
-│   ├── lib/                       # DataProvider, EventBus, Cache & Permissions
+│   │   ├── forms/                 # CsvImportModal, CreateVehicle, CreateOrder
+│   │   ├── map/                   # Interactive Leaflet World Map & Telemetry HUD
+│   │   ├── ui/                    # Omnisearch Command Palette, SupportTicketModal
+│   │   └── settings/              # AppleSettingsView Inset Hierarchy
+│   ├── lib/                       # CSV Export, Sound Effects Synthesizer, RBAC
 │   └── styles/                    # Tailwind CSS Design Tokens & SF Typography
 │
 ├── database/                      # Prisma Schema & Database Migrations
@@ -151,8 +152,10 @@ Nexus/
 │
 └── docs/                          # Comprehensive Technical Documentation
     ├── ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md
+    ├── AZURE_ENTERPRISE_INTEGRATIONS_ROADMAP.md
     ├── INDUSTRY_LEVEL_ML_ARCHITECTURE.md
     ├── ARCHITECTURE.md
+    ├── DEPLOYMENT.md
     └── API_SPECIFICATION.md
 ```
 

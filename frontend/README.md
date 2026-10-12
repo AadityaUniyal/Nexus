@@ -1,15 +1,32 @@
 # 🌐 NEXUS Next.js 15 App Router Frontend
 
-Enterprise 3D Spatial GIS Command HUD built with Next.js 15, MapLibre GL, Tailwind CSS, and Framer Motion.
+Enterprise Autonomous Logistics Operating System, Real-Time Leaflet GIS World Map, and Apple-Grade Tactile Command Center.
+
+---
+
+## 🚀 Live Production Web App
+- **Production URL**: [https://nexus-logistics-os.vercel.app](https://nexus-logistics-os.vercel.app)
 
 ---
 
 ## 🏛️ Architecture Overview
 
-- **`app/`**: 60+ compiled Next.js 15 App Router routes.
-- **`components/`**: 3D vector GIS map (`map/`), UI primitives (`ui/`), command layouts (`layout/`), motion wrappers (`motion/`).
-- **`lib/`**: Data provider (`data-provider.ts`), real-time SSE stream client (`realtime-client.ts`), state management stores.
-- **`styles/`**: Global styles and CSS design tokens.
+The frontend is an optimized **Next.js 15** application utilizing React Server Components and Leaflet GIS client islands:
+
+- **`app/`**: 66 static and dynamic App Router routes covering:
+  - **`(app)/overview/`**: Tactical nerve center mounting 5 custom role cockpits (Manager, Operator, Analyst, Administrator, Viewer).
+  - **`operations/`**: High-density fleet management (Vehicles, Warehouses, Orders, Routes) with RFC 4180 CSV export and bulk ingestion.
+  - **`status/`**: Public SLA monitoring and live cloud health dashboard.
+  - **`admin/audit/`**: Cryptographic SHA-256 action audit ledger with modal forensic inspection.
+  - **`driver-pass/` & `driver/`**: Zero-install mobile Driver PWA with live telemetry beaconing and QR Proof of Delivery.
+- **`components/`**:
+  - **`map/`**: Interactive Leaflet World Map with CartoDB basemap, real-time telemetry HUD badges, and hazard layers.
+  - **`forms/`**: Create modals and `CsvImportModal` with schema mapping and preview validation.
+  - **`ui/`**: Apple HIG design primitives, glassmorphism tiles, `command-palette.tsx` (Omnisearch), `SupportTicketModal.tsx`.
+- **`lib/`**:
+  - `csv-export.ts`: Universal RFC 4180 CSV export utility.
+  - `sound-effects.ts`: Web Audio API procedural tactical audio synthesizer.
+  - `permissions.ts` & `AuthProvider.tsx`: Fine-grained RBAC action guards.
 
 ---
 
@@ -19,12 +36,14 @@ Enterprise 3D Spatial GIS Command HUD built with Next.js 15, MapLibre GL, Tailwi
 # Install dependencies
 npm install
 
-# Run development server
+# Run local development server
 npm run dev
+# Open http://localhost:3000
 
-# Production build check
+# Verify production build (66 pages)
 npm run build
 
-# TypeScript type safety check
+# TypeScript verification
 npx tsc --noEmit
 ```
+
