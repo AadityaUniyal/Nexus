@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,10 +13,13 @@ import {
   Boxes,
   Activity,
   TrendingUp,
+  Trash2,
 } from 'lucide-react';
 import { WarehouseItem, OrderItem } from '@/lib/mock-data';
 import { dataProvider } from '@/lib/data-provider';
 import { FadeIn, SpringCard } from '@/components/motion';
+import { tactileAudio } from '@/lib/sound-effects';
+import { useToast } from '@/components/ui/toast';
 
 export default function WarehouseDetailPage() {
   const params = useParams();
@@ -49,6 +52,43 @@ export default function WarehouseDetailPage() {
       mounted = false;
     };
   }, [warehouseId]);
+
+  const router = useRouter();
+  const { toast } = useToast();
+  const [deleting, setDeleting] = React.useState(false);
+
+  const handleDelete = async () => {
+    if (!warehouse) return;
+    if (!confirm(`Are you sure you want to decommission warehouse hub ${warehouse.name}?`)) return;
+
+    setDeleting(true);
+    tactileAudio.playCriticalAlert();
+
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem('nexus_custom_warehouses');
+        if (raw) {
+          const list = JSON.parse(raw);
+          localStorage.setItem('nexus_custom_warehouses', JSON.stringify(list.filter((w: any) => w.id !== warehouse.id && w.code !== warehouse.code)));
+        }
+      }
+
+      toast({
+        title: "Warehouse Hub Decommissioned",
+        message: `${warehouse.name} (${warehouse.code}) removed from operational network.`,
+        type: "success",
+      });
+      router.push('/operations/warehouses');
+    } catch {
+      toast({
+        title: "Action Failed",
+        message: "Unable to remove warehouse hub.",
+        type: "critical",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const originOrders = warehouse ? orders.filter((o) => o.warehouseId === warehouse.id) : [];
   const utilPct = warehouse ? Math.round((warehouse.currentUnits / warehouse.capacityUnits) * 100) : 0;
@@ -100,6 +140,15 @@ export default function WarehouseDetailPage() {
                 Simulate Dock Reallocation
               </Button>
             </Link>
+            <Button
+              variant="critical"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="font-mono text-xs gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Decommissioning..." : "Decommission"}
+            </Button>
           </div>
         </div>
 

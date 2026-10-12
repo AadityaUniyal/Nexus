@@ -120,19 +120,46 @@ export function AppleSetupAssistant() {
     }
   }, [stage]);
 
-  const completeAndRedirect = () => {
+  const completeAndRedirect = async () => {
     tactileAudio.playSuccess();
     const workspaceId = `ws-${(companyName || "nexus").toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 18)}`;
-    
-    const userObject = {
+    const targetEmail = (email || `operator-${Date.now().toString().slice(-4)}@nexus.platform`).trim();
+    const targetPassword = "Password123!";
+    const targetName = name || "Enterprise Operator";
+
+    let accessToken = `nexus_jwt_signup_${Date.now()}`;
+    let registeredUser: any = {
       id: `usr-${selectedRole.toLowerCase()}-${Date.now().toString().slice(-4)}`,
-      name: name || "Enterprise Operator",
-      email: email || "operator@nexus.continental",
+      name: targetName,
+      email: targetEmail,
       role: selectedRole,
       workspace_id: workspaceId,
       company_name: companyName,
       location: selectedCity,
     };
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      const res = await fetch(`${apiBase}/api/v1/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: targetEmail,
+          password: targetPassword,
+          name: targetName,
+          role: selectedRole,
+          workspace_id: workspaceId,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        accessToken = data.access_token || data.accessToken || accessToken;
+        if (data.user) {
+          registeredUser = { ...registeredUser, ...data.user };
+        }
+      }
+    } catch {}
 
     const companyProfile = {
       companyName,
@@ -151,9 +178,11 @@ export function AppleSetupAssistant() {
     };
 
     if (typeof window !== "undefined") {
-      document.cookie = `nexus_demo_session=${userObject.id}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `nexus_session_token=nexus_jwt_${userObject.id}_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
-      localStorage.setItem("nexus_demo_user", JSON.stringify(userObject));
+      document.cookie = `nexus_session_token=${accessToken}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `nexus_demo_session=${registeredUser.id}; path=/; max-age=86400; SameSite=Lax`;
+      localStorage.setItem("nexus_access_token", accessToken);
+      localStorage.setItem("nexus_demo_user", JSON.stringify(registeredUser));
+      localStorage.setItem("nexus_user_role", selectedRole);
       localStorage.setItem("nexus_company_profile", JSON.stringify(companyProfile));
       localStorage.setItem("nexus_company_name", companyName);
       localStorage.setItem("nexus_active_workspace_id", workspaceId);

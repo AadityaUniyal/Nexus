@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { NexusWorld } from "@/components/world/NexusWorld";
-import { NexusMap } from "@/components/map/NexusMap";
+import { LeafletWorldMap } from "@/components/map/LeafletWorldMap";
 import { LocationSearch } from "@/components/location/LocationSearch";
 import { ResolvedLocation } from "@/lib/api/endpoints/location";
 import { Button } from "@/components/ui/button";
@@ -229,42 +228,14 @@ export default function LiveWorldPage() {
               <PulseLED color="emerald" size="sm" />
               <span>Spatial Telemetry Viewport</span>
               <span>·</span>
-              <span>{viewMode === "GIS_MAP" ? "MapLibre Vector GIS Engine" : "WebGL 3D Digital Twin"}</span>
+              <span>Real-Time Leaflet GPS World Map</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Live Operations World
+              Global Operations Fleet Map
             </h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* View Mode Toggle */}
-            <div className="bg-stone-200/70 dark:bg-stone-800 p-1 rounded-xl flex items-center gap-1 border border-stone-300/40 dark:border-stone-700">
-              <button
-                onClick={() => setViewMode("GIS_MAP")}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                  viewMode === "GIS_MAP"
-                    ? "bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-sm"
-                    : "text-stone-500 hover:text-stone-900"
-                )}
-              >
-                <MapIcon className="w-3.5 h-3.5" />
-                GIS World Map
-              </button>
-              <button
-                onClick={() => setViewMode("WEBGL_3D")}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                  viewMode === "WEBGL_3D"
-                    ? "bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-sm"
-                    : "text-stone-500 hover:text-stone-900"
-                )}
-              >
-                <Box className="w-3.5 h-3.5" />
-                3D Digital Twin
-              </button>
-            </div>
-
             <Button
               variant={simulationMode ? "simulation" : "secondary"}
               size="sm"
@@ -290,46 +261,16 @@ export default function LiveWorldPage() {
         {/* World Viewport */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
-            <AnimatePresence mode="wait">
-              {viewMode === "GIS_MAP" ? (
-                <motion.div
-                  key="gis-map"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.3 }}
-                  className="h-[620px] rounded-xl overflow-hidden shadow-sm"
-                >
-                  <NexusMap
-                    centerLocation={selectedLocation}
-                    vehicles={mapVehicles}
-                    warehouses={mapWarehouses}
-                    incidents={mapIncidents}
-                    isSimulationMode={simulationMode}
-                    className="h-full"
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="webgl-3d"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.3 }}
-                  className="h-[620px] rounded-xl overflow-hidden shadow-sm"
-                >
-                  <NexusWorld
-                    warehouses={warehouses}
-                    vehicles={vehicles}
-                    routes={routes}
-                    incidents={incidents}
-                    simulationMode={simulationMode}
-                    onSelectEntity={(ent) => setSelectedEntity(ent)}
-                    className="h-full"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="h-[640px] rounded-2xl overflow-hidden shadow-tactile border border-stone-200/80 dark:border-stone-800">
+              <LeafletWorldMap
+                centerLocation={selectedLocation}
+                vehicles={mapVehicles}
+                warehouses={mapWarehouses}
+                incidents={mapIncidents}
+                isSimulationMode={simulationMode}
+                className="h-full"
+              />
+            </div>
           </div>
 
           {/* Side Telemetry Inspection Panel */}

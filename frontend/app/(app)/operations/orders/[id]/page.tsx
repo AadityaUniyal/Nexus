@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,11 +15,14 @@ import {
   Truck,
   Building2,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 import { OrderItem, VehicleItem, WarehouseItem } from '@/lib/mock-data';
 import { dataProvider } from '@/lib/data-provider';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { FadeIn, SpringCard } from '@/components/motion';
+import { tactileAudio } from '@/lib/sound-effects';
+import { useToast } from '@/components/ui/toast';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -54,6 +57,43 @@ export default function OrderDetailPage() {
       mounted = false;
     };
   }, [orderId]);
+
+  const router = useRouter();
+  const { toast } = useToast();
+  const [deleting, setDeleting] = React.useState(false);
+
+  const handleDelete = async () => {
+    if (!order) return;
+    if (!confirm(`Are you sure you want to cancel and remove consignment ${order.orderNumber}?`)) return;
+
+    setDeleting(true);
+    tactileAudio.playCriticalAlert();
+
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem('nexus_custom_orders');
+        if (raw) {
+          const list = JSON.parse(raw);
+          localStorage.setItem('nexus_custom_orders', JSON.stringify(list.filter((o: any) => o.id !== order.id && o.orderNumber !== order.orderNumber)));
+        }
+      }
+
+      toast({
+        title: "Order Consignment Cancelled",
+        message: `${order.orderNumber} (${order.customerName}) removed from active manifest.`,
+        type: "success",
+      });
+      router.push('/operations/orders');
+    } catch {
+      toast({
+        title: "Action Failed",
+        message: "Unable to remove order consignment.",
+        type: "critical",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const vehicle = order ? vehicles.find((v) => v.id === order.vehicleId) : null;
   const warehouse = order ? warehouses.find((w) => w.id === order.warehouseId) : null;
@@ -97,6 +137,18 @@ export default function OrderDetailPage() {
             <h1 className="text-xl font-bold font-mono text-nexus-on-surface">
               {order.orderNumber}
             </h1>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              variant="critical"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="font-mono text-xs gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Cancelling..." : "Cancel Order"}
+            </Button>
           </div>
         </div>
 

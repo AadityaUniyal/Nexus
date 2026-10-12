@@ -3,8 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { NexusMap, MapWarehouse, MapVehicle, MapIncident } from "@/components/map/NexusMap";
-import { NexusWorld } from "@/components/world/NexusWorld";
+import { LeafletWorldMap, MapWarehouse, MapVehicle, MapIncident } from "@/components/map/LeafletWorldMap";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -426,34 +425,12 @@ export default function OverviewPage() {
         {/* 2D Google Maps-Style GIS Network Map & Spatial Timeline Section */}
         <div className="space-y-4 pt-2">
           <div className="rounded-3xl border border-nexus-outline/30 overflow-hidden shadow-tactile bg-nexus-surface-container relative">
-            {/* Map View Toggle Bar */}
-            <div className="absolute top-4 right-4 z-20 flex items-center p-1 rounded-xl bg-nexus-surface-container/90 backdrop-blur-md border border-nexus-outline/40 shadow-tactile text-xs font-mono">
-              <button
-                onClick={() => {
-                  setWorldView("GIS");
-                  tactileAudio.playClick();
-                }}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                  worldView === "GIS"
-                    ? "bg-nexus-secondary text-white font-bold shadow-xs"
-                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
-                }`}
-              >
-                <MapIcon className="w-3.5 h-3.5" /> 2D GIS Network (Google Maps)
-              </button>
-              <button
-                onClick={() => {
-                  setWorldView("3D");
-                  tactileAudio.playClick();
-                }}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                  worldView === "3D"
-                    ? "bg-nexus-secondary text-white font-bold shadow-xs"
-                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
-                }`}
-              >
-                <Box className="w-3.5 h-3.5" /> 3D Digital Twin
-              </button>
+            {/* Live GPS Telemetry Network HUD */}
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 p-1.5 rounded-2xl bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/80 dark:border-stone-800 shadow-xl text-xs font-mono">
+              <span className="flex items-center gap-1.5 px-2.5 py-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Telemetry Active
+              </span>
             </div>
 
             {/* Quick Map Action Badge */}
@@ -471,24 +448,15 @@ export default function OverviewPage() {
               </div>
             )}
 
-            <div className="h-[520px] w-full">
-              {worldView === "GIS" ? (
-                <NexusMap
-                  warehouses={mapWarehouses}
-                  vehicles={mapVehicles}
-                  incidents={mapIncidents}
-                  centerLocation={centerLocation}
-                  onLocationClick={handleMapClick}
-                  className="w-full h-full"
-                />
-              ) : (
-                <NexusWorld
-                  warehouses={warehouses}
-                  vehicles={vehicles}
-                  routes={routes}
-                  incidents={incidents}
-                />
-              )}
+            <div className="h-[540px] w-full">
+              <LeafletWorldMap
+                warehouses={mapWarehouses}
+                vehicles={mapVehicles}
+                incidents={mapIncidents}
+                centerLocation={centerLocation}
+                onLocationClick={handleMapClick}
+                className="w-full h-full"
+              />
             </div>
           </div>
 

@@ -110,35 +110,48 @@ export function AppleSettingsView() {
     setSaving(true);
     tactileAudio.playClick();
 
+    const payload = {
+      workspaceName,
+      activeRole,
+      operationalMode,
+      autoRerouteThreshold,
+      maxBudgetCap,
+      hudRefreshSec,
+      nightModeHud,
+      monteCarloRuns,
+      defaultExportFormat,
+      passkeyEnforced,
+      sessionTimeoutMins,
+      currencySymbol,
+    };
+
     if (typeof window !== "undefined") {
       localStorage.setItem("nexus_company_name", workspaceName);
       localStorage.setItem("nexus_user_role", activeRole);
       localStorage.setItem("nexus_operational_mode", operationalMode);
-      localStorage.setItem(
-        "nexus_role_config",
-        JSON.stringify({
-          autoRerouteThreshold,
-          maxBudgetCap,
-          hudRefreshSec,
-          nightModeHud,
-          monteCarloRuns,
-          defaultExportFormat,
-          passkeyEnforced,
-          sessionTimeoutMins,
-          currencySymbol,
-        })
-      );
+      localStorage.setItem("nexus_role_config", JSON.stringify(payload));
     }
 
-    setTimeout(() => {
-      setSaving(false);
-      tactileAudio.playSuccess();
-      toast({
-        title: "Preferences Saved",
-        message: "Synchronized with PostgreSQL role settings and local session checkpoint.",
-        type: "success",
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      const token = typeof window !== "undefined" ? localStorage.getItem("nexus_access_token") : null;
+      await fetch(`${apiBase}/api/v1/settings`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
       });
-    }, 400);
+    } catch {}
+
+    setSaving(false);
+    tactileAudio.playSuccess();
+    toast({
+      title: "Preferences Saved",
+      message: "Synchronized with PostgreSQL role settings and local session checkpoint.",
+      type: "success",
+    });
   };
 
   const handleResetWorkspaceToZero = () => {

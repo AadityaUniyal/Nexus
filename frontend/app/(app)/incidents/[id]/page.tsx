@@ -93,7 +93,8 @@ export default function IncidentDetailPage() {
   const handleAdvanceStatus = async (nextStatus: IncidentItem["status"]) => {
     setIsUpdating(true);
     try {
-      const res = await fetch(`/api/v1/incidents/${incident?.id}`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      const res = await fetch(`${apiBase}/api/v1/incidents/${incident?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -28,7 +28,8 @@ export function ViewerDashboard() {
     try {
       setIsGeneratingPdf(true);
       tactileAudio.playClick();
-      const res = await fetch("/api/v1/reports/board-briefing.pdf");
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      const res = await fetch(`${apiBase}/api/v1/reports/board-briefing.pdf`);
       if (!res.ok) {
         throw new Error("PDF generation service unavailable");
       }

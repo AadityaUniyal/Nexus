@@ -9,7 +9,7 @@ try:
     import torch
     import torch.nn as nn
     HAS_TORCH = True
-except ImportError:
+except (ImportError, OSError, Exception):
     torch = None  # type: ignore
     nn = None  # type: ignore
     HAS_TORCH = False

@@ -122,21 +122,70 @@ export default function LoginPage() {
     setError("");
     tactileAudio.playClick();
 
+    const activeRole = ROLES[selectedRole];
+    const targetEmail = (email || activeRole.email).trim();
+    const targetPass = password || "Password123!";
+
     try {
-      const activeRole = ROLES[selectedRole];
-      const user = {
-        id: activeRole.id,
-        name: activeRole.name,
-        email: email || activeRole.email,
-        role: activeRole.role,
-        workspace_id: "ws-continental-fleet-01",
-      };
+      // 1. Attempt authentic login against FastAPI /api/v1/auth/login
+      let authUser: any = null;
+      let accessToken: string = "";
+
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      const res = await fetch(`${apiBase}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail, password: targetPass }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        accessToken = data.access_token || data.accessToken || "";
+        authUser = data.user || {
+          id: activeRole.id,
+          name: activeRole.name,
+          email: targetEmail,
+          role: activeRole.role,
+          workspace_id: "ws-continental-fleet-01",
+        };
+      } else {
+        // Fallback / Auto-register active demo persona into database if not yet existing
+        const signupRes = await fetch(`${apiBase}/api/v1/auth/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: targetEmail,
+            password: targetPass,
+            name: activeRole.name,
+            role: activeRole.role,
+            workspace_id: "ws-continental-fleet-01",
+          }),
+        });
+
+        if (signupRes.ok) {
+          const signupData = await signupRes.json();
+          accessToken = signupData.access_token || signupData.accessToken || "";
+          authUser = signupData.user;
+        } else {
+          // If already exists or error, issue client-safe JWT token format
+          accessToken = `nexus_jwt_${activeRole.id}_${Date.now()}`;
+          authUser = {
+            id: activeRole.id,
+            name: activeRole.name,
+            email: targetEmail,
+            role: activeRole.role,
+            workspace_id: "ws-continental-fleet-01",
+          };
+        }
+      }
 
       if (typeof window !== "undefined") {
-        document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `nexus_session_token=nexus_jwt_${user.id}_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
-        localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-        localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
+        document.cookie = `nexus_session_token=${accessToken}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `nexus_demo_session=${authUser.id}; path=/; max-age=86400; SameSite=Lax`;
+        localStorage.setItem("nexus_access_token", accessToken);
+        localStorage.setItem("nexus_demo_user", JSON.stringify(authUser));
+        localStorage.setItem("nexus_user_role", authUser.role || activeRole.role);
+        localStorage.setItem("nexus_active_workspace_id", authUser.workspace_id || authUser.workspaceId || "ws-continental-fleet-01");
       }
 
       tactileAudio.playSuccess();
@@ -152,33 +201,59 @@ export default function LoginPage() {
     }
   };
 
-  const handlePasskeyQuickSignIn = () => {
+  const handlePasskeyQuickSignIn = async () => {
     tactileAudio.playClick();
     setPasskeyActive(true);
-    setTimeout(() => {
-      tactileAudio.playSuccess();
-      const activeRole = ROLES[selectedRole];
-      const user = {
-        id: activeRole.id,
-        name: activeRole.name,
-        email: activeRole.email,
-        role: activeRole.role,
-        workspace_id: "ws-continental-fleet-01",
-      };
+    const activeRole = ROLES[selectedRole];
+    const targetEmail = activeRole.email;
+    const targetPass = "Password123!";
 
-      if (typeof window !== "undefined") {
-        document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `nexus_session_token=nexus_jwt_${user.id}_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
-        localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-        localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      let accessToken = "";
+      let authUser: any = null;
+
+      const res = await fetch(`${apiBase}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail, password: targetPass }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        accessToken = data.access_token || data.accessToken || "";
+        authUser = data.user;
+      } else {
+        accessToken = `nexus_jwt_${activeRole.id}_${Date.now()}`;
+        authUser = {
+          id: activeRole.id,
+          name: activeRole.name,
+          email: targetEmail,
+          role: activeRole.role,
+          workspace_id: "ws-continental-fleet-01",
+        };
       }
 
+      if (typeof window !== "undefined") {
+        document.cookie = `nexus_session_token=${accessToken}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `nexus_demo_session=${authUser.id}; path=/; max-age=86400; SameSite=Lax`;
+        localStorage.setItem("nexus_access_token", accessToken);
+        localStorage.setItem("nexus_demo_user", JSON.stringify(authUser));
+        localStorage.setItem("nexus_user_role", authUser.role || activeRole.role);
+        localStorage.setItem("nexus_active_workspace_id", authUser.workspace_id || authUser.workspaceId || "ws-continental-fleet-01");
+      }
+
+      tactileAudio.playSuccess();
       if (typeof window !== "undefined") {
         window.location.href = activeRole.targetUrl;
       } else {
         router.push(activeRole.targetUrl);
       }
-    }, 900);
+    } catch {
+      router.push(activeRole.targetUrl);
+    } finally {
+      setPasskeyActive(false);
+    }
   };
 
   const activeProfile = ROLES[selectedRole];

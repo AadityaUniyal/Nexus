@@ -15,10 +15,13 @@ import {
   MapPin,
   Sparkles,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { VehicleItem, OrderItem, IncidentItem } from '@/lib/mock-data';
 import { dataProvider } from '@/lib/data-provider';
 import { FadeIn, SpringCard } from '@/components/motion';
+import { tactileAudio } from '@/lib/sound-effects';
+import { useToast } from '@/components/ui/toast';
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -54,6 +57,42 @@ export default function VehicleDetailPage() {
       mounted = false;
     };
   }, [vehicleId]);
+
+  const [deleting, setDeleting] = React.useState(false);
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    if (!vehicle) return;
+    if (!confirm(`Are you sure you want to decommission and remove vehicle ${vehicle.code}?`)) return;
+
+    setDeleting(true);
+    tactileAudio.playCriticalAlert();
+
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem('nexus_custom_vehicles');
+        if (raw) {
+          const list = JSON.parse(raw);
+          localStorage.setItem('nexus_custom_vehicles', JSON.stringify(list.filter((v: any) => v.id !== vehicle.id && v.code !== vehicle.code)));
+        }
+      }
+
+      toast({
+        title: "Vehicle Decommissioned",
+        message: `${vehicle.code} (${vehicle.name}) was removed from the active fleet.`,
+        type: "success",
+      });
+      router.push('/operations/vehicles');
+    } catch {
+      toast({
+        title: "Decommission Failed",
+        message: "Unable to remove vehicle.",
+        type: "critical",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const relatedOrders = vehicle ? orders.filter((o) => o.vehicleId === vehicle.id) : [];
   const relatedIncidents = vehicle
@@ -107,6 +146,15 @@ export default function VehicleDetailPage() {
                 <Sparkles className="h-3.5 w-3.5" /> Simulate Reroute
               </Button>
             </Link>
+            <Button
+              variant="critical"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="font-mono text-xs gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Decommissioning..." : "Decommission"}
+            </Button>
           </div>
         </div>
 
