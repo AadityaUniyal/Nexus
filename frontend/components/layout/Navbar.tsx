@@ -10,6 +10,7 @@ import {
   Menu,
   MapPin,
   Globe2,
+  LifeBuoy,
 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/brand/Logo";
@@ -25,6 +26,7 @@ export interface NavbarProps {
   onOpenNotifications?: () => void;
   onOpenCommandMenu?: () => void;
   onOpenMobileMenu?: () => void;
+  onOpenSupport?: () => void;
 }
 
 export function Navbar({
@@ -32,6 +34,7 @@ export function Navbar({
   onOpenNotifications,
   onOpenCommandMenu,
   onOpenMobileMenu,
+  onOpenSupport,
 }: NavbarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -153,6 +156,16 @@ export function Navbar({
           {unreadCount > 0 && (
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-600 ring-2 ring-nexus-surface" />
           )}
+        </button>
+
+        {/* Support & Dispatch Hotline Button */}
+        <button
+          onClick={onOpenSupport}
+          className="p-2 rounded-lg text-nexus-on-surface-variant hover:text-sky-500 hover:bg-nexus-surface-container transition-colors"
+          aria-label="Dispatch Assistance Hotline"
+          title="Dispatch Assistance & Support Tickets"
+        >
+          <LifeBuoy className="h-4 w-4" />
         </button>
 
         {/* Theme Toggle Button */}
@@ -280,6 +293,25 @@ export function Navbar({
                 >
                   <span>🛡️ Safety Specialist (L3)</span>
                   <span className="text-[10px] font-mono">Safety</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    const viewerUser = {
+                      id: "usr-viewer-01",
+                      name: "Guest Auditor",
+                      email: "auditor@external-esg.org",
+                      role: "VIEWER",
+                      workspace_id: "ws-continental-fleet-01",
+                    };
+                    localStorage.setItem("nexus_demo_user", JSON.stringify(viewerUser));
+                    window.location.href = "/overview";
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-stone-600 dark:text-stone-300 hover:bg-stone-500/10 transition-colors font-medium text-left"
+                >
+                  <span>👁️ Auditor / Guest (Viewer)</span>
+                  <span className="text-[10px] font-mono">Read-Only</span>
                 </button>
               </div>
 

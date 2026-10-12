@@ -111,6 +111,14 @@ export function LeafletWorldMap({
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
   const [tileLayerType, setTileLayerType] = useState<'CARTO_VOYAGER' | 'OSM' | 'CARTO_DARK'>('CARTO_VOYAGER');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VEHICLES' | 'WAREHOUSES' | 'INCIDENTS'>('ALL');
+  const [packetCount, setPacketCount] = useState(1480);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPacketCount((p) => p + Math.floor(Math.random() * 3) + 1);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -614,6 +622,17 @@ export function LeafletWorldMap({
             <ShieldAlert className="w-3.5 h-3.5" /> Hazards ({incidents.length})
           </button>
         )}
+
+        {/* Live Telemetry Stream Indicator */}
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[11px] font-mono text-emerald-400">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <span className="font-bold">LIVE TELEMETRY</span>
+          <span className="text-emerald-600">·</span>
+          <span>{packetCount} pkts</span>
+        </div>
       </div>
 
       {/* Selected Entity Card Detail Drawer (Bottom Left) */}

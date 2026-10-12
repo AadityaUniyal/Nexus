@@ -62,6 +62,7 @@ def test_nullpool_instantiation_with_vercel_flag():
 @pytest.mark.asyncio
 async def test_nullpool_concurrent_sessions_no_leak(tmp_path):
     """Stress test NullPool under concurrent async operations with real database."""
+    pytest.importorskip("aiosqlite")
     db_file = tmp_path / "test_nullpool.db"
     db_url = f"sqlite+aiosqlite:///{db_file}"
 
@@ -125,6 +126,7 @@ async def test_nullpool_concurrent_sessions_no_leak(tmp_path):
 @pytest.mark.asyncio
 async def test_session_module_actual_engine_under_vercel_concurrent_stress(tmp_path):
     """Verify app.db.session's actual engine and session factory under VERCEL=1 with 50 concurrent queries."""
+    pytest.importorskip("aiosqlite")
     prev_vercel = os.environ.get("VERCEL")
     prev_db_url = os.environ.get("DATABASE_URL")
     db_file = tmp_path / "actual_session.db"

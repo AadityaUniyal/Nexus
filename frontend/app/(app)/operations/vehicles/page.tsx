@@ -8,25 +8,45 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
-import { Truck, Search, ArrowRight } from 'lucide-react';
+import { Truck, Search, ArrowRight, Download, Upload } from 'lucide-react';
 import { VehicleItem } from '@/lib/mock-data';
 import { dataProvider } from '@/lib/data-provider';
 import { FadeIn } from '@/components/motion';
+import { exportToCsv } from '@/lib/csv-export';
+import { CsvImportModal } from '@/components/forms/CsvImportModal';
 
 export default function VehiclesListPage() {
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('ALL');
   const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
+  const [importOpen, setImportOpen] = React.useState(false);
+
+  const loadVehicles = React.useCallback(async () => {
+    try {
+      const data = await dataProvider.getVehicles();
+      if (data && data.length > 0) setVehicles(data);
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
-    async function load() {
-      try {
-        const data = await dataProvider.getVehicles();
-        if (data && data.length > 0) setVehicles(data);
-      } catch {}
-    }
-    load();
-  }, []);
+    loadVehicles();
+  }, [loadVehicles]);
+
+  const handleExportCsv = () => {
+    const exportData = vehicles.map((v) => ({
+      Code: v.code,
+      Name: v.name,
+      Model: v.model,
+      Status: v.status,
+      Driver: v.driverName || 'Unassigned',
+      SpeedKmh: v.speedKmh,
+      BatteryPct: v.batteryPct,
+      Latitude: v.lat,
+      Longitude: v.lng,
+      Route: v.currentRouteName || 'Unassigned',
+    }));
+    exportToCsv('nexus_fleet_vehicles.csv', exportData);
+  };
 
   const filtered = vehicles.filter((v) => {
     const matchSearch =
@@ -52,14 +72,39 @@ export default function VehiclesListPage() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="text-xs font-mono"
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportOpen(true)}
+              className="text-xs font-mono text-emerald-600 border-emerald-500/40"
+            >
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              Import CSV
+            </Button>
             <Link href="/live-world">
               <Button variant="secondary" size="sm">
-                View in 3D World
+                View on World Map
               </Button>
             </Link>
           </div>
         </div>
+
+        <CsvImportModal
+          isOpen={importOpen}
+          onClose={() => setImportOpen(false)}
+          entityType="VEHICLES"
+          onSuccess={loadVehicles}
+        />
 
         {/* Filter Toolbar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-white border border-nexus-surface-container-high shadow-sm">

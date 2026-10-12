@@ -23,10 +23,12 @@ import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { FadeIn, SpringCard } from '@/components/motion';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/components/ui/toast';
+import { usePermissions } from '@/components/providers/AuthProvider';
 
 export default function OrderDetailPage() {
   const params = useParams();
   const orderId = params.id as string;
+  const { canDecommission } = usePermissions();
 
   const [order, setOrder] = React.useState<OrderItem | null>(null);
   const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
@@ -140,15 +142,17 @@ export default function OrderDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="critical"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="font-mono text-xs gap-1.5"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Cancelling..." : "Cancel Order"}
-            </Button>
+            {canDecommission && (
+              <Button
+                variant="critical"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="font-mono text-xs gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Cancelling..." : "Cancel Order"}
+              </Button>
+            )}
           </div>
         </div>
 

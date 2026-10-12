@@ -8,24 +8,46 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
-import { Building2, Search, ArrowRight } from 'lucide-react';
+import { Building2, Search, ArrowRight, Download, Upload } from 'lucide-react';
 import { WarehouseItem } from '@/lib/mock-data';
 import { dataProvider } from '@/lib/data-provider';
 import { FadeIn } from '@/components/motion';
+import { exportToCsv } from '@/lib/csv-export';
+import { CsvImportModal } from '@/components/forms/CsvImportModal';
 
 export default function WarehousesListPage() {
   const [search, setSearch] = React.useState('');
   const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
+  const [importOpen, setImportOpen] = React.useState(false);
+
+  const loadWarehouses = React.useCallback(async () => {
+    try {
+      const data = await dataProvider.getWarehouses();
+      if (data && data.length > 0) setWarehouses(data);
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
-    async function load() {
-      try {
-        const data = await dataProvider.getWarehouses();
-        if (data && data.length > 0) setWarehouses(data);
-      } catch {}
-    }
-    load();
-  }, []);
+    loadWarehouses();
+  }, [loadWarehouses]);
+
+  const handleExportCsv = () => {
+    const exportData = warehouses.map((w) => ({
+      Code: w.code,
+      Name: w.name,
+      City: w.city,
+      State: w.state,
+      Status: w.status,
+      CapacityUnits: w.capacityUnits,
+      CurrentUnits: w.currentUnits,
+      DocksTotal: w.dockCount,
+      DocksActive: w.activeDocks,
+      EfficiencyPct: w.efficiencyPct,
+      Latitude: w.lat,
+      Longitude: w.lng,
+    }));
+    exportToCsv('nexus_warehouses.csv', exportData);
+  };
 
   const filtered = warehouses.filter(
     (w) =>
@@ -49,14 +71,39 @@ export default function WarehousesListPage() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="text-xs font-mono"
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportOpen(true)}
+              className="text-xs font-mono text-emerald-600 border-emerald-500/40"
+            >
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              Import CSV
+            </Button>
             <Link href="/live-world">
               <Button variant="secondary" size="sm">
-                View in 3D World
+                View on World Map
               </Button>
             </Link>
           </div>
         </div>
+
+        <CsvImportModal
+          isOpen={importOpen}
+          onClose={() => setImportOpen(false)}
+          entityType="WAREHOUSES"
+          onSuccess={loadWarehouses}
+        />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-white border border-nexus-surface-container-high shadow-sm">
           <div className="relative w-full sm:w-80">

@@ -60,6 +60,13 @@ export default function NotificationsPage() {
     );
   };
 
+  const [filter, setFilter] = React.useState<string>("ALL");
+
+  const filteredNotifications = notifications.filter((n) => {
+    if (filter === "ALL") return true;
+    return n.type === filter;
+  });
+
   return (
     <AppShell>
       <FadeIn className="space-y-6 max-w-4xl mx-auto">
@@ -75,14 +82,33 @@ export default function NotificationsPage() {
             </h1>
           </div>
 
-          <Button variant="secondary" size="sm" onClick={markAllRead} className="font-mono-data text-xs">
-            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-            Mark All as Read
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="secondary" size="sm" onClick={markAllRead} className="font-mono-data text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+              Mark All as Read
+            </Button>
+          </div>
+        </div>
+
+        {/* Severity Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {["ALL", "CRITICAL", "ATTENTION", "SIMULATION"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilter(t)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all ${
+                filter === t
+                  ? "bg-stone-900 text-white dark:bg-white dark:text-black shadow-sm"
+                  : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200"
+              }`}
+            >
+              {t === "ALL" ? `All Alerts (${notifications.length})` : t}
+            </button>
+          ))}
         </div>
 
         <StaggerContainer className="space-y-3">
-          {notifications.map((n) => {
+          {filteredNotifications.map((n) => {
             const icons = {
               CRITICAL: <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />,
               ATTENTION: <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />,

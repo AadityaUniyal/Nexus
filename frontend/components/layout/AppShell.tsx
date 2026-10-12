@@ -12,11 +12,13 @@ import { realtimeClient } from "@/lib/realtime-client";
 import { formatRelativeTime } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { SupportTicketModal } from "@/components/ui/SupportTicketModal";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = React.useState(false);
+  const [supportModalOpen, setSupportModalOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState<any[]>([]);
 
   // Fetch initial notifications from dataProvider
@@ -86,6 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onOpenNotifications={() => setNotificationsOpen(true)}
         onOpenCommandMenu={() => setCommandMenuOpen(true)}
         onOpenMobileMenu={() => setMobileNavOpen(true)}
+        onOpenSupport={() => setSupportModalOpen(true)}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -210,6 +213,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </Drawer>
+
+      {/* Dispatch Assistance & Support Ticket Hotline Modal */}
+      <SupportTicketModal
+        isOpen={supportModalOpen}
+        onClose={() => setSupportModalOpen(false)}
+      />
     </div>
   );
 }

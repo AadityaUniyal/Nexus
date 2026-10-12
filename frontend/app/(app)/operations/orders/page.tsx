@@ -8,25 +8,44 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusLed } from '@/components/ui/status-led';
 import { Input } from '@/components/ui/input';
-import { Package, Search, ArrowRight } from 'lucide-react';
+import { Package, Search, ArrowRight, Download, Upload } from 'lucide-react';
 import { OrderItem } from '@/lib/mock-data';
 import { dataProvider } from '@/lib/data-provider';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { FadeIn } from '@/components/motion';
+import { exportToCsv } from '@/lib/csv-export';
+import { CsvImportModal } from '@/components/forms/CsvImportModal';
 
 export default function OrdersListPage() {
   const [search, setSearch] = React.useState('');
   const [orders, setOrders] = React.useState<OrderItem[]>([]);
+  const [importOpen, setImportOpen] = React.useState(false);
+
+  const loadOrders = React.useCallback(async () => {
+    try {
+      const data = await dataProvider.getOrders();
+      if (data && data.length > 0) setOrders(data);
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
-    async function load() {
-      try {
-        const data = await dataProvider.getOrders();
-        if (data && data.length > 0) setOrders(data);
-      } catch {}
-    }
-    load();
-  }, []);
+    loadOrders();
+  }, [loadOrders]);
+
+  const handleExportCsv = () => {
+    const exportData = orders.map((o) => ({
+      OrderNumber: o.orderNumber,
+      CustomerName: o.customerName,
+      Destination: o.destination,
+      ItemCount: o.itemsCount,
+      TotalCost: o.totalCost,
+      Priority: o.priority,
+      Status: o.status,
+      Deadline: o.deadline,
+      VehicleCode: o.vehicleCode || 'Unassigned',
+    }));
+    exportToCsv('nexus_freight_orders.csv', exportData);
+  };
 
   const filtered = orders.filter(
     (o) =>
@@ -49,7 +68,35 @@ export default function OrdersListPage() {
               Consignment Tracking & SLA Monitor
             </h1>
           </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="text-xs font-mono"
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportOpen(true)}
+              className="text-xs font-mono text-emerald-600 border-emerald-500/40"
+            >
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              Import CSV
+            </Button>
+          </div>
         </div>
+
+        <CsvImportModal
+          isOpen={importOpen}
+          onClose={() => setImportOpen(false)}
+          entityType="ORDERS"
+          onSuccess={loadOrders}
+        />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-white border border-nexus-surface-container-high shadow-sm">
           <div className="relative w-full sm:w-80">

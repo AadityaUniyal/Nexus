@@ -16,6 +16,9 @@ import {
   FileText,
   ArrowRight,
   X,
+  Package,
+  Activity,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +29,8 @@ interface CommandItem {
   icon: React.ComponentType<{ className?: string }>;
   action: () => void;
   keywords?: string[];
-  category: "navigation" | "actions" | "search";
+  category: "navigation" | "actions" | "search" | "vehicles" | "warehouses" | "incidents" | "orders" | "simulations";
+  badge?: string;
 }
 
 export interface CommandPaletteProps {
@@ -48,9 +52,39 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOn
   };
   const [search, setSearch] = React.useState("");
   const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [dynamicResults, setDynamicResults] = React.useState<any[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Define all commands
+  // Dynamic API search querying /api/v1/search
+  React.useEffect(() => {
+    if (!search || search.trim().length < 1) {
+      setDynamicResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(search.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setDynamicResults(data);
+          }
+        }
+      } catch (err) {
+        console.error("Command palette search error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Define static commands
   const commands: CommandItem[] = [
     // Navigation
     {
@@ -65,52 +99,88 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOn
     {
       id: "nav-operations",
       label: "Fleet Operations",
-      description: "View all vehicles",
+      description: "View all fleet vehicles and assets",
       icon: Truck,
       category: "navigation",
-      action: () => router.push("/operations"),
+      action: () => router.push("/operations/vehicles"),
       keywords: ["vehicles", "fleet", "trucks"],
     },
     {
+      id: "nav-orders",
+      label: "Orders & Shipments",
+      description: "Active freight orders and dispatch deadlines",
+      icon: Package,
+      category: "navigation",
+      action: () => router.push("/operations/orders"),
+      keywords: ["orders", "shipments", "freight", "cargo"],
+    },
+    {
+      id: "nav-warehouses",
+      label: "Distribution Hubs & Warehouses",
+      description: "Intermodal terminals, dock capacity, and inventory",
+      icon: Building2,
+      category: "navigation",
+      action: () => router.push("/operations/warehouses"),
+      keywords: ["warehouses", "hubs", "terminals", "storage"],
+    },
+    {
       id: "nav-incidents",
-      label: "Active Incidents",
-      description: "View and manage incidents",
+      label: "Active Incidents & Hazards",
+      description: "View and manage active corridor disruptions",
       icon: ShieldAlert,
       category: "navigation",
       action: () => router.push("/incidents"),
-      keywords: ["incidents", "alerts", "issues"],
+      keywords: ["incidents", "alerts", "issues", "weather", "hazard"],
     },
     {
       id: "nav-simulations",
       label: "Simulation Lab",
-      description: "Run what-if scenarios",
+      description: "Run Monte-Carlo what-if detour scenarios",
       icon: Sparkles,
       category: "navigation",
       action: () => router.push("/simulations"),
-      keywords: ["simulations", "what-if", "scenarios"],
+      keywords: ["simulations", "what-if", "scenarios", "monte-carlo"],
     },
     {
       id: "nav-world",
-      label: "Live World View",
-      description: "3D spatial map",
+      label: "Live World Map",
+      description: "Global GPS real-time asset tracker",
       icon: Map,
       category: "navigation",
       action: () => router.push("/live-world"),
-      keywords: ["map", "3d", "world", "spatial"],
+      keywords: ["map", "world", "spatial", "gps", "live"],
+    },
+    {
+      id: "nav-audit",
+      label: "System Audit Trail",
+      description: "Immutable compliance and activity ledger",
+      icon: ShieldAlert,
+      category: "navigation",
+      action: () => router.push("/admin/audit"),
+      keywords: ["audit", "logs", "compliance", "history", "security"],
+    },
+    {
+      id: "nav-status",
+      label: "SLA & System Status",
+      description: "Real-time uptime metrics and service health",
+      icon: Activity,
+      category: "navigation",
+      action: () => router.push("/status"),
+      keywords: ["status", "sla", "uptime", "health", "latency"],
     },
     {
       id: "nav-analytics",
-      label: "Analytics",
-      description: "Reports and insights",
+      label: "Analytics & Executive Briefing",
+      description: "Reports, ESG metrics and PDF board briefing",
       icon: FileText,
       category: "navigation",
       action: () => router.push("/analytics"),
-      keywords: ["analytics", "reports", "insights"],
+      keywords: ["analytics", "reports", "insights", "pdf", "briefing"],
     },
     {
       id: "nav-settings",
-      label: "Settings",
-      description: "App preferences",
+      label: "System Settings",
+      description: "Operational mode and workspace configurations",
       icon: Settings,
       category: "navigation",
       action: () => router.push("/settings"),
@@ -118,18 +188,18 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOn
     },
     {
       id: "nav-profile",
-      label: "Your Profile",
-      description: "Manage account",
+      label: "Operator Profile & RBAC Role",
+      description: "Manage credentials and assigned permissions",
       icon: User,
       category: "navigation",
       action: () => router.push("/profile"),
-      keywords: ["profile", "account", "user"],
+      keywords: ["profile", "account", "user", "role", "rbac"],
     },
     // Quick Actions
     {
       id: "action-new-simulation",
       label: "Create New Simulation",
-      description: "Run a what-if scenario",
+      description: "Run physics-based route recovery scenario",
       icon: Sparkles,
       category: "actions",
       action: () => router.push("/simulations/new"),
@@ -137,27 +207,65 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOn
     },
     {
       id: "action-import-data",
-      label: "Import Fleet Data",
-      description: "Upload CSV or connect API",
+      label: "Import Fleet Data (CSV)",
+      description: "Upload fleet vehicles or freight orders CSV",
       icon: Truck,
       category: "actions",
       action: () => router.push("/onboarding/import-data"),
-      keywords: ["import", "upload", "csv", "data"],
+      keywords: ["import", "upload", "csv", "data", "bulk"],
     },
   ];
 
-  // Filter commands based on search
-  const filteredCommands = React.useMemo(() => {
-    if (!search) return commands;
+  // Map dynamic search results to CommandItems
+  const dynamicCommands: CommandItem[] = React.useMemo(() => {
+    return dynamicResults.map((item, idx) => {
+      let icon = Truck;
+      let category: CommandItem["category"] = "vehicles";
 
-    const searchLower = search.toLowerCase();
-    return commands.filter((cmd) => {
-      const matchLabel = cmd.label.toLowerCase().includes(searchLower);
-      const matchDescription = cmd.description?.toLowerCase().includes(searchLower);
-      const matchKeywords = cmd.keywords?.some((kw) => kw.includes(searchLower));
-      return matchLabel || matchDescription || matchKeywords;
+      if (item.type === "WAREHOUSE") {
+        icon = Building2;
+        category = "warehouses";
+      } else if (item.type === "INCIDENT") {
+        icon = ShieldAlert;
+        category = "incidents";
+      } else if (item.type === "ORDER") {
+        icon = Package;
+        category = "orders";
+      } else if (item.type === "SIMULATION") {
+        icon = Sparkles;
+        category = "simulations";
+      }
+
+      return {
+        id: `dyn-${item.type}-${item.id || idx}`,
+        label: item.title,
+        description: item.subtitle,
+        icon,
+        badge: item.status,
+        category,
+        action: () => {
+          if (item.deepLink) {
+            router.push(item.deepLink);
+          }
+        },
+      };
     });
-  }, [search, commands]);
+  }, [dynamicResults, router]);
+
+  // Combined filtered commands
+  const filteredCommands = React.useMemo(() => {
+    const searchLower = search.trim().toLowerCase();
+    const staticMatches = !searchLower
+      ? commands
+      : commands.filter((cmd) => {
+          const matchLabel = cmd.label.toLowerCase().includes(searchLower);
+          const matchDescription = cmd.description?.toLowerCase().includes(searchLower);
+          const matchKeywords = cmd.keywords?.some((kw) => kw.includes(searchLower));
+          return matchLabel || matchDescription || matchKeywords;
+        });
+
+    return [...dynamicCommands, ...staticMatches];
+  }, [search, commands, dynamicCommands]);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -267,9 +375,12 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOn
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search for vehicles, actions, pages..."
+                    placeholder="Search vehicles, warehouses, orders, incidents, or commands..."
                     className="flex-1 bg-transparent text-sm text-nexus-on-surface placeholder:text-nexus-on-surface-variant outline-none"
                   />
+                  {isSearching && (
+                    <Loader2 className="h-4 w-4 animate-spin text-nexus-primary shrink-0" />
+                  )}
                   <button
                     onClick={() => setIsOpen(false)}
                     className="p-1 rounded hover:bg-nexus-surface-container text-nexus-on-surface-variant"
@@ -290,16 +401,29 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOn
                   ) : (
                     Object.entries(groupedCommands).map(([category, items]) => (
                       <div key={category} className="py-2">
-                        <div className="px-4 py-2">
+                        <div className="px-4 py-2 flex items-center justify-between">
                           <span className="text-[10px] font-mono-data font-bold uppercase tracking-wider text-nexus-on-surface-variant">
                             {category === "navigation"
                               ? "Navigate"
                               : category === "actions"
-                              ? "Actions"
-                              : "Search"}
+                              ? "Quick Actions"
+                              : category === "vehicles"
+                              ? "Fleet Vehicles"
+                              : category === "warehouses"
+                              ? "Distribution Hubs"
+                              : category === "incidents"
+                              ? "Active Incidents"
+                              : category === "orders"
+                              ? "Freight Orders"
+                              : category === "simulations"
+                              ? "Simulation Scenarios"
+                              : "Search Results"}
+                          </span>
+                          <span className="text-[10px] font-mono text-stone-500">
+                            {items.length}
                           </span>
                         </div>
-                        {items.map((cmd, index) => {
+                        {items.map((cmd) => {
                           const globalIndex = filteredCommands.indexOf(cmd);
                           const isSelected = selectedIndex === globalIndex;
                           const Icon = cmd.icon;
@@ -332,7 +456,14 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose: controlledOn
                                 <Icon className="h-4 w-4" />
                               </div>
                               <div className="flex-1 text-left">
-                                <p className="text-sm font-medium">{cmd.label}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">{cmd.label}</p>
+                                  {cmd.badge && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-nexus-surface-high border border-nexus-outline-variant text-nexus-on-surface-variant">
+                                      {cmd.badge}
+                                    </span>
+                                  )}
+                                </div>
                                 {cmd.description && (
                                   <p className="text-xs text-nexus-on-surface-variant">
                                     {cmd.description}

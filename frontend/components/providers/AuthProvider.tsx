@@ -46,6 +46,24 @@ export function useUser() {
   };
 }
 
+export function usePermissions() {
+  const { user } = useAuth();
+  const role = user?.role || 'ADMINISTRATOR';
+
+  const canDecommission = ['ADMINISTRATOR', 'OPERATIONS_MANAGER', 'SUPERVISOR_L1'].includes(role);
+  const canManageSettings = ['ADMINISTRATOR'].includes(role);
+  const canRunSimulations = ['ADMINISTRATOR', 'OPERATIONS_MANAGER', 'SUPERVISOR_L1', 'SUPERVISOR_L2', 'ANALYST'].includes(role);
+  const isReadOnly = role === 'VIEWER';
+
+  return {
+    role,
+    canDecommission,
+    canManageSettings,
+    canRunSimulations,
+    isReadOnly,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserContextType | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);

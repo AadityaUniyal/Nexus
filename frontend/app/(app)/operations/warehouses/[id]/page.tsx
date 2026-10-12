@@ -20,10 +20,12 @@ import { dataProvider } from '@/lib/data-provider';
 import { FadeIn, SpringCard } from '@/components/motion';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/components/ui/toast';
+import { usePermissions } from '@/components/providers/AuthProvider';
 
 export default function WarehouseDetailPage() {
   const params = useParams();
   const warehouseId = params.id as string;
+  const { canDecommission } = usePermissions();
 
   const [warehouse, setWarehouse] = React.useState<WarehouseItem | null>(null);
   const [orders, setOrders] = React.useState<OrderItem[]>([]);
@@ -140,15 +142,17 @@ export default function WarehouseDetailPage() {
                 Simulate Dock Reallocation
               </Button>
             </Link>
-            <Button
-              variant="critical"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="font-mono text-xs gap-1.5"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Decommissioning..." : "Decommission"}
-            </Button>
+            {canDecommission && (
+              <Button
+                variant="critical"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="font-mono text-xs gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Decommissioning..." : "Decommission"}
+              </Button>
+            )}
           </div>
         </div>
 

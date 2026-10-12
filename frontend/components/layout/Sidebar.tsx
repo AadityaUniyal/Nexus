@@ -59,6 +59,8 @@ const NAVIGATION: NavSection[] = [
     title: "Workspace",
     items: [
       { name: "Company Command", href: "/admin/company", icon: Building2, badge: "Admin" },
+      { name: "Audit Trail", href: "/admin/audit", icon: Shield },
+      { name: "SLA & Status", href: "/status", icon: LineChart, badge: "99.98%" },
       { name: "Notifications", href: "/notifications", icon: Bell },
       { name: "Settings", href: "/settings", icon: Settings },
       { name: "Admin Console", href: "/admin/dashboard", icon: Shield },

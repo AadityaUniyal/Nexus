@@ -22,11 +22,13 @@ import { dataProvider } from '@/lib/data-provider';
 import { FadeIn, SpringCard } from '@/components/motion';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/components/ui/toast';
+import { usePermissions } from '@/components/providers/AuthProvider';
 
 export default function VehicleDetailPage() {
   const params = useParams();
   const router = useRouter();
   const vehicleId = params.id as string;
+  const { canDecommission } = usePermissions();
 
   const [vehicle, setVehicle] = React.useState<VehicleItem | null>(null);
   const [orders, setOrders] = React.useState<OrderItem[]>([]);
@@ -146,15 +148,17 @@ export default function VehicleDetailPage() {
                 <Sparkles className="h-3.5 w-3.5" /> Simulate Reroute
               </Button>
             </Link>
-            <Button
-              variant="critical"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="font-mono text-xs gap-1.5"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Decommissioning..." : "Decommission"}
-            </Button>
+            {canDecommission && (
+              <Button
+                variant="critical"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="font-mono text-xs gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> {deleting ? "Decommissioning..." : "Decommission"}
+              </Button>
+            )}
           </div>
         </div>
 
