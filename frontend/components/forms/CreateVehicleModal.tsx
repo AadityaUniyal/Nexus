@@ -40,6 +40,24 @@ export function CreateVehicleModal({
   const [batteryPct, setBatteryPct] = React.useState("92");
   const [status, setStatus] = React.useState("IN_TRANSIT");
 
+  React.useEffect(() => {
+    if (warehouses && warehouses.length > 0) {
+      setLat(warehouses[0].lat.toFixed(4));
+      setLng(warehouses[0].lng.toFixed(4));
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("nexus_workspace_location");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.lat && parsed.lng) {
+            setLat(parsed.lat.toString());
+            setLng(parsed.lng.toString());
+          }
+        }
+      } catch {}
+    }
+  }, [warehouses]);
+
   const handleSelectWarehouseLocation = (whId: string) => {
     const wh = warehouses.find((w) => w.id === whId || w.code === whId);
     if (wh) {

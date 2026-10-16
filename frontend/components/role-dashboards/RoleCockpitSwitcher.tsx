@@ -63,11 +63,24 @@ const ROLES: Array<{
   },
 ];
 
+export function normalizeRole(role?: string | null): RoleType {
+  if (!role) return "OPERATIONS_MANAGER";
+  const r = role.toUpperCase();
+  if (r === "SUPERVISOR_L1" || r === "OPERATIONS_MANAGER") return "OPERATIONS_MANAGER";
+  if (r === "SUPERVISOR_L2" || r === "SUPERVISOR_L3" || r === "OPERATOR" || r === "FIELD_OPERATOR") return "OPERATOR";
+  if (r === "ANALYST" || r === "SUPPLY_CHAIN_ANALYST") return "ANALYST";
+  if (r === "ADMINISTRATOR" || r === "ADMIN" || r === "SOLO_ADMIN") return "ADMINISTRATOR";
+  if (r === "VIEWER" || r === "GUEST" || r === "AUDITOR") return "VIEWER";
+  return "OPERATIONS_MANAGER";
+}
+
 export function RoleCockpitSwitcher({
   activeRole,
   onRoleChange,
   className = "",
 }: RoleCockpitSwitcherProps) {
+  const normalizedActive = normalizeRole(activeRole);
+
   return (
     <div
       className={`p-1.5 rounded-2xl bg-nexus-surface-container-high/80 backdrop-blur-md border border-nexus-outline/30 shadow-xs flex flex-wrap items-center gap-1 ${className}`}
@@ -79,7 +92,7 @@ export function RoleCockpitSwitcher({
 
       <div className="flex flex-wrap items-center gap-1">
         {ROLES.map((r) => {
-          const isActive = activeRole === r.id;
+          const isActive = normalizedActive === r.id;
           const Icon = r.icon;
 
           return (

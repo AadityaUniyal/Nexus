@@ -52,7 +52,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { dataProvider } from "@/lib/data-provider";
 
 // Innovations & Role Cockpits
-import { RoleCockpitSwitcher, RoleType } from "@/components/role-dashboards/RoleCockpitSwitcher";
+import { RoleCockpitSwitcher, RoleType, normalizeRole } from "@/components/role-dashboards/RoleCockpitSwitcher";
 import { ManagerDashboard } from "@/components/role-dashboards/ManagerDashboard";
 import { OperatorDashboard } from "@/components/role-dashboards/OperatorDashboard";
 import { AnalystDashboard } from "@/components/role-dashboards/AnalystDashboard";
@@ -96,8 +96,8 @@ export default function OverviewPage() {
     if (typeof window !== "undefined") {
       const savedMode = localStorage.getItem("nexus_operational_mode") as any;
       if (savedMode) setOperationalMode(savedMode);
-      const savedRole = localStorage.getItem("nexus_user_role") as RoleType;
-      if (savedRole) setActiveRole(savedRole);
+      const savedRole = localStorage.getItem("nexus_user_role");
+      if (savedRole) setActiveRole(normalizeRole(savedRole));
     }
   }, []);
 
@@ -392,13 +392,26 @@ export default function OverviewPage() {
         {/* Bespoke Active Role Dashboard Cockpit */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeRole}
+            key={normalizeRole(activeRole)}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            {activeRole === "OPERATIONS_MANAGER" && (
+            {normalizeRole(activeRole) === "OPERATOR" ? (
+              <OperatorDashboard
+                vehicles={vehicles}
+                warehouses={warehouses}
+                onOpenCreateVehicle={() => setIsVehicleModalOpen(true)}
+                onOpenCreateOrder={() => setIsOrderModalOpen(true)}
+              />
+            ) : normalizeRole(activeRole) === "ANALYST" ? (
+              <AnalystDashboard />
+            ) : normalizeRole(activeRole) === "ADMINISTRATOR" ? (
+              <AdminDashboard />
+            ) : normalizeRole(activeRole) === "VIEWER" ? (
+              <ViewerDashboard />
+            ) : (
               <ManagerDashboard
                 incidents={incidents}
                 simulations={simulations}
@@ -408,17 +421,6 @@ export default function OverviewPage() {
                 onOpenCreateWarehouse={() => setIsWarehouseModalOpen(true)}
               />
             )}
-            {activeRole === "OPERATOR" && (
-              <OperatorDashboard
-                vehicles={vehicles}
-                warehouses={warehouses}
-                onOpenCreateVehicle={() => setIsVehicleModalOpen(true)}
-                onOpenCreateOrder={() => setIsOrderModalOpen(true)}
-              />
-            )}
-            {activeRole === "ANALYST" && <AnalystDashboard />}
-            {activeRole === "ADMINISTRATOR" && <AdminDashboard />}
-            {activeRole === "VIEWER" && <ViewerDashboard />}
           </motion.div>
         </AnimatePresence>
 

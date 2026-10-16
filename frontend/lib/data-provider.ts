@@ -106,9 +106,28 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           // Clerk session token unavailable or not initialized yet
         }
         if (demoModeEnabled && !headers.has("Authorization")) {
-          const demoUser = localStorage.getItem("nexus_demo_user");
-          if (demoUser || document.cookie.includes("nexus_demo_session")) {
-            headers.set("Authorization", "Bearer demo-operator-token");
+          const accessToken = localStorage.getItem("nexus_access_token");
+          if (accessToken && accessToken.length > 10) {
+            headers.set("Authorization", `Bearer ${accessToken}`);
+          } else {
+            const demoUserRaw = localStorage.getItem("nexus_demo_user");
+            if (demoUserRaw) {
+              try {
+                const demoUser = JSON.parse(demoUserRaw);
+                const role = (demoUser.role || "OPERATIONS_MANAGER").toUpperCase();
+                if (role === "ADMINISTRATOR") {
+                  headers.set("Authorization", "Bearer demo-admin-token");
+                } else if (role === "VIEWER") {
+                  headers.set("Authorization", "Bearer demo-viewer-token");
+                } else {
+                  headers.set("Authorization", "Bearer demo-operator-token");
+                }
+              } catch {
+                headers.set("Authorization", "Bearer demo-operator-token");
+              }
+            } else if (document.cookie.includes("nexus_demo_session")) {
+              headers.set("Authorization", "Bearer demo-operator-token");
+            }
           }
         }
       }

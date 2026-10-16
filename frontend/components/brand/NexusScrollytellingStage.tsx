@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowRight,
   Sparkles,
@@ -13,373 +13,280 @@ import {
   Zap,
   Radio,
   Lock,
-  ChevronDown,
   Globe2,
   Gauge,
-  Sliders,
-  ScanSearch,
   CheckCircle2,
+  Truck,
+  Building2,
+  ExternalLink,
+  MapPin,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { NexusExplodedCore3D } from "./NexusExplodedCore3D";
+import { LeafletWorldMap, MapVehicle, MapWarehouse } from "@/components/map/LeafletWorldMap";
 import { tactileAudio } from "@/lib/sound-effects";
 
+const SAMPLE_HERO_VEHICLES: MapVehicle[] = [
+  {
+    id: "v-hero-101",
+    code: "NX-TRK-101",
+    name: "Volvo VNR Electric",
+    lat: 28.6139,
+    lng: 77.2090,
+    speedKmh: 68.5,
+    heading: 45,
+    status: "IN_TRANSIT",
+    driverName: "Vikram Rawat",
+    batteryPct: 92,
+  },
+  {
+    id: "v-hero-102",
+    code: "NX-TRK-104",
+    name: "Freightliner eCascadia",
+    lat: 30.3165,
+    lng: 78.0322,
+    speedKmh: 72.0,
+    heading: 90,
+    status: "IN_TRANSIT",
+    driverName: "Elena Rostova",
+    batteryPct: 84,
+  },
+  {
+    id: "v-hero-103",
+    code: "NX-TRK-208",
+    name: "Kenworth T680E",
+    lat: 19.0760,
+    lng: 72.8777,
+    speedKmh: 64.0,
+    heading: 180,
+    status: "IN_TRANSIT",
+    driverName: "Marcus Vance",
+    batteryPct: 79,
+  },
+];
+
+const SAMPLE_HERO_WAREHOUSES: MapWarehouse[] = [
+  {
+    id: "wh-hero-ded",
+    code: "WH-DED-01",
+    name: "Dehradun Intermodal Terminal",
+    city: "Dehradun",
+    lat: 30.3165,
+    lng: 78.0322,
+    capacityUnits: 75000,
+    currentUnits: 48000,
+  },
+  {
+    id: "wh-hero-del",
+    code: "WH-DEL-02",
+    name: "Delhi NCR Distribution Superhub",
+    city: "Delhi",
+    lat: 28.6139,
+    lng: 77.2090,
+    capacityUnits: 120000,
+    currentUnits: 94000,
+  },
+  {
+    id: "wh-hero-bom",
+    code: "WH-BOM-03",
+    name: "Mumbai Port Intermodal Hub",
+    city: "Mumbai",
+    lat: 19.0760,
+    lng: 72.8777,
+    capacityUnits: 90000,
+    currentUnits: 62000,
+  },
+];
+
 export function NexusScrollytellingStage() {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [currentStageIndex, setCurrentStageIndex] = React.useState(0);
-
-  // Scroll listener computing normalized progress across the 450vh container
-  React.useEffect(() => {
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!containerRef.current) return;
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          if (!containerRef.current) return;
-          const rect = containerRef.current.getBoundingClientRect();
-          const totalScrollable = rect.height - window.innerHeight;
-          if (totalScrollable > 0) {
-            const currentScrolled = -rect.top;
-            const progress = Math.max(0, Math.min(1, currentScrolled / totalScrollable));
-            setScrollProgress(progress);
-
-            // Determine stage index
-            let stage = 0;
-            if (progress >= 0.75) stage = 3;
-            else if (progress >= 0.48) stage = 2;
-            else if (progress >= 0.22) stage = 1;
-            else stage = 0;
-
-            if (stage !== currentStageIndex) {
-              setCurrentStageIndex(stage);
-            }
-          }
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [currentStageIndex]);
-
   return (
-    <div ref={containerRef} className="relative w-full h-[420vh] bg-[#09090b] text-white select-none">
-      {/* Sticky Viewport (Pinned at top: 0, 100vh) */}
-      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between">
-        {/* Background 3D Exploded View Canvas */}
-        <div className="absolute inset-0 z-0">
-          <NexusExplodedCore3D scrollProgress={scrollProgress} />
+    <div className="relative w-full bg-[#0c0c0e] text-white overflow-hidden border-b border-stone-800">
+      {/* Background Subtle Gradient Grid */}
+      <div className="absolute inset-0 bg-[radial-gradient(#22c55e15_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-40" />
+      <div className="absolute -top-40 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Top Floating Navigation Header */}
+      <header className="relative z-20 w-full px-6 py-5 flex items-center justify-between max-w-7xl mx-auto border-b border-stone-800/80">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black tracking-tighter text-sm shadow-lg shadow-emerald-950">
+            NX
+          </div>
+          <div>
+            <span className="text-base font-extrabold tracking-tight block leading-none text-white">NEXUS</span>
+            <span className="text-[10px] font-mono text-stone-400 uppercase tracking-widest">
+              Autonomous Logistics OS
+            </span>
+          </div>
         </div>
 
-        {/* Ambient Top & Bottom Vignette Gradients */}
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/80 via-transparent to-black/90 z-10" />
+        {/* Live SLA & Status Badge */}
+        <Link
+          href="/status"
+          className="hidden sm:flex items-center gap-2 bg-stone-900/90 hover:bg-stone-800 border border-stone-800 px-3.5 py-1.5 rounded-full text-xs font-mono text-stone-300 transition-colors"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>SLA: 99.98% Operational</span>
+          <ExternalLink className="w-3 h-3 text-stone-500 ml-0.5" />
+        </Link>
 
-        {/* Top Floating HUD Status Bar */}
-        <header className="relative z-20 w-full px-6 pt-6 flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black tracking-tighter text-sm">
-              NX
+        {/* Navigation CTAs */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <Link href="/driver-pass">
+            <Button variant="ghost" size="sm" className="text-xs text-stone-300 hover:text-white font-mono gap-1.5">
+              <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Driver PWA</span>
+            </Button>
+          </Link>
+          <Link href="/login">
+            <Button variant="ghost" size="sm" className="text-xs text-stone-300 hover:text-white font-mono">
+              Sign In
+            </Button>
+          </Link>
+          <Link href="/overview">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => tactileAudio.playClick()}
+              className="text-xs font-mono gap-1.5 shadow-lg shadow-emerald-950 bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            >
+              <span>Launch Cockpit</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Hero Split View */}
+      <main className="relative z-10 max-w-7xl mx-auto w-full px-6 py-12 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        {/* Left Column: Value Proposition & CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="lg:col-span-6 space-y-6 text-left"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Real-Time Spatial Digital Twin & AI Preemption</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white">
+            Autonomous Freight. <br />
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+              Zero Second Guessing.
+            </span>
+          </h1>
+
+          <p className="text-sm sm:text-base text-stone-300 leading-relaxed max-w-xl">
+            NEXUS replaces clunky, reactive fleet software with a predictive decision engine. Continuously simulate
+            weather hazards, battery degradation, and depot chokepoints with 1-click automated detour dispatch.
+          </p>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Link href="/overview">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => tactileAudio.playSuccess()}
+                className="font-mono text-sm font-bold gap-2 px-6 py-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl shadow-emerald-950"
+              >
+                <Truck className="w-4 h-4" />
+                <span>Open Operations Cockpit</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Link href="/driver-pass">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => tactileAudio.playClick()}
+                className="font-mono text-sm font-semibold gap-2 px-5 py-6 rounded-xl border-stone-700 hover:border-emerald-500 text-stone-200 hover:text-white bg-stone-900/60"
+              >
+                <QrCode className="w-4 h-4 text-emerald-400" />
+                <span>Zero-Install Driver Pass</span>
+              </Button>
+            </Link>
+          </div>
+
+          {/* Key Metric Badges */}
+          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-stone-800 text-left">
+            <div>
+              <p className="text-[10px] font-mono text-stone-400 uppercase">SLA Target</p>
+              <p className="text-lg sm:text-xl font-bold font-mono text-emerald-400 mt-0.5">99.98%</p>
+              <p className="text-[10px] text-stone-500 font-mono">Live verified</p>
             </div>
             <div>
-              <span className="text-sm font-extrabold tracking-tight block leading-none">NEXUS</span>
-              <span className="text-[10px] font-mono text-stone-400 uppercase tracking-widest">
-                Autonomous Sovereign Core
-              </span>
+              <p className="text-[10px] font-mono text-stone-400 uppercase">Stream Latency</p>
+              <p className="text-lg sm:text-xl font-bold font-mono text-sky-400 mt-0.5">&lt;18ms</p>
+              <p className="text-[10px] text-stone-500 font-mono">Sub-second telemetry</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-mono text-stone-400 uppercase">Role Cockpits</p>
+              <p className="text-lg sm:text-xl font-bold font-mono text-purple-400 mt-0.5">5 Personas</p>
+              <p className="text-[10px] text-stone-500 font-mono">Cognitive load scoped</p>
             </div>
           </div>
+        </motion.div>
 
-          {/* Scrub Timeline Indicator */}
-          <div className="hidden md:flex items-center gap-2 bg-stone-900/80 backdrop-blur-md border border-stone-800 px-3.5 py-1.5 rounded-full text-xs font-mono">
-            <span className="text-stone-500">STAGE 0{currentStageIndex + 1}</span>
-            <div className="w-24 h-1.5 bg-stone-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 transition-all duration-100 ease-out"
-                style={{ width: `${Math.round(scrollProgress * 100)}%` }}
+        {/* Right Column: Interactive Leaflet World Map Preview HUD */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+          className="lg:col-span-6"
+        >
+          <div className="rounded-3xl border border-stone-800 bg-stone-950/80 backdrop-blur-xl shadow-2xl overflow-hidden p-2 relative group">
+            {/* Top Window Bar */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-stone-800/80 text-xs font-mono text-stone-400">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                <span className="ml-2 text-[11px] font-semibold text-stone-300">Live GIS Fleet Telemetry Map</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1 text-emerald-400 text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  ONLINE
+                </span>
+              </div>
+            </div>
+
+            {/* Embedded Leaflet World Map Component */}
+            <div className="h-[380px] sm:h-[440px] w-full rounded-2xl overflow-hidden relative">
+              <LeafletWorldMap
+                vehicles={SAMPLE_HERO_VEHICLES}
+                warehouses={SAMPLE_HERO_WAREHOUSES}
+                centerLocation={{
+                  id: "loc-india-delhi",
+                  display_name: "Northern India Industrial Corridor",
+                  latitude: 28.6139,
+                  longitude: 77.2090,
+                  type: "corridor",
+                  confidence: 1.0,
+                  provider: "nexus-gps",
+                }}
+                className="h-full w-full"
               />
             </div>
-            <span className="text-emerald-400 font-bold">{Math.round(scrollProgress * 100)}%</span>
+
+            {/* Bottom Telemetry Ticker Overlay */}
+            <div className="px-3 py-2.5 bg-stone-900/90 border-t border-stone-800/80 flex items-center justify-between text-[11px] font-mono text-stone-400">
+              <div className="flex items-center gap-2">
+                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>Active Commercial Beacons: 3 Vehicles · 3 Distribution Hubs</span>
+              </div>
+              <Link href="/live-world" className="text-emerald-400 hover:underline flex items-center gap-1">
+                <span>Expand GIS Viewport</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="text-xs text-stone-300 hover:text-white font-mono">
-                Operator Sign In
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button variant="primary" size="sm" className="text-xs font-mono gap-1.5 shadow-tactile">
-                Launch Workspace <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
-        </header>
-
-        {/* Central Dynamic Scrollytelling Stage Content */}
-        <main className="relative z-20 max-w-7xl mx-auto w-full px-6 flex-1 flex items-center justify-between">
-          {/* Stage 0 (0% - 22%): Pure Unibody Hero Intro */}
-          {currentStageIndex === 0 && (
-            <motion.div
-              key="stage-0"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="max-w-2xl space-y-6"
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>Next-Gen Autonomous Logistics OS</span>
-              </div>
-
-              <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.08] text-white">
-                Supply Chains Don&apos;t Wait.{" "}
-                <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-                  Neither Does Nexus.
-                </span>
-              </h1>
-
-              <p className="text-base sm:text-lg text-stone-300 leading-relaxed font-normal max-w-xl">
-                The world&apos;s first deterministic intelligence engine for enterprise logistics. Sub-second IoT
-                telematics, kinetic reroute physics, and autonomous state execution with zero vendor lock-in.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Link href="/signup">
-                  <Button variant="primary" size="lg" className="font-mono text-xs gap-2 shadow-tactile">
-                    Get Started Free <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/overview">
-                  <Button variant="outline" size="lg" className="font-mono text-xs text-stone-200 border-stone-700 hover:bg-stone-800">
-                    Live Operational Demo
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="flex items-center gap-6 pt-4 text-xs font-mono text-stone-400">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Sub-Second Telemetry</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>100% Deterministic Physics</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>ACID State Ledger</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stage 1 (22% - 48%): Exploded View - Hardware & Intelligence Deconstruction */}
-          {currentStageIndex === 1 && (
-            <motion.div
-              key="stage-1"
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 30 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="max-w-xl space-y-4"
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono">
-                <Cpu className="w-3.5 h-3.5" />
-                <span>Exploded Core Architecture</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-                Deconstructed for <br />
-                <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                  Uncompromised Speed.
-                </span>
-              </h2>
-
-              <p className="text-sm text-stone-300 leading-relaxed">
-                Scroll to explore the layered hardware and neural inference stack powering autonomous fleet rerouting and
-                spatial digital twin synchronization.
-              </p>
-
-              {/* Exploded Tech Callouts */}
-              <div className="space-y-2.5 pt-2">
-                <div className="p-3.5 rounded-2xl bg-stone-900/90 border border-stone-800 backdrop-blur-md flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
-                    <Radio className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold font-mono text-stone-100">
-                      01. Optical Lidar & GPS Sensory Array
-                    </h4>
-                    <p className="text-[11px] text-stone-400 mt-0.5">
-                      Continuously captures vehicle velocity, heading, elevation grades, and weather radar anomalies.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-stone-900/90 border border-stone-800 backdrop-blur-md flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 shrink-0 mt-0.5">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold font-mono text-purple-300">
-                      02. Nexus Neural Engine™ Core Crystal
-                    </h4>
-                    <p className="text-[11px] text-stone-400 mt-0.5">
-                      Sub-second situation synthesis evaluating supply bottlenecks, corridor closures, and multi-variable trade-offs.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-stone-900/90 border border-stone-800 backdrop-blur-md flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 shrink-0 mt-0.5">
-                    <Activity className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold font-mono text-sky-300">
-                      03. Sovereign StreamGrid™ Telemetry Bus
-                    </h4>
-                    <p className="text-[11px] text-stone-400 mt-0.5">
-                      High-throughput optical interconnect processing 1.2M+ live state updates per second with &lt;18ms latency.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stage 2 (48% - 75%): Kinetic Physics & Recovery Matrix */}
-          {currentStageIndex === 2 && (
-            <motion.div
-              key="stage-2"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="ml-auto max-w-xl space-y-4"
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-mono">
-                <Zap className="w-3.5 h-3.5" />
-                <span>Deterministic Physics Engine</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-                Kinetic Reroute Matrix™ <br />
-                <span className="bg-gradient-to-r from-purple-400 via-fuchsia-400 to-rose-400 bg-clip-text text-transparent">
-                  Zero Second Guessing.
-                </span>
-              </h2>
-
-              <p className="text-sm text-stone-300 leading-relaxed">
-                When blizzards strike mountain passes or highway bottlenecks halt transit, Nexus tests thousands of
-                alternative paths against rolling resistance, aerodynamic drag, and customer penalty models before dispatching.
-              </p>
-
-              {/* Real Physics Metrics HUD */}
-              <div className="grid grid-cols-2 gap-3 pt-2 font-mono">
-                <div className="p-4 rounded-2xl bg-stone-900/90 border border-stone-800 backdrop-blur-md">
-                  <span className="text-[10px] text-stone-400 block uppercase">Time Recovered</span>
-                  <span className="text-2xl font-black text-emerald-400 mt-1 block">+135 Mins</span>
-                  <span className="text-[10px] text-stone-500">I-70 South Detour vs. I-80 Standstill</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-stone-900/90 border border-stone-800 backdrop-blur-md">
-                  <span className="text-[10px] text-stone-400 block uppercase">SLA Breach Probability</span>
-                  <span className="text-2xl font-black text-emerald-400 mt-1 block">12.0%</span>
-                  <span className="text-[10px] text-stone-500">Reduced from 88.0% baseline hold</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-stone-900/90 border border-stone-800 backdrop-blur-md">
-                  <span className="text-[10px] text-stone-400 block uppercase">Energy Offset</span>
-                  <span className="text-xl font-black text-purple-400 mt-1 block">-18.4 kWh</span>
-                  <span className="text-[10px] text-stone-500">Regenerative downhill braking</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-stone-900/90 border border-stone-800 backdrop-blur-md">
-                  <span className="text-[10px] text-stone-400 block uppercase">Decision Score</span>
-                  <span className="text-xl font-black text-purple-300 mt-1 block">94 / 100</span>
-                  <span className="text-[10px] text-stone-500">Pareto Optimal Verdict</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stage 3 (75% - 100%): Aegis Cryptographic Governance & Curtain Peel */}
-          {currentStageIndex === 3 && (
-            <motion.div
-              key="stage-3"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="max-w-2xl mx-auto text-center space-y-5"
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono mx-auto">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Aegis Verifiable State Protocol™</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-                Cryptographically Signed. <br />
-                <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-                  Executed in Milliseconds.
-                </span>
-              </h2>
-
-              <p className="text-sm sm:text-base text-stone-300 max-w-xl mx-auto leading-relaxed">
-                Every reroute mutation is verified against optimistic concurrency locks, company policy guardrails, and
-                immutable cryptographic state logs.
-              </p>
-
-              <div className="pt-3 flex items-center justify-center gap-3">
-                <Link href="/signup">
-                  <Button variant="primary" size="lg" className="font-mono text-xs gap-2 shadow-tactile">
-                    Deploy Nexus in Your Fleet <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/features">
-                  <Button variant="outline" size="lg" className="font-mono text-xs text-stone-300 border-stone-700 hover:bg-stone-800">
-                    Explore Platform Features
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="pt-6 text-stone-500 text-xs font-mono flex items-center justify-center gap-1.5 animate-bounce">
-                <span>Scroll down to enter the Operational Loop</span>
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </motion.div>
-          )}
-        </main>
-
-        {/* Bottom Interactive HUD Timeline Scrub Bar */}
-        <footer className="relative z-20 w-full px-6 pb-6 max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-mono text-stone-500">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>WebGL 3D Accelerated Engine</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {["Core Identity", "Exploded Architecture", "Kinetic Physics", "State Governance"].map((title, idx) => (
-              <div
-                key={idx}
-                className={`px-3 py-1 rounded-lg text-[11px] font-mono transition-all ${
-                  currentStageIndex === idx
-                    ? "bg-stone-800 text-white font-bold border border-stone-700"
-                    : "text-stone-500 hover:text-stone-400"
-                }`}
-              >
-                0{idx + 1}. {title}
-              </div>
-            ))}
-          </div>
-        </footer>
-      </div>
+        </motion.div>
+      </main>
     </div>
   );
 }

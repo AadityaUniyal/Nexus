@@ -50,11 +50,27 @@ export function CreateWarehouseModal({
   const [efficiencyPct, setEfficiencyPct] = React.useState("95");
   const [status, setStatus] = React.useState("OPERATIONAL");
 
-  // React to defaultCoordinates prop change if map center changes
+  // React to defaultCoordinates prop change if map center changes, or load workspace location
   React.useEffect(() => {
     if (defaultCoordinates) {
       setLat(defaultCoordinates.lat.toFixed(4));
       setLng(defaultCoordinates.lng.toFixed(4));
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("nexus_workspace_location");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.lat && parsed.lng) {
+            setLat(parsed.lat.toString());
+            setLng(parsed.lng.toString());
+            if (parsed.name) {
+              setCity(parsed.name);
+              setCode(`WH-${parsed.name.substring(0, 3).toUpperCase()}-01`);
+              setName(`${parsed.name} Operational Hub`);
+            }
+          }
+        }
+      } catch {}
     }
   }, [defaultCoordinates]);
 
