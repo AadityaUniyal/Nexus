@@ -250,7 +250,7 @@ export default function OverviewPage() {
               <span>·</span>
               <span className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
                 <PulseLED color="emerald" size="sm" />
-                Sub-Second Telemetry Ingest Active
+                Live Operations Network
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">

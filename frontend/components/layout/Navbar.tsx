@@ -30,7 +30,7 @@ export interface NavbarProps {
 }
 
 export function Navbar({
-  unreadCount = 2,
+  unreadCount = 0,
   onOpenNotifications,
   onOpenCommandMenu,
   onOpenMobileMenu,

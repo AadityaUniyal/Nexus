@@ -14,14 +14,36 @@ export function LogoMark({ size = 32, className }: { size?: number; className?: 
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("shrink-0", className)}
+      className={cn("shrink-0 drop-shadow-sm", className)}
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="8" fill="var(--brand-700, #0e5e58)" />
-      <path d="M9 23V9.5" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
-      <path d="M23 22.5V9" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" opacity="0.55" />
-      <path d="M9 9.5L16.2 18.4L19.2 15.2L23 22.5" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="23" cy="9" r="2.6" fill="var(--accent-500, #e0652a)" />
+      <defs>
+        <linearGradient id="nexus-logo-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#0F172A" />
+          <stop offset="50%" stopColor="#0D4B46" />
+          <stop offset="100%" stopColor="#072B28" />
+        </linearGradient>
+        <linearGradient id="nexus-logo-corridor" x1="9" y1="23" x2="23" y2="9" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#14B8A6" />
+          <stop offset="50%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#F97316" />
+        </linearGradient>
+      </defs>
+
+      {/* Apple Squircle Base */}
+      <rect x="1" y="1" width="30" height="30" rx="7.5" fill="url(#nexus-logo-bg)" stroke="#FFFFFF" strokeOpacity="0.25" strokeWidth="0.8" />
+
+      {/* Fleet Origin Pillar */}
+      <path d="M9 23V10" stroke="#FFFFFF" strokeWidth="2.6" strokeLinecap="round" />
+
+      {/* Fleet Return / Destination Guide */}
+      <path d="M23 22V12" stroke="#FFFFFF" strokeWidth="2.6" strokeLinecap="round" opacity="0.45" />
+
+      {/* Nexus Intermodal Corridor Vector */}
+      <path d="M9 10L15 18L18 15L23 9" stroke="url(#nexus-logo-corridor)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* Verified Delivery Checkpoint Beacon */}
+      <circle cx="23" cy="9" r="2.4" fill="#F97316" stroke="#FFFFFF" strokeWidth="1.2" />
     </svg>
   );
 }
