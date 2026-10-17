@@ -169,7 +169,7 @@ class Settings(BaseSettings):
 
     EMAIL_VERIFICATION_ENABLED: bool = os.getenv("EMAIL_VERIFICATION_ENABLED", "false").lower() == "true"
 
-    ENABLE_DEMO_AUTH: bool = os.getenv("ENABLE_DEMO_AUTH", "false").lower() == "true"
+    ENABLE_DEMO_AUTH: bool = os.getenv("ENABLE_DEMO_AUTH", "true" if os.getenv("APP_ENV", "development").lower() != "production" else "false").lower() == "true"
 
     # Weather Cache Configuration (Redis / Memory)
 
