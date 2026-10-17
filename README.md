@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="frontend/public/app-icon.svg" width="96" height="96" alt="Nexus Brand Icon" style="border-radius: 22px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);" />
+
 # 🌐 NEXUS
 ### *Autonomous Logistics Operating System & Real-Time Digital Twin*
 
@@ -13,7 +15,7 @@
 
 <br />
 
-**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[🌐 System Status & SLA](https://nexus-logistics-os.vercel.app/status)** · **[📖 Architecture Blueprint](docs/ROLE_DRIVEN_ARCHITECTURE_BLUEPRINT.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)** · **[☁️ Azure Roadmap](docs/AZURE_ENTERPRISE_INTEGRATIONS_ROADMAP.md)** · **[🚀 Deployment Playbook](docs/DEPLOYMENT.md)**
+**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[📋 Launch Readiness Ledger](docs/LAUNCH_READINESS.md)** · **[🔍 Technical Audit Matrix](docs/AUDIT_MATRIX.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)** · **[☁️ Azure Roadmap](docs/AZURE_ENTERPRISE_INTEGRATIONS_ROADMAP.md)** · **[🚀 Deployment Playbook](docs/DEPLOYMENT.md)**
 
 </div>
 
