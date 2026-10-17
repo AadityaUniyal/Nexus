@@ -110,6 +110,21 @@
     text-wrap: balance;
   }
 
+  .glass-luxury {
+    background: rgba(15, 15, 18, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .specular-border {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+  }
+
+  .studio-radial-glow {
+    background: radial-gradient(circle at 50% 40%, rgba(249, 115, 22, 0.18) 0%, transparent 65%);
+  }
+
   .bg-grid {
     background-image:
       linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
