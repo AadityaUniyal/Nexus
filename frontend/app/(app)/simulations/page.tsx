@@ -11,6 +11,7 @@ import { Sparkles, Plus, ArrowRight, CheckCircle2, TrendingUp, Layers, RefreshCw
 import { SimulationItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 export default function SimulationsPage() {
   const [simulations, setSimulations] = React.useState<SimulationItem[]>([]);
@@ -130,8 +131,16 @@ export default function SimulationsPage() {
           </Link>
         </div>
 
-        {/* Simulations List */}
-        {simulations.length === 0 ? (
+        {/* Simulations List with Loading State */}
+        {isLoading ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono text-purple-600 dark:text-purple-400">
+              <span className="h-2 w-2 rounded-full bg-purple-500 animate-ping" />
+              <span>Simulating deterministic branching states...</span>
+            </div>
+            <SkeletonTable rows={4} />
+          </div>
+        ) : simulations.length === 0 ? (
           <EmptyState
             icon={Sparkles}
             title="No decision simulations queued"

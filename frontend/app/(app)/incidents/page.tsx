@@ -15,6 +15,8 @@ import { IncidentItem } from "@/lib/mock-data";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Tabs } from "@/components/ui/tabs";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 export default function IncidentCenterPage() {
   const { toast } = useToast();
@@ -176,27 +178,52 @@ export default function IncidentCenterPage() {
           </div>
         </div>
 
-        {/* Severity Filters */}
-        <div className="flex items-center gap-2">
-          {["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((sev) => (
-            <Button
-              key={sev}
-              variant={filterSeverity === sev ? "primary" : "secondary"}
-              size="sm"
-              onClick={() => setFilterSeverity(sev)}
-              className="font-mono-data text-xs"
-            >
-              {sev === "ALL" ? "All Incidents" : sev}
-            </Button>
-          ))}
+        {/* Apple Segmented Severity Triage Tabs */}
+        <div className="flex items-center justify-between overflow-x-auto pb-1">
+          <Tabs
+            tabs={[
+              { id: "ALL", label: "All Disruptions", count: incidents.length },
+              {
+                id: "CRITICAL",
+                label: "Critical SLA",
+                count: incidents.filter((i) => i.severity === "CRITICAL").length,
+                badge: "Immediate",
+              },
+              {
+                id: "HIGH",
+                label: "High Impact",
+                count: incidents.filter((i) => i.severity === "HIGH").length,
+              },
+              {
+                id: "MEDIUM",
+                label: "Moderate",
+                count: incidents.filter((i) => i.severity === "MEDIUM").length,
+              },
+              {
+                id: "LOW",
+                label: "Advisory",
+                count: incidents.filter((i) => i.severity === "LOW").length,
+              },
+            ]}
+            activeTab={filterSeverity}
+            onChange={setFilterSeverity}
+          />
         </div>
 
-        {/* Incidents Table */}
-        {filtered.length === 0 ? (
+        {/* Loading State & Incidents Table */}
+        {isLoading ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>Scanning live telemetry streams for corridor anomalies...</span>
+            </div>
+            <SkeletonTable rows={4} />
+          </div>
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon={CheckCircle2}
             title="All network corridors clear"
-            description="No active disruptions, weather hazards, or fleet anomalies flagged at this time."
+            description="No active disruptions, weather hazards, or fleet anomalies flagged for this filter."
             action={
               <Button
                 variant="outline"

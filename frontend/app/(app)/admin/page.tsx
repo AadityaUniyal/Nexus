@@ -26,6 +26,7 @@ import { UserItem, AuditLogItem, PipelineHealthItem } from "@/lib/mock-data";
 import { dataProvider } from "@/lib/data-provider";
 import { formatDateTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -128,8 +129,19 @@ export default function AdminPage() {
 
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-        {/* 1. User Governance */}
-        {activeTab === "users" && (
+        {/* Loading State */}
+        {loading ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono text-purple-600 dark:text-purple-400">
+              <span className="h-2 w-2 rounded-full bg-purple-500 animate-ping" />
+              <span>Verifying enterprise tenant authorization and RBAC partition...</span>
+            </div>
+            <SkeletonTable rows={5} />
+          </div>
+        ) : (
+          <>
+            {/* 1. User Governance */}
+            {activeTab === "users" && (
           <Table>
             <TableHeader>
               <TableRow>
@@ -310,6 +322,8 @@ export default function AdminPage() {
             </TableBody>
           </Table>
         )}
+      </>
+    )}
 
         {/* Add User Modal */}
         <Dialog

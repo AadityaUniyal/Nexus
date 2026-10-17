@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { MetricTile } from "@/components/ui/metric-tile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs } from "@/components/ui/tabs";
+import { SkeletonMetricTile, SkeletonCard } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/http";
 import { track } from "@/lib/analytics/tracker";
 import { AIInsightsPanel } from "@/components/analytics/AIInsightsPanel";
@@ -193,36 +195,36 @@ export default function AnalyticsPage() {
 
         <AIInsightsPanel timeframe={timeframe} />
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-nexus-outline-variant/40 gap-2 overflow-x-auto text-sm font-medium">
-          {[
-            { id: "overview" as TabType, label: "Overview", icon: Activity },
-            { id: "forecast" as TabType, label: "Forecast", icon: BrainCircuit },
-            { id: "anomalies" as TabType, label: "Anomalies", icon: AlertTriangle },
-            { id: "risk" as TabType, label: "Risk", icon: ShieldAlert },
-            { id: "medallion" as TabType, label: "Data pipeline", icon: Layers },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 border-b-2 font-mono text-xs transition-all whitespace-nowrap ${
-                  isActive
-                    ? "border-nexus-secondary text-nexus-secondary font-bold"
-                    : "border-transparent text-nexus-on-surface-variant hover:text-nexus-on-surface hover:border-nexus-outline-variant"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+        {/* Apple Segmented Tab Navigation */}
+        <div className="flex items-center justify-between overflow-x-auto pb-1">
+          <Tabs
+            tabs={[
+              { id: "overview", label: "Operations Overview", icon: <Activity className="h-3.5 w-3.5" /> },
+              { id: "forecast", label: "Predictive Forecast", icon: <BrainCircuit className="h-3.5 w-3.5" /> },
+              { id: "anomalies", label: "Anomaly Hunter", icon: <AlertTriangle className="h-3.5 w-3.5" />, count: anomaliesList.length },
+              { id: "risk", label: "Corridor Risk Index", icon: <ShieldAlert className="h-3.5 w-3.5" /> },
+              { id: "medallion", label: "Data Pipeline", icon: <Layers className="h-3.5 w-3.5" /> },
+            ]}
+            activeTab={activeTab}
+            onChange={(id) => setActiveTab(id as TabType)}
+          />
         </div>
 
+        {/* Apple-grade Loading Skeleton */}
+        {loading && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <SkeletonMetricTile />
+              <SkeletonMetricTile />
+              <SkeletonMetricTile />
+            </div>
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        )}
+
         {/* TAB 1: OVERVIEW */}
-        {activeTab === "overview" && (
+        {!loading && activeTab === "overview" && (
           <div className="space-y-6">
             {/* Top Analytics Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

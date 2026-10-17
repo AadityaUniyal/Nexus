@@ -89,7 +89,7 @@ export function Navbar({
   const roleInfo = getRoleBadge(user?.role);
 
   return (
-    <header className="h-16 border-b border-nexus-outline-variant/30 bg-nexus-surface/80 backdrop-blur-md sticky top-0 z-40 px-6 flex items-center justify-between">
+    <header className="h-16 border-b border-stone-200/70 dark:border-white/10 bg-white/70 dark:bg-stone-950/70 backdrop-blur-2xl sticky top-0 z-40 px-6 flex items-center justify-between font-sans">
       {/* Left: Brand Identity & Workspace Switcher */}
       <div className="flex items-center gap-3 sm:gap-6">
         <button
@@ -104,30 +104,30 @@ export function Navbar({
         <Logo href="/overview" size={30} />
 
         {/* Dynamic Workspace & Hub Pill */}
-        <div className="hidden md:flex items-center gap-2 pl-4 ml-1 border-l border-nexus-outline-variant/70 text-sm text-nexus-on-surface">
+        <div className="hidden md:flex items-center gap-2 pl-4 ml-1 border-l border-stone-200/70 dark:border-stone-800 text-sm text-stone-900 dark:text-stone-100">
           <StatusLed status="HEALTHY" size="sm" />
           <span className="font-semibold text-xs tracking-tight">{companyName}</span>
-          <span className="text-stone-600">·</span>
-          <div className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/30">
+          <span className="text-stone-400 dark:text-stone-600">·</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
             <MapPin className="w-2.5 h-2.5" />
             <span>{hubName}</span>
           </div>
         </div>
       </div>
 
-      {/* Middle: Command Search Bar */}
+      {/* Middle: Apple Command Search Bar */}
       <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
         <button
           type="button"
           onClick={onOpenCommandMenu}
           aria-label="Search operational assets, vehicles, routes, and commands"
-          className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-nexus-surface-container/70 hover:bg-nexus-surface-container border border-nexus-outline-variant/40 text-xs text-nexus-on-surface-variant transition-colors shadow-tactile-inner"
+          className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl bg-stone-100/80 dark:bg-stone-900/70 hover:bg-stone-200/70 dark:hover:bg-stone-850/80 border border-stone-200/60 dark:border-white/10 text-xs text-stone-500 dark:text-stone-400 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
         >
           <div className="flex items-center gap-2">
-            <Search className="h-3.5 w-3.5 text-nexus-outline" />
+            <Search className="h-3.5 w-3.5 text-stone-400 dark:text-stone-500" />
             <span>Search vehicles, routes, incidents, simulations...</span>
           </div>
-          <kbd className="px-1.5 py-0.5 rounded bg-nexus-surface-lowest text-[10px] font-mono-data border border-nexus-outline-variant/40 shadow-sm">
+          <kbd className="px-2 py-0.5 rounded-md bg-white dark:bg-stone-800 text-[10px] font-mono font-bold border border-stone-200/80 dark:border-white/10 shadow-xs text-stone-600 dark:text-stone-300">
             ⌘K
           </kbd>
         </button>

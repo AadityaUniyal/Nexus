@@ -34,7 +34,7 @@ import {
 import { dataProvider } from "@/lib/data-provider";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -234,66 +234,39 @@ export default function OperationsPage() {
           </div>
         </div>
 
-        {/* Global Regional Topology Presets Switcher */}
-        <div className="p-3.5 bg-stone-50/80 dark:bg-stone-900/60 rounded-2xl border border-stone-200/70 dark:border-stone-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-stone-600 dark:text-stone-300">
-            <Globe className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-bold text-stone-900 dark:text-stone-100">Setup Region Topology:</span>
-            <span className="text-stone-500 text-[11px] hidden sm:inline">
-              Instant 1-click provisioning for any target operational area
+        {/* Global Regional Topology Presets Switcher (Apple Control Strip) */}
+        <div className="p-2.5 bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl rounded-2xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 px-2 text-xs font-semibold text-stone-700 dark:text-stone-300">
+            <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="font-bold text-stone-900 dark:text-stone-100">Regional Topology:</span>
+            <span className="text-stone-500 text-[11px] font-normal hidden sm:inline">
+              1-click synchronous deployment for active grid
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            <button
-              onClick={() => handleApplyPreset("dehradun", "Dehradun & North India Grid")}
-              className={`px-2.5 py-1 rounded-lg transition-all font-medium ${
-                activePreset === "dehradun"
-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
-                  : "bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100"
-              }`}
-            >
-              📍 Dehradun / India
-            </button>
-            <button
-              onClick={() => handleApplyPreset("delhi", "Delhi NCR Logistics Grid")}
-              className={`px-2.5 py-1 rounded-lg transition-all font-medium ${
-                activePreset === "delhi"
-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
-                  : "bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100"
-              }`}
-            >
-              📍 Delhi NCR
-            </button>
-            <button
-              onClick={() => handleApplyPreset("london", "London Thames Superhub")}
-              className={`px-2.5 py-1 rounded-lg transition-all font-medium ${
-                activePreset === "london"
-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
-                  : "bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100"
-              }`}
-            >
-              📍 London / UK
-            </button>
-            <button
-              onClick={() => handleApplyPreset("tokyo", "Tokyo Bay Terminal")}
-              className={`px-2.5 py-1 rounded-lg transition-all font-medium ${
-                activePreset === "tokyo"
-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
-                  : "bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100"
-              }`}
-            >
-              📍 Tokyo / Japan
-            </button>
-            <button
-              onClick={() => handleApplyPreset("chicago", "US Central Grid")}
-              className={`px-2.5 py-1 rounded-lg transition-all font-medium ${
-                activePreset === "chicago"
-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
-                  : "bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100"
-              }`}
-            >
-              📍 US Central
-            </button>
+          <div className="flex flex-wrap items-center gap-1 text-xs">
+            {[
+              { key: "dehradun" as const, label: "Dehradun / India", flag: "🇮🇳" },
+              { key: "delhi" as const, label: "Delhi NCR", flag: "🇮🇳" },
+              { key: "london" as const, label: "London / UK", flag: "🇬🇧" },
+              { key: "tokyo" as const, label: "Tokyo / Japan", flag: "🇯🇵" },
+              { key: "chicago" as const, label: "US Central", flag: "🇺🇸" },
+            ].map((preset) => {
+              const isSelected = activePreset === preset.key;
+              return (
+                <button
+                  key={preset.key}
+                  onClick={() => handleApplyPreset(preset.key, preset.label)}
+                  className={`relative px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 font-medium select-none ${
+                    isSelected
+                      ? "text-stone-900 dark:text-white font-bold shadow-xs bg-white dark:bg-stone-800 border border-black/5 dark:border-white/15"
+                      : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-black/5 dark:hover:bg-white/5"
+                  }`}
+                >
+                  <span className="text-xs">{preset.flag}</span>
+                  <span>{preset.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -301,274 +274,334 @@ export default function OperationsPage() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-          <div className="w-full md:w-72">
+          <div className="w-full md:w-72 relative">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-stone-400" />
             <Input
-              placeholder="Search by code, city, name..."
+              placeholder="Filter by code, city, name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 text-xs"
+              className="h-9 pl-8 pr-8 text-xs bg-stone-100/70 dark:bg-stone-900/60 border-stone-200 dark:border-stone-800 rounded-xl"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-stone-400 hover:text-stone-600 p-0.5"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* 1. Fleet Vehicles Table */}
-        {activeTab === "vehicles" && (
-          vehicles.length === 0 ? (
-            <EmptyState
-              icon={Truck}
-              title="No fleet assets registered"
-              description="Your company workspace has no active trucks or transport vehicles registered yet."
-              action={
-                <Button
-                  onClick={() => setIsAddVehicleOpen(true)}
-                  variant="primary"
-                  size="sm"
-                  className="font-mono text-xs gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Deploy Fleet Vehicle
-                </Button>
-              }
-            />
-          ) : (
-            <div className="rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-hidden shadow-sm">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Vehicle Code</TableHead>
-                    <TableHead>Model & Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Driver Pilot</TableHead>
-                    <TableHead>Speed</TableHead>
-                    <TableHead>Battery State</TableHead>
-                    <TableHead>Health Score</TableHead>
-                    <TableHead>Assigned Corridor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vehicles
-                    .filter(
-                      (v) =>
-                        v.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        v.driverName.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell className="font-mono font-bold text-xs">{v.code}</TableCell>
-                        <TableCell>
-                          <div className="font-semibold text-xs text-stone-900 dark:text-stone-100">{v.name}</div>
-                          <div className="text-[10px] text-stone-500">{v.model}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={v.status === "IN_TRANSIT" ? "healthy" : v.status === "MAINTENANCE" ? "critical" : "neutral"}
-                            size="sm"
-                          >
-                            {v.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="font-medium text-stone-800 dark:text-stone-200">{v.driverName}</div>
-                          <div className="text-[10px] text-stone-400 font-mono">{v.driverPhone}</div>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-semibold">{v.speedKmh} km/h</TableCell>
-                        <TableCell className="font-mono text-xs">
-                          <span className={v.batteryPct < 30 ? "text-rose-600 font-bold" : "text-emerald-600 font-bold"}>
-                            {v.batteryPct}%
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-semibold text-emerald-600">
-                          {v.healthScore}%
-                        </TableCell>
-                        <TableCell className="text-xs text-stone-600 dark:text-stone-300">
-                          {v.currentRouteName || "Standby Dock"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
+        {/* Loading Skeleton Transition */}
+        {loading ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>Synchronizing fleet telemetry with live ledger...</span>
             </div>
-          )
-        )}
-
-        {/* 2. Hub Warehouses Table */}
-        {activeTab === "warehouses" && (
-          warehouses.length === 0 ? (
-            <EmptyState
-              icon={Building2}
-              title="No hub facilities registered"
-              description="Register your primary distribution superhubs, cold storage warehouses, or transfer cross-docks."
-              action={
-                <Button
-                  onClick={() => setIsAddHubOpen(true)}
-                  variant="primary"
-                  size="sm"
-                  className="font-mono text-xs gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Provision First Hub
-                </Button>
-              }
-            />
-          ) : (
-            <div className="rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-hidden shadow-sm">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Hub Code</TableHead>
-                    <TableHead>Facility Name</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>GPS Coordinates</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Units Capacity</TableHead>
-                    <TableHead>Active Docks</TableHead>
-                    <TableHead>Efficiency</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {warehouses
-                    .filter(
-                      (w) =>
-                        w.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        w.city.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((w) => (
-                      <TableRow key={w.id}>
-                        <TableCell className="font-mono font-bold text-xs">{w.code}</TableCell>
-                        <TableCell className="text-xs font-semibold text-stone-900 dark:text-stone-100">{w.name}</TableCell>
-                        <TableCell className="text-xs">{w.city}, {w.state}</TableCell>
-                        <TableCell className="font-mono text-[11px] text-stone-500">
-                          {w.lat.toFixed(4)}, {w.lng.toFixed(4)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={w.status === "OPERATIONAL" ? "healthy" : "attention"}
-                            size="sm"
-                          >
-                            {w.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {w.currentUnits.toLocaleString()} / {w.capacityUnits.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {w.activeDocks} / {w.dockCount}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-semibold text-emerald-600">
-                          {w.efficiencyPct}%
-                        </TableCell>
+            <SkeletonTable rows={5} />
+          </div>
+        ) : (
+          <>
+            {/* 1. Fleet Vehicles Table */}
+            {activeTab === "vehicles" && (
+              vehicles.length === 0 ? (
+                <EmptyState
+                  icon={Truck}
+                  title="No fleet assets registered"
+                  description="Your company workspace has no active trucks or transport vehicles registered yet."
+                  action={
+                    <Button
+                      onClick={() => setIsAddVehicleOpen(true)}
+                      variant="primary"
+                      size="sm"
+                      className="font-mono text-xs gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Deploy Fleet Vehicle
+                    </Button>
+                  }
+                />
+              ) : (
+                <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 backdrop-blur-xl overflow-hidden shadow-xs">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vehicle Code</TableHead>
+                        <TableHead>Model & Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Driver Pilot</TableHead>
+                        <TableHead>Speed</TableHead>
+                        <TableHead>Battery / Energy</TableHead>
+                        <TableHead>Health Score</TableHead>
+                        <TableHead>Assigned Corridor</TableHead>
                       </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
-          )
-        )}
+                    </TableHeader>
+                    <TableBody>
+                      {vehicles
+                        .filter(
+                          (v) =>
+                            v.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            v.driverName.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((v) => (
+                          <TableRow key={v.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/40 transition-colors">
+                            <TableCell className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100">
+                              <span className="px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+                                {v.code}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-semibold text-xs text-stone-900 dark:text-stone-100">{v.name}</div>
+                              <div className="text-[10px] text-stone-500 font-mono">{v.model}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={v.status === "IN_TRANSIT" ? "healthy" : v.status === "MAINTENANCE" ? "critical" : "neutral"}
+                                size="sm"
+                              >
+                                {v.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <div className="font-medium text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                                <span className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+                                  {v.driverName.charAt(0)}
+                                </span>
+                                <span>{v.driverName}</span>
+                              </div>
+                              <div className="text-[10px] text-stone-400 font-mono pl-6.5">{v.driverPhone}</div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs font-semibold">{v.speedKmh} km/h</TableCell>
+                            <TableCell className="text-xs">
+                              <div className="space-y-1 w-24">
+                                <div className="flex items-center justify-between text-[10px] font-mono font-bold">
+                                  <span className={v.batteryPct < 30 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
+                                    {v.batteryPct}%
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      v.batteryPct < 30
+                                        ? "bg-rose-500"
+                                        : v.batteryPct < 60
+                                        ? "bg-amber-500"
+                                        : "bg-emerald-500"
+                                    }`}
+                                    style={{ width: `${v.batteryPct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              {v.healthScore}%
+                            </TableCell>
+                            <TableCell className="text-xs text-stone-600 dark:text-stone-300">
+                              {v.currentRouteName || "Standby Dock"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )
+            )}
 
-        {/* 3. Routes Table */}
-        {activeTab === "routes" && (
-          <div className="rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-hidden shadow-sm">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Route Code</TableHead>
-                  <TableHead>Corridor Name</TableHead>
-                  <TableHead>Origin Hub</TableHead>
-                  <TableHead>Destination Hub</TableHead>
-                  <TableHead>Distance</TableHead>
-                  <TableHead>Est. Duration</TableHead>
-                  <TableHead>Traffic / Weather Risk</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {routes
-                  .filter(
-                    (r) =>
-                      r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      r.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-mono font-bold text-xs">{r.code}</TableCell>
-                      <TableCell className="text-xs font-semibold text-stone-900 dark:text-stone-100">{r.name}</TableCell>
-                      <TableCell className="text-xs font-mono">{r.originWarehouseName}</TableCell>
-                      <TableCell className="text-xs font-mono">{r.destWarehouseName}</TableCell>
-                      <TableCell className="font-mono text-xs">{r.distanceKm} km</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {Math.floor(r.avgDurationMins / 60)}h {r.avgDurationMins % 60}m
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={r.trafficCondition === "SEVERE_WEATHER_ALERT" ? "critical" : "healthy"}
-                          size="sm"
-                        >
-                          {r.trafficCondition}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+            {/* 2. Hub Warehouses Table */}
+            {activeTab === "warehouses" && (
+              warehouses.length === 0 ? (
+                <EmptyState
+                  icon={Building2}
+                  title="No hub facilities registered"
+                  description="Register your primary distribution superhubs, cold storage warehouses, or transfer cross-docks."
+                  action={
+                    <Button
+                      onClick={() => setIsAddHubOpen(true)}
+                      variant="primary"
+                      size="sm"
+                      className="font-mono text-xs gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Provision First Hub
+                    </Button>
+                  }
+                />
+              ) : (
+                <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 backdrop-blur-xl overflow-hidden shadow-xs">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Hub Code</TableHead>
+                        <TableHead>Facility Name</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>GPS Coordinates</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Units Capacity</TableHead>
+                        <TableHead>Active Docks</TableHead>
+                        <TableHead>Efficiency</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {warehouses
+                        .filter(
+                          (w) =>
+                            w.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            w.city.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((w) => (
+                          <TableRow key={w.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/40 transition-colors">
+                            <TableCell className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100">
+                              <span className="px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+                                {w.code}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs font-semibold text-stone-900 dark:text-stone-100">{w.name}</TableCell>
+                            <TableCell className="text-xs">{w.city}, {w.state}</TableCell>
+                            <TableCell className="font-mono text-[11px] text-stone-500">
+                              {w.lat.toFixed(4)}, {w.lng.toFixed(4)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={w.status === "OPERATIONAL" ? "healthy" : "attention"}
+                                size="sm"
+                              >
+                                {w.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {w.currentUnits.toLocaleString()} / {w.capacityUnits.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {w.activeDocks} / {w.dockCount}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              {w.efficiencyPct}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )
+            )}
 
-        {/* 4. Orders Table */}
-        {activeTab === "orders" && (
-          <div className="rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-hidden shadow-sm">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order #</TableHead>
-                  <TableHead>Client Consignee</TableHead>
-                  <TableHead>Destination</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Delivery Deadline</TableHead>
-                  <TableHead>Carrier Vehicle</TableHead>
-                  <TableHead className="text-right">Value</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders
-                  .filter(
-                    (o) =>
-                      o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      o.destination.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .map((o) => (
-                    <TableRow key={o.id}>
-                      <TableCell className="font-mono font-bold text-xs">{o.orderNumber}</TableCell>
-                      <TableCell className="text-xs font-semibold text-stone-900 dark:text-stone-100">{o.customerName}</TableCell>
-                      <TableCell className="text-xs">{o.destination}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={o.priority === "CRITICAL" ? "critical" : o.priority === "HIGH" ? "attention" : "neutral"}
-                          size="sm"
-                        >
-                          {o.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={o.status === "DELAYED" ? "critical" : "healthy"}
-                          size="sm"
-                        >
-                          {o.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{formatDateTime(o.deadline)}</TableCell>
-                      <TableCell className="font-mono text-xs text-emerald-600 font-semibold">
-                        {o.vehicleCode || "Unassigned"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-right font-semibold">
-                        {formatCurrency(o.totalCost)}
-                      </TableCell>
+            {/* 3. Routes Table */}
+            {activeTab === "routes" && (
+              <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 backdrop-blur-xl overflow-hidden shadow-xs">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Route Code</TableHead>
+                      <TableHead>Corridor Name</TableHead>
+                      <TableHead>Origin Hub</TableHead>
+                      <TableHead>Destination Hub</TableHead>
+                      <TableHead>Distance</TableHead>
+                      <TableHead>Est. Duration</TableHead>
+                      <TableHead>Traffic / Weather Risk</TableHead>
                     </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {routes
+                      .filter(
+                        (r) =>
+                          r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          r.name.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((r) => (
+                        <TableRow key={r.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/40 transition-colors">
+                          <TableCell className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100">
+                            <span className="px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+                              {r.code}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold text-stone-900 dark:text-stone-100">{r.name}</TableCell>
+                          <TableCell className="text-xs font-mono">{r.originWarehouseName}</TableCell>
+                          <TableCell className="text-xs font-mono">{r.destWarehouseName}</TableCell>
+                          <TableCell className="font-mono text-xs">{r.distanceKm} km</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {Math.floor(r.avgDurationMins / 60)}h {r.avgDurationMins % 60}m
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={r.trafficCondition === "SEVERE_WEATHER_ALERT" ? "critical" : "healthy"}
+                              size="sm"
+                            >
+                              {r.trafficCondition}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* 4. Orders Table */}
+            {activeTab === "orders" && (
+              <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 backdrop-blur-xl overflow-hidden shadow-xs">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order #</TableHead>
+                      <TableHead>Client Consignee</TableHead>
+                      <TableHead>Destination</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Delivery Deadline</TableHead>
+                      <TableHead>Carrier Vehicle</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders
+                      .filter(
+                        (o) =>
+                          o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          o.destination.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((o) => (
+                        <TableRow key={o.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/40 transition-colors">
+                          <TableCell className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100">
+                            <span className="px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+                              {o.orderNumber}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold text-stone-900 dark:text-stone-100">{o.customerName}</TableCell>
+                          <TableCell className="text-xs">{o.destination}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={o.priority === "CRITICAL" ? "critical" : o.priority === "HIGH" ? "attention" : "neutral"}
+                              size="sm"
+                            >
+                              {o.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={o.status === "DELAYED" ? "critical" : "healthy"}
+                              size="sm"
+                            >
+                              {o.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{formatDateTime(o.deadline)}</TableCell>
+                          <TableCell className="font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                            {o.vehicleCode || "Unassigned"}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-right font-semibold">
+                            {formatCurrency(o.totalCost)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </>
         )}
 
         {/* Modal: Provision Hub */}

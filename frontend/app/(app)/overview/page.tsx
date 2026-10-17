@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/motion-animations";
 import { motion, AnimatePresence } from "motion/react";
 import { dataProvider } from "@/lib/data-provider";
+import { SkeletonMetricTile, SkeletonCard } from "@/components/ui/skeleton";
 
 // Innovations & Role Cockpits
 import { RoleCockpitSwitcher, RoleType, normalizeRole } from "@/components/role-dashboards/RoleCockpitSwitcher";
@@ -258,8 +259,8 @@ export default function OverviewPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Action Modals Toolbar */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-nexus-surface-container-high border border-nexus-outline/30">
+            {/* Apple Action Modals Toolbar */}
+            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
               <Button
                 variant="default"
                 size="sm"
@@ -267,10 +268,10 @@ export default function OverviewPage() {
                   tactileAudio.playClick();
                   setIsWarehouseModalOpen(true);
                 }}
-                className="font-mono text-xs h-7.5 px-2.5 shadow-tactile"
+                className="font-mono text-xs h-7.5 px-3 rounded-xl shadow-xs"
               >
                 <Building2 className="w-3.5 h-3.5 mr-1" />
-                + Add Hub
+                + Hub
               </Button>
               <Button
                 variant="secondary"
@@ -279,10 +280,10 @@ export default function OverviewPage() {
                   tactileAudio.playClick();
                   setIsVehicleModalOpen(true);
                 }}
-                className="font-mono text-xs h-7.5 px-2.5"
+                className="font-mono text-xs h-7.5 px-3 rounded-xl"
               >
                 <Truck className="w-3.5 h-3.5 mr-1 text-nexus-secondary" />
-                + Enroll Vehicle
+                + Vehicle
               </Button>
               <Button
                 variant="outline"
@@ -291,10 +292,10 @@ export default function OverviewPage() {
                   tactileAudio.playClick();
                   setIsOrderModalOpen(true);
                 }}
-                className="font-mono text-xs h-7.5 px-2.5"
+                className="font-mono text-xs h-7.5 px-3 rounded-xl"
               >
                 <Package className="w-3.5 h-3.5 mr-1 text-nexus-primary" />
-                + New Order
+                + Order
               </Button>
               <Button
                 variant="ghost"
@@ -303,7 +304,7 @@ export default function OverviewPage() {
                   tactileAudio.playClick();
                   setIsIncidentModalOpen(true);
                 }}
-                className="font-mono text-xs h-7.5 px-2.5 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                className="font-mono text-xs h-7.5 px-3 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
               >
                 <AlertTriangle className="w-3.5 h-3.5 mr-1" />
                 + Incident
@@ -313,24 +314,24 @@ export default function OverviewPage() {
             {/* Live War Room Presence */}
             <MultiplayerPresence />
 
-            {/* Sandbox / Production Toggle */}
-            <div className="flex items-center p-1 rounded-xl bg-nexus-surface-container-high border border-nexus-outline/30 text-xs font-mono">
+            {/* Apple Segmented Sandbox / Production Toggle */}
+            <div className="flex items-center p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] text-xs font-mono">
               <button
                 onClick={() => handleToggleSandbox("PRODUCTION")}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
+                className={`px-3 py-1.5 rounded-xl transition-all ${
                   operationalMode === "PRODUCTION"
-                    ? "bg-nexus-surface border border-nexus-outline/40 font-bold text-nexus-on-surface shadow-xs"
-                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
+                    ? "bg-white dark:bg-stone-850 text-stone-900 dark:text-white font-bold shadow-xs border border-black/5 dark:border-white/10"
+                    : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
                 }`}
               >
                 Production (0-State)
               </button>
               <button
                 onClick={() => handleToggleSandbox("SANDBOX")}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
+                className={`px-3 py-1.5 rounded-xl transition-all ${
                   operationalMode === "SANDBOX"
-                    ? "bg-nexus-secondary text-white font-bold shadow-xs"
-                    : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
+                    ? "bg-emerald-600 text-white font-bold shadow-xs"
+                    : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
                 }`}
               >
                 Sandbox Demo
@@ -389,39 +390,57 @@ export default function OverviewPage() {
           </div>
         )}
 
-        {/* Bespoke Active Role Dashboard Cockpit */}
+        {/* Bespoke Active Role Dashboard Cockpit with Apple Shimmer Skeleton */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key={normalizeRole(activeRole)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {normalizeRole(activeRole) === "OPERATOR" ? (
-              <OperatorDashboard
-                vehicles={vehicles}
-                warehouses={warehouses}
-                onOpenCreateVehicle={() => setIsVehicleModalOpen(true)}
-                onOpenCreateOrder={() => setIsOrderModalOpen(true)}
-              />
-            ) : normalizeRole(activeRole) === "ANALYST" ? (
-              <AnalystDashboard />
-            ) : normalizeRole(activeRole) === "ADMINISTRATOR" ? (
-              <AdminDashboard />
-            ) : normalizeRole(activeRole) === "VIEWER" ? (
-              <ViewerDashboard />
-            ) : (
-              <ManagerDashboard
-                incidents={incidents}
-                simulations={simulations}
-                warehouses={warehouses}
-                onApplyDecision={handleApplyDecision}
-                onOpenCreateIncident={() => setIsIncidentModalOpen(true)}
-                onOpenCreateWarehouse={() => setIsWarehouseModalOpen(true)}
-              />
-            )}
-          </motion.div>
+          {isLoading ? (
+            <motion.div
+              key="overview-loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <SkeletonMetricTile />
+                <SkeletonMetricTile />
+                <SkeletonMetricTile />
+                <SkeletonMetricTile />
+              </div>
+              <SkeletonCard />
+            </motion.div>
+          ) : (
+            <motion.div
+              key={normalizeRole(activeRole)}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {normalizeRole(activeRole) === "OPERATOR" ? (
+                <OperatorDashboard
+                  vehicles={vehicles}
+                  warehouses={warehouses}
+                  onOpenCreateVehicle={() => setIsVehicleModalOpen(true)}
+                  onOpenCreateOrder={() => setIsOrderModalOpen(true)}
+                />
+              ) : normalizeRole(activeRole) === "ANALYST" ? (
+                <AnalystDashboard />
+              ) : normalizeRole(activeRole) === "ADMINISTRATOR" ? (
+                <AdminDashboard />
+              ) : normalizeRole(activeRole) === "VIEWER" ? (
+                <ViewerDashboard />
+              ) : (
+                <ManagerDashboard
+                  incidents={incidents}
+                  simulations={simulations}
+                  warehouses={warehouses}
+                  onApplyDecision={handleApplyDecision}
+                  onOpenCreateIncident={() => setIsIncidentModalOpen(true)}
+                  onOpenCreateWarehouse={() => setIsWarehouseModalOpen(true)}
+                />
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* 2D Google Maps-Style GIS Network Map & Spatial Timeline Section */}
