@@ -27,13 +27,20 @@ from app.schemas.operations import (
 from app.core.errors import EntityNotFoundException
 from app.realtime.sse import broadcaster
 
+from app.core.config import settings
+from fastapi import HTTPException
+
 router = APIRouter(prefix="/operations", tags=["Operations"])
 
 def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
     """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
     if principal and principal.workspace_id:
         return principal.workspace_id
-    return fallback or "ws-continental-fleet-01"
+    if fallback and fallback != "ws-continental-fleet-01":
+        return fallback
+    if settings.ENABLE_DEMO_AUTH:
+        return "ws-continental-fleet-01"
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication and active workspace required")
 
 
 @router.get("/summary")
