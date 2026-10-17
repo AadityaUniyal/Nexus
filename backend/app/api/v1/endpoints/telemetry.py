@@ -87,7 +87,35 @@ async def receive_provider_webhook(
     Verifies signature / token, normalizes via provider adapter, and updates Nexus operational state.
     """
     prov_upper = provider.upper()
-    ws_id = x_workspace_id or "ws-continental-fleet-01"
+
+    # Look up configured active webhook endpoint in DB
+    wh_stmt = select(WebhookEndpoint).where(
+        WebhookEndpoint.provider == prov_upper,
+        WebhookEndpoint.is_active == True
+    )
+    if x_workspace_id:
+        wh_stmt = wh_stmt.where(WebhookEndpoint.workspace_id == x_workspace_id)
+
+    wh_res = await db.execute(wh_stmt)
+    webhook_endpoint = wh_res.scalar_one_or_none()
+
+    if webhook_endpoint:
+        if not x_nexus_secret or not hmac.compare_digest(x_nexus_secret, webhook_endpoint.signing_secret):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or missing webhook signature/secret"
+            )
+        ws_id = webhook_endpoint.workspace_id
+        webhook_endpoint.events_received += 1
+    else:
+        # If no endpoint registered and demo auth is disabled, reject unverified webhooks
+        from app.core.config import settings
+        if not settings.ENABLE_DEMO_AUTH:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"No active webhook configuration found for provider '{provider}'"
+            )
+        ws_id = x_workspace_id or "ws-continental-fleet-01"
 
     # Normalize packet through provider adapter
     if prov_upper == "SAMSARA":

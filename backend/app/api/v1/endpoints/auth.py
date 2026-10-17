@@ -17,6 +17,7 @@ from app.schemas.user import (
 )
 from app.core.security import create_access_token, decode_token, get_password_hash, verify_password
 from app.core.errors import NexusException, UnauthorizedException
+from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -27,7 +28,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
-    is_demo_pass = req.password in ["nexus-demo-password", "Password123!"]
+    is_demo_pass = settings.ENABLE_DEMO_AUTH and req.password in ["nexus-demo-password", "Password123!"]
     password_valid = False
     if user and user.hashed_password:
         password_valid = verify_password(req.password, user.hashed_password)
@@ -129,7 +130,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
         expires_delta=timedelta(minutes=15),
         extra_claims={"type": "password_reset", "email": user.email},
     )
-    logger.info(f"Password reset token generated for user {user.email}: {reset_token}")
+    logger.info(f"Password reset token generated for user id {user.id}")
     return AuthMessageResponse(
         status="SUCCESS",
         message="If an account exists with that email, a password reset link has been dispatched.",

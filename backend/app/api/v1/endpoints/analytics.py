@@ -2,24 +2,26 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.auth.dependencies import get_optional_principal
+from app.auth.dependencies import require_workspace
 from app.auth.principal import RequestPrincipal
 from app.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & BI Engine"])
 
-def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
+def get_tenant_workspace(principal: RequestPrincipal, fallback: Optional[str] = None) -> str:
     """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
     if principal and principal.workspace_id:
         return principal.workspace_id
-    return fallback or "ws-continental-fleet-01"
+    if fallback and fallback != "ws-continental-fleet-01":
+        return fallback
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No authorized workspace found")
 
 @router.get("/overview")
 async def get_analytics_overview(
     timeframe: str = Query("24h", description="Timeframe: 24h, 7d, 30d, 90d"),
     hub_id: Optional[str] = Query(None, description="Filter by warehouse hub ID"),
     workspace_id: Optional[str] = Query(None, description="Filter by workspace ID"),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -39,7 +41,7 @@ async def export_analytics(
     format: str = Query("csv", description="Format: csv or json"),
     timeframe: str = Query("24h"),
     workspace_id: Optional[str] = Query(None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -62,7 +64,7 @@ async def export_analytics(
 @router.get("/hubs")
 async def get_hubs_throughput(
     workspace_id: Optional[str] = Query(None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -81,7 +83,7 @@ async def get_analytics_forecast(
     metric: str = Query("delivery_volume", description="Metric: delivery_volume, sla_adherence, energy_consumption"),
     horizon: str = Query("7d", description="Horizon: 24h or 7d"),
     workspace_id: Optional[str] = Query(None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -99,7 +101,7 @@ async def get_analytics_forecast(
 @router.get("/anomalies")
 async def get_analytics_anomalies(
     workspace_id: Optional[str] = Query(None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -115,7 +117,7 @@ async def get_analytics_anomalies(
 @router.get("/risk-scores")
 async def get_analytics_risk_scores(
     workspace_id: Optional[str] = Query(None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -130,7 +132,7 @@ async def get_analytics_risk_scores(
 @router.get("/medallion-summary")
 async def get_medallion_pipeline_summary(
     workspace_id: Optional[str] = Query(None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """

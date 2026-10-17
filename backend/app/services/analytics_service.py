@@ -28,8 +28,8 @@ class AnalyticsService:
         Calculates live SLA compliance, turnaround times, network throughput,
         time-series trends, and hub capacities from actual DB tables.
         """
-        # Filter helper
-        ws_filter = workspace_id if (workspace_id and workspace_id != "ws-demo-1") else None
+        # Strict tenant filter
+        ws_filter = workspace_id
 
         # 1. Orders Query & SLA Computation
         o_stmt = select(Order)
@@ -164,7 +164,7 @@ class AnalyticsService:
     @staticmethod
     async def export_csv_report(db: AsyncSession, workspace_id: Optional[str] = None) -> str:
         """Generates downloadable CSV containing operational analytics and active order status."""
-        ws_filter = workspace_id if (workspace_id and workspace_id != "ws-demo-1") else None
+        ws_filter = workspace_id
 
         o_stmt = select(Order)
         if ws_filter:
@@ -204,7 +204,7 @@ class AnalyticsService:
         """
         import numpy as np
 
-        ws_filter = workspace_id if (workspace_id and workspace_id != "ws-demo-1") else None
+        ws_filter = workspace_id
 
         # Determine base level from actual orders or default
         o_stmt = select(func.count(Order.id))
@@ -298,7 +298,7 @@ class AnalyticsService:
         """
         import numpy as np
 
-        ws_filter = workspace_id if (workspace_id and workspace_id != "ws-demo-1") else None
+        ws_filter = workspace_id
 
         v_stmt = select(Vehicle)
         if ws_filter:
@@ -444,7 +444,7 @@ class AnalyticsService:
         Composite Multi-Factor Logistics Risk Scoring.
         Evaluates active orders and corridors against weather risk, route congestion, and SLA margin.
         """
-        ws_filter = workspace_id if (workspace_id and workspace_id != "ws-demo-1") else None
+        ws_filter = workspace_id
 
         o_stmt = select(Order)
         if ws_filter:

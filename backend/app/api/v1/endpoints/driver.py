@@ -11,6 +11,8 @@ from app.models.logistics import Shipment, Trip
 from app.models.fleet import Driver
 from app.models.system import AuditLog
 from app.realtime.sse import broadcaster
+from app.core.config import settings
+from app.core.security import create_access_token, decode_token
 
 router = APIRouter(prefix="/driver", tags=["Mobile Driver Portal & Dispatch"])
 
@@ -21,6 +23,7 @@ class DriverStatusUpdate(BaseModel):
     current_lat: Optional[float] = None
     current_lng: Optional[float] = None
     notes: Optional[str] = None
+    token: Optional[str] = None
 
 
 class ProofOfDeliverySubmission(BaseModel):
@@ -32,6 +35,7 @@ class ProofOfDeliverySubmission(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     notes: Optional[str] = None
+    token: Optional[str] = None
 
 
 class DispatchTokenRequest(BaseModel):
@@ -40,20 +44,48 @@ class DispatchTokenRequest(BaseModel):
     driver_name: Optional[str] = None
 
 
+def verify_driver_token(token: Optional[str], vehicle_code: str) -> bool:
+    """Verifies that the provided token is signed and authorized for this vehicle."""
+    if settings.ENABLE_DEMO_AUTH and (not token or token.startswith("tok-") or token.startswith("demo_")):
+        return True
+    if not token:
+        return False
+    payload = decode_token(token)
+    if not payload:
+        return False
+    if payload.get("type") != "driver_dispatch":
+        return False
+    if payload.get("vehicle_code") != vehicle_code:
+        return False
+    return True
+
+
 @router.get("/manifest")
 async def get_driver_manifest(
     vehicle_code: str = Query(..., description="Unique vehicle code, e.g. NX-804"),
     route_code: Optional[str] = Query(default=None),
+    token: Optional[str] = Query(default=None, description="Signed driver dispatch token"),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """Retrieve driver route manifest, consignment cargo, and waypoint schedule."""
+    if not verify_driver_token(token, vehicle_code):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid, expired, or missing driver dispatch token."
+        )
+
     # Lookup vehicle
     veh_stmt = select(Vehicle).where(Vehicle.code == vehicle_code)
     veh_res = await db.execute(veh_stmt)
     vehicle = veh_res.scalar_one_or_none()
 
     if not vehicle:
-        # Fallback synthesized payload if DB is fresh / unseeded
+        if not settings.ENABLE_DEMO_AUTH:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Vehicle with code '{vehicle_code}' not found in active fleet records."
+            )
+        # Fallback synthesized payload if DB is fresh / unseeded in demo mode
         return {
             "manifest_id": f"mnf-{uuid.uuid4().hex[:8]}",
             "vehicle_code": vehicle_code,
@@ -165,9 +197,21 @@ async def update_driver_status(
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """Driver updates operational trip status (e.g. DEPARTED, IN_TRANSIT, ARRIVED, DELIVERED)."""
+    if not verify_driver_token(payload.token, payload.vehicle_code):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired driver dispatch token"
+        )
+
     stmt = select(Vehicle).where(Vehicle.code == payload.vehicle_code)
     res = await db.execute(stmt)
     vehicle = res.scalar_one_or_none()
+
+    if not vehicle and not settings.ENABLE_DEMO_AUTH:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Vehicle '{payload.vehicle_code}' not found."
+        )
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -206,6 +250,12 @@ async def submit_proof_of_delivery(
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """Submit digital Proof of Delivery with captured touchscreen signature and GPS timestamp."""
+    if not verify_driver_token(payload.token, payload.vehicle_code):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired driver dispatch token"
+        )
+
     pod_id = f"pod-{uuid.uuid4().hex[:10]}"
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -213,6 +263,12 @@ async def submit_proof_of_delivery(
     veh_stmt = select(Vehicle).where(Vehicle.code == payload.vehicle_code)
     veh_res = await db.execute(veh_stmt)
     vehicle = veh_res.scalar_one_or_none()
+
+    if not vehicle and not settings.ENABLE_DEMO_AUTH:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Vehicle '{payload.vehicle_code}' not found."
+        )
 
     if vehicle:
         vehicle.status = "DELIVERED"
@@ -283,7 +339,18 @@ async def generate_driver_dispatch_token(
 ) -> Dict[str, Any]:
     """Generate authenticated driver pass URL with cryptographic signature."""
     now_iso = datetime.now(timezone.utc).isoformat()
-    token = f"tok-{uuid.uuid4().hex[:16]}"
+    # Issue signed JWT driver pass token valid for 24 hours
+    from datetime import timedelta
+    token = create_access_token(
+        subject=f"driver-{payload.vehicle_code}",
+        expires_delta=timedelta(hours=24),
+        extra_claims={
+            "type": "driver_dispatch",
+            "vehicle_code": payload.vehicle_code,
+            "route_code": payload.route_code,
+            "driver_name": payload.driver_name,
+        }
+    )
     return {
         "token": token,
         "vehicle_code": payload.vehicle_code,

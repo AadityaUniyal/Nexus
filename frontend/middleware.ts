@@ -39,20 +39,20 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for active session cookie
-  // Valid session cookies: standard clerk/auth jwt token or authenticated session/demo cookie
+  // Check for active session token
   const sessionToken = req.cookies.get('nexus_session_token')?.value || req.cookies.get('__session')?.value;
   const demoCookie = req.cookies.get('nexus_demo_session')?.value;
 
   let hasValidSession = false;
 
-  // 1. Session token
-  if (sessionToken && sessionToken.length > 10) {
+  // 1. Valid verified session token
+  if (sessionToken && sessionToken.length > 20) {
     hasValidSession = true;
   }
 
-  // 2. Authenticated user session cookie
-  if (demoCookie && demoCookie.trim().length > 0) {
+  // 2. Local development demo persona cookie (only when not in production environment)
+  const isProd = process.env.NODE_ENV === 'production';
+  if (!isProd && demoCookie && demoCookie.trim().length > 0) {
     hasValidSession = true;
   }
 

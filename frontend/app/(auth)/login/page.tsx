@@ -47,26 +47,24 @@ export default function LoginPage() {
 
       if (resp.ok) {
         const data = await resp.json();
-        const user = data.user || {
-          id: "usr-admin-alex",
-          name: email.split("@")[0].replace(".", " "),
-          email,
-          role: email.includes("admin") ? "ADMINISTRATOR" : "OPERATIONS_MANAGER",
-          workspace_id: "ws-continental-fleet-01",
-        };
-        const token = data.access_token || "demo-operator-token";
+        const user = data.user;
+        const token = data.access_token;
 
-        document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
-        localStorage.setItem("nexus_active_workspace_id", user.workspace_id || "ws-continental-fleet-01");
-        localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-        localStorage.setItem("nexus_access_token", token);
-
-        window.location.href = user.role === "ADMINISTRATOR" ? "/admin/company" : "/overview";
+        document.cookie = `nexus_session_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+        if (user) {
+          localStorage.setItem("nexus_active_workspace_id", user.workspace_id || "ws-continental-fleet-01");
+          localStorage.setItem("nexus_demo_user", JSON.stringify(user));
+          localStorage.setItem("nexus_access_token", token);
+          window.location.href = user.role === "ADMINISTRATOR" ? "/admin/company" : "/overview";
+        } else {
+          window.location.href = "/overview";
+        }
       } else {
-        loginAsRole(selectedRole);
+        const errJson = await resp.json().catch(() => ({}));
+        setError(errJson.detail || errJson.message || "Invalid email or password. Please try again.");
       }
     } catch {
-      loginAsRole(selectedRole);
+      setError("Unable to connect to authentication service. Please check your connection.");
     } finally {
       setLoading(false);
     }

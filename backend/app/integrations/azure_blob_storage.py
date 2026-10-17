@@ -9,51 +9,76 @@ logger = logging.getLogger("nexus.storage")
 
 
 class AzureBlobStorageClient:
-    """Zero-Azure storage client for telemetry archival and local file persistence.
+    """Enterprise storage client for telemetry archival and private document storage (PODs).
     
-    Replaces Azure Blob Storage with clean local/serverless filesystem storage,
-    preserving caller interfaces while eliminating Azure SDK dependencies.
+    Supports real Azure Blob Storage via azure.storage.blob SDK when configured with connection string
+    or Managed Identity, with clean local filesystem fallback for development and test execution.
     """
     def __init__(self):
-        self.enabled = False
-        self.connection_string = ""
+        from app.core.config import settings
+        self.enabled = bool(settings.AZURE_STORAGE_ENABLED and settings.AZURE_STORAGE_CONNECTION_STRING)
+        self.connection_string = settings.AZURE_STORAGE_CONNECTION_STRING
         self.blob_service_client = None
         self.local_fallback_dir = Path(os.getcwd()) / "local_storage"
         self._ensure_local_dirs()
 
+        if self.enabled:
+            try:
+                import importlib
+                azure_blob = importlib.import_module("azure.storage.blob")
+                BlobServiceClient = getattr(azure_blob, "BlobServiceClient")
+                self.blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
+                logger.info("[Storage] Connected to Azure Blob Storage service")
+            except Exception as e:
+                logger.warning(f"[Storage] Could not initialize Azure BlobServiceClient: {e}. Falling back to local storage.")
+                self.enabled = False
+
     def _ensure_local_dirs(self):
-        containers = ["telemetry-bronze", "telemetry-silver", "analytics-gold"]
+        containers = ["telemetry-bronze", "telemetry-silver", "analytics-gold", "documents-pod"]
         for container in containers:
             try:
                 (self.local_fallback_dir / container).mkdir(parents=True, exist_ok=True)
             except Exception as e:
                 logger.debug(f"[Storage] Could not create local directory {container}: {e}")
 
-    def upload_telemetry_batch(self, records: List[Dict[str, Any]], tier: str = "bronze") -> bool:
-        """Uploads a batch of telemetry records to the medallion tier directory."""
-        container = f"telemetry-{tier}" if tier in ["bronze", "silver"] else "analytics-gold"
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        blob_name = f"{time.strftime('%Y/%m/%d')}/batch_{timestamp}.json"
-        data = json.dumps(records, indent=2).encode("utf-8")
-        return self.upload_file(container, blob_name, data)
-
     def upload_file(self, container: str, blob_name: str, data: Union[bytes, str]) -> bool:
-        """Saves a file to the local storage directory."""
+        """Saves a file to Azure Blob Storage or local directory fallback."""
         if isinstance(data, str):
             data = data.encode("utf-8")
+
+        if self.enabled and self.blob_service_client:
+            try:
+                container_client = self.blob_service_client.get_container_client(container)
+                if not container_client.exists():
+                    container_client.create_container()
+                blob_client = container_client.get_blob_client(blob_name)
+                blob_client.upload_blob(data, overwrite=True)
+                logger.debug(f"[Storage] Uploaded {blob_name} to Azure container {container}")
+                return True
+            except Exception as e:
+                logger.error(f"[Storage] Azure upload failed for {blob_name}: {e}. Falling back to local.")
+
         try:
             file_path = self.local_fallback_dir / container / blob_name
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, "wb") as f:
                 f.write(data)
-            logger.debug(f"[Storage] Saved {blob_name} to {container}")
+            logger.debug(f"[Storage] Saved {blob_name} to local {container}")
             return True
         except Exception as e:
-            logger.error(f"[Storage] Save failed for {blob_name}: {e}")
+            logger.error(f"[Storage] Local save failed for {blob_name}: {e}")
             return False
 
     def download_file(self, container: str, blob_name: str) -> Optional[bytes]:
-        """Reads a file from the local storage directory."""
+        """Reads a file from Azure Blob Storage or local directory fallback."""
+        if self.enabled and self.blob_service_client:
+            try:
+                blob_client = self.blob_service_client.get_blob_client(container=container, blob=blob_name)
+                if blob_client.exists():
+                    return blob_client.download_blob().readall()
+            except Exception as e:
+                logger.error(f"[Storage] Azure download failed for {blob_name}: {e}. Checking local.")
+
         try:
             file_path = self.local_fallback_dir / container / blob_name
             if file_path.exists():
@@ -63,6 +88,14 @@ class AzureBlobStorageClient:
         except Exception as e:
             logger.error(f"[Storage] Read failed for {blob_name}: {e}")
             return None
+
+    def upload_telemetry_batch(self, records: List[Dict[str, Any]], tier: str = "bronze") -> bool:
+        """Uploads a batch of telemetry records to the medallion tier directory."""
+        container = f"telemetry-{tier}" if tier in ["bronze", "silver"] else "analytics-gold"
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        blob_name = f"{time.strftime('%Y/%m/%d')}/batch_{timestamp}.json"
+        data = json.dumps(records, indent=2).encode("utf-8")
+        return self.upload_file(container, blob_name, data)
 
     def list_blobs(self, container: str, prefix: Optional[str] = None) -> List[str]:
         """Lists files in the local container directory, optionally filtered by prefix."""
