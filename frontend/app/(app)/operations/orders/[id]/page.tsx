@@ -72,17 +72,11 @@ export default function OrderDetailPage() {
     tactileAudio.playCriticalAlert();
 
     try {
-      if (typeof window !== 'undefined') {
-        const raw = localStorage.getItem('nexus_custom_orders');
-        if (raw) {
-          const list = JSON.parse(raw);
-          localStorage.setItem('nexus_custom_orders', JSON.stringify(list.filter((o: any) => o.id !== order.id && o.orderNumber !== order.orderNumber)));
-        }
-      }
+      await dataProvider.deleteOrder(order.id);
 
       toast({
         title: "Order Consignment Cancelled",
-        message: `${order.orderNumber} (${order.customerName}) removed from active manifest.`,
+        message: `${order.orderNumber} (${order.customerName}) removed from active manifest and database.`,
         type: "success",
       });
       router.push('/operations/orders');

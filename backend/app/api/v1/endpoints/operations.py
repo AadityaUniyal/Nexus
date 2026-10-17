@@ -12,13 +12,17 @@ from app.models.system import AuditLog, OperationalEvent, EventOutbox
 from app.schemas.operations import (
     WarehouseRead,
     WarehouseCreate,
+    WarehouseUpdate,
     VehicleRead,
     VehicleCreate,
+    VehicleUpdate,
     VehicleUpdateTelemetry,
     RouteRead,
     RouteCreate,
+    RouteUpdate,
     OrderRead,
     OrderCreate,
+    OrderUpdate,
 )
 from app.core.errors import EntityNotFoundException
 from app.realtime.sse import broadcaster
@@ -136,6 +140,57 @@ async def create_warehouse(
     await broadcaster.broadcast("WAREHOUSE_CREATED", {"id": new_wh.id, "code": new_wh.code, "name": new_wh.name})
     return new_wh
 
+@router.put("/warehouses/{warehouse_id}", response_model=WarehouseRead)
+async def update_warehouse(
+    warehouse_id: str,
+    req: WarehouseUpdate,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update warehouse attributes in PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Warehouse).where(
+        Warehouse.workspace_id == ws,
+        or_(Warehouse.id == warehouse_id, Warehouse.code == warehouse_id)
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalars().first()
+    if not warehouse:
+        raise EntityNotFoundException("Warehouse", warehouse_id)
+
+    update_data = req.model_dump(exclude_unset=True)
+    for k, v in update_data.items():
+        if v is not None:
+            setattr(warehouse, k, v)
+    warehouse.version += 1
+
+    await db.commit()
+    await db.refresh(warehouse)
+    await broadcaster.broadcast("WAREHOUSE_UPDATED", {"id": warehouse.id, "code": warehouse.code, "name": warehouse.name})
+    return warehouse
+
+@router.delete("/warehouses/{warehouse_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_warehouse(
+    warehouse_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Decommission and delete a warehouse from PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Warehouse).where(
+        Warehouse.workspace_id == ws,
+        or_(Warehouse.id == warehouse_id, Warehouse.code == warehouse_id)
+    )
+    result = await db.execute(stmt)
+    warehouse = result.scalars().first()
+    if not warehouse:
+        raise EntityNotFoundException("Warehouse", warehouse_id)
+
+    await db.delete(warehouse)
+    await db.commit()
+    await broadcaster.broadcast("WAREHOUSE_DELETED", {"id": warehouse_id})
+    return None
+
 # --- VEHICLES ---
 @router.get("/vehicles", response_model=List[VehicleRead])
 async def list_vehicles(
@@ -216,6 +271,57 @@ async def update_vehicle_telemetry(
     await broadcaster.broadcast("VEHICLE_UPDATED", {"id": vehicle.id, "code": vehicle.code, "status": vehicle.status, "current_lat": vehicle.current_lat, "current_lng": vehicle.current_lng})
     return vehicle
 
+@router.put("/vehicles/{vehicle_id}", response_model=VehicleRead)
+async def update_vehicle(
+    vehicle_id: str,
+    req: VehicleUpdate,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update commercial vehicle attributes in PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Vehicle).where(
+        Vehicle.workspace_id == ws,
+        or_(Vehicle.id == vehicle_id, Vehicle.code == vehicle_id)
+    )
+    result = await db.execute(stmt)
+    vehicle = result.scalars().first()
+    if not vehicle:
+        raise EntityNotFoundException("Vehicle", vehicle_id)
+
+    update_data = req.model_dump(exclude_unset=True)
+    for k, v in update_data.items():
+        if v is not None:
+            setattr(vehicle, k, v)
+    vehicle.version += 1
+
+    await db.commit()
+    await db.refresh(vehicle)
+    await broadcaster.broadcast("VEHICLE_UPDATED", {"id": vehicle.id, "code": vehicle.code, "status": vehicle.status})
+    return vehicle
+
+@router.delete("/vehicles/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_vehicle(
+    vehicle_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Decommission and delete a vehicle from PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Vehicle).where(
+        Vehicle.workspace_id == ws,
+        or_(Vehicle.id == vehicle_id, Vehicle.code == vehicle_id)
+    )
+    result = await db.execute(stmt)
+    vehicle = result.scalars().first()
+    if not vehicle:
+        raise EntityNotFoundException("Vehicle", vehicle_id)
+
+    await db.delete(vehicle)
+    await db.commit()
+    await broadcaster.broadcast("VEHICLE_DELETED", {"id": vehicle_id})
+    return None
+
 # --- ROUTES ---
 @router.get("/routes", response_model=List[RouteRead])
 async def list_routes(
@@ -268,6 +374,57 @@ async def create_route(
     await broadcaster.broadcast("ROUTE_CREATED", {"id": new_r.id, "code": new_r.code, "name": new_r.name})
     return new_r
 
+@router.put("/routes/{route_id}", response_model=RouteRead)
+async def update_route(
+    route_id: str,
+    req: RouteUpdate,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update logistics route in PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Route).where(
+        Route.workspace_id == ws,
+        or_(Route.id == route_id, Route.code == route_id)
+    )
+    result = await db.execute(stmt)
+    route = result.scalars().first()
+    if not route:
+        raise EntityNotFoundException("Route", route_id)
+
+    update_data = req.model_dump(exclude_unset=True)
+    for k, v in update_data.items():
+        if v is not None:
+            setattr(route, k, v)
+    route.version += 1
+
+    await db.commit()
+    await db.refresh(route)
+    await broadcaster.broadcast("ROUTE_UPDATED", {"id": route.id, "code": route.code, "name": route.name})
+    return route
+
+@router.delete("/routes/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_route(
+    route_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a route from PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Route).where(
+        Route.workspace_id == ws,
+        or_(Route.id == route_id, Route.code == route_id)
+    )
+    result = await db.execute(stmt)
+    route = result.scalars().first()
+    if not route:
+        raise EntityNotFoundException("Route", route_id)
+
+    await db.delete(route)
+    await db.commit()
+    await broadcaster.broadcast("ROUTE_DELETED", {"id": route_id})
+    return None
+
 # --- ORDERS ---
 @router.get("/orders", response_model=List[OrderRead])
 async def list_orders(
@@ -319,3 +476,54 @@ async def create_order(
     await db.refresh(new_o)
     await broadcaster.broadcast("ORDER_CREATED", {"id": new_o.id, "order_number": new_o.order_number})
     return new_o
+
+@router.put("/orders/{order_id}", response_model=OrderRead)
+async def update_order(
+    order_id: str,
+    req: OrderUpdate,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update freight consignment order in PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Order).where(
+        Order.workspace_id == ws,
+        or_(Order.id == order_id, Order.order_number == order_id)
+    )
+    result = await db.execute(stmt)
+    order = result.scalars().first()
+    if not order:
+        raise EntityNotFoundException("Order", order_id)
+
+    update_data = req.model_dump(exclude_unset=True)
+    for k, v in update_data.items():
+        if v is not None:
+            setattr(order, k, v)
+    order.version += 1
+
+    await db.commit()
+    await db.refresh(order)
+    await broadcaster.broadcast("ORDER_UPDATED", {"id": order.id, "order_number": order.order_number, "status": order.status})
+    return order
+
+@router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_order(
+    order_id: str,
+    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    db: AsyncSession = Depends(get_db)
+):
+    """Cancel and delete order from PostgreSQL."""
+    ws = get_tenant_workspace(principal)
+    stmt = select(Order).where(
+        Order.workspace_id == ws,
+        or_(Order.id == order_id, Order.order_number == order_id)
+    )
+    result = await db.execute(stmt)
+    order = result.scalars().first()
+    if not order:
+        raise EntityNotFoundException("Order", order_id)
+
+    await db.delete(order)
+    await db.commit()
+    await broadcaster.broadcast("ORDER_DELETED", {"id": order_id})
+    return None

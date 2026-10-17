@@ -71,17 +71,11 @@ export default function VehicleDetailPage() {
     tactileAudio.playCriticalAlert();
 
     try {
-      if (typeof window !== 'undefined') {
-        const raw = localStorage.getItem('nexus_custom_vehicles');
-        if (raw) {
-          const list = JSON.parse(raw);
-          localStorage.setItem('nexus_custom_vehicles', JSON.stringify(list.filter((v: any) => v.id !== vehicle.id && v.code !== vehicle.code)));
-        }
-      }
+      await dataProvider.deleteVehicle(vehicle.id);
 
       toast({
         title: "Vehicle Decommissioned",
-        message: `${vehicle.code} (${vehicle.name}) was removed from the active fleet.`,
+        message: `${vehicle.code} (${vehicle.name}) was removed from active operations and database.`,
         type: "success",
       });
       router.push('/operations/vehicles');

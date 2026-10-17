@@ -67,17 +67,11 @@ export default function WarehouseDetailPage() {
     tactileAudio.playCriticalAlert();
 
     try {
-      if (typeof window !== 'undefined') {
-        const raw = localStorage.getItem('nexus_custom_warehouses');
-        if (raw) {
-          const list = JSON.parse(raw);
-          localStorage.setItem('nexus_custom_warehouses', JSON.stringify(list.filter((w: any) => w.id !== warehouse.id && w.code !== warehouse.code)));
-        }
-      }
+      await dataProvider.deleteWarehouse(warehouse.id);
 
       toast({
         title: "Warehouse Hub Decommissioned",
-        message: `${warehouse.name} (${warehouse.code}) removed from operational network.`,
+        message: `${warehouse.name} (${warehouse.code}) removed from operational network and database.`,
         type: "success",
       });
       router.push('/operations/warehouses');

@@ -42,15 +42,23 @@ export interface NexusDataProvider {
   getVehicles(): Promise<VehicleItem[]>;
   getVehicle(id: string): Promise<VehicleItem | null>;
   createVehicle(data: Partial<VehicleItem>): Promise<VehicleItem>;
+  updateVehicle(id: string, data: Partial<VehicleItem>): Promise<VehicleItem>;
+  deleteVehicle(id: string): Promise<void>;
   getWarehouses(): Promise<WarehouseItem[]>;
   createWarehouse(data: Partial<WarehouseItem>): Promise<WarehouseItem>;
+  updateWarehouse(id: string, data: Partial<WarehouseItem>): Promise<WarehouseItem>;
+  deleteWarehouse(id: string): Promise<void>;
   getRoutes(): Promise<RouteItem[]>;
   getRoute(id: string): Promise<RouteItem | null>;
   createRoute(data: Partial<RouteItem>): Promise<RouteItem>;
+  updateRoute(id: string, data: Partial<RouteItem>): Promise<RouteItem>;
+  deleteRoute(id: string): Promise<void>;
   provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }>;
   getOrders(): Promise<OrderItem[]>;
   getOrder(id: string): Promise<OrderItem | null>;
   createOrder(data: Partial<OrderItem>): Promise<OrderItem>;
+  updateOrder(id: string, data: Partial<OrderItem>): Promise<OrderItem>;
+  deleteOrder(id: string): Promise<void>;
   getIncidents(severity?: string): Promise<IncidentItem[]>;
   getIncident(id: string): Promise<IncidentItem | null>;
   createIncident(data: Partial<IncidentItem>): Promise<IncidentItem>;
@@ -272,9 +280,78 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           status: newVehicle.status,
         }),
       });
-    } catch {}
+    } catch (err) {
+      console.warn("Backend vehicle persistence fallback to local cache:", err);
+    }
 
     return newVehicle;
+  }
+
+  async updateVehicle(id: string, data: Partial<VehicleItem>): Promise<VehicleItem> {
+    const list = await this.getVehicles();
+    const existing = list.find((v) => v.id === id || v.code === id);
+    const updated: VehicleItem = {
+      ...(existing || {} as VehicleItem),
+      ...data,
+      id: existing?.id || id,
+      code: data.code || existing?.code || id,
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_vehicles");
+        const custom = raw ? JSON.parse(raw) : [];
+        localStorage.setItem(
+          "nexus_custom_vehicles",
+          JSON.stringify([updated, ...custom.filter((v: any) => v.id !== id && v.code !== id)])
+        );
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/vehicles/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          code: updated.code,
+          name: updated.name,
+          model: updated.model,
+          driver_name: updated.driverName,
+          current_lat: updated.lat,
+          current_lng: updated.lng,
+          speed_kmh: updated.speedKmh,
+          battery_pct: updated.batteryPct,
+          health_score: updated.healthScore,
+          status: updated.status,
+        }),
+      });
+    } catch (err) {
+      console.warn("Backend vehicle update fallback:", err);
+    }
+
+    return updated;
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_vehicles");
+        if (raw) {
+          const custom = JSON.parse(raw);
+          localStorage.setItem(
+            "nexus_custom_vehicles",
+            JSON.stringify(custom.filter((v: any) => v.id !== id && v.code !== id))
+          );
+        }
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/vehicles/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("Backend vehicle delete fallback:", err);
+    }
   }
 
   async getVehicle(id: string): Promise<VehicleItem | null> {
@@ -363,9 +440,80 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           status: newWh.status,
         }),
       });
-    } catch {}
+    } catch (err) {
+      console.warn("Backend warehouse persistence fallback:", err);
+    }
 
     return newWh;
+  }
+
+  async updateWarehouse(id: string, data: Partial<WarehouseItem>): Promise<WarehouseItem> {
+    const list = await this.getWarehouses();
+    const existing = list.find((w) => w.id === id || w.code === id);
+    const updated: WarehouseItem = {
+      ...(existing || {} as WarehouseItem),
+      ...data,
+      id: existing?.id || id,
+      code: data.code || existing?.code || id,
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_warehouses");
+        const custom = raw ? JSON.parse(raw) : [];
+        localStorage.setItem(
+          "nexus_custom_warehouses",
+          JSON.stringify([updated, ...custom.filter((w: any) => w.id !== id && w.code !== id)])
+        );
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/warehouses/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          code: updated.code,
+          name: updated.name,
+          city: updated.city,
+          state: updated.state,
+          lat: updated.lat,
+          lng: updated.lng,
+          capacity_units: updated.capacityUnits,
+          current_units: updated.currentUnits,
+          dock_count: updated.dockCount,
+          active_docks: updated.activeDocks,
+          efficiency_pct: updated.efficiencyPct,
+          status: updated.status,
+        }),
+      });
+    } catch (err) {
+      console.warn("Backend warehouse update fallback:", err);
+    }
+
+    return updated;
+  }
+
+  async deleteWarehouse(id: string): Promise<void> {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_warehouses");
+        if (raw) {
+          const custom = JSON.parse(raw);
+          localStorage.setItem(
+            "nexus_custom_warehouses",
+            JSON.stringify(custom.filter((w: any) => w.id !== id && w.code !== id))
+          );
+        }
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/warehouses/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("Backend warehouse delete fallback:", err);
+    }
   }
 
   async createRoute(data: Partial<RouteItem>): Promise<RouteItem> {
@@ -408,9 +556,78 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           waypoints: newRoute.waypoints,
         }),
       });
-    } catch {}
+    } catch (err) {
+      console.warn("Backend route persistence fallback:", err);
+    }
 
     return newRoute;
+  }
+
+  async updateRoute(id: string, data: Partial<RouteItem>): Promise<RouteItem> {
+    const list = await this.getRoutes();
+    const existing = list.find((r) => r.id === id || r.code === id);
+    const updated: RouteItem = {
+      ...(existing || {} as RouteItem),
+      ...data,
+      id: existing?.id || id,
+      code: data.code || existing?.code || id,
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_routes");
+        const custom = raw ? JSON.parse(raw) : [];
+        localStorage.setItem(
+          "nexus_custom_routes",
+          JSON.stringify([updated, ...custom.filter((r: any) => r.id !== id && r.code !== id)])
+        );
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/routes/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          code: updated.code,
+          name: updated.name,
+          origin_warehouse_id: updated.originWarehouseId,
+          origin_warehouse_name: updated.originWarehouseName,
+          dest_warehouse_id: updated.destWarehouseId,
+          dest_warehouse_name: updated.destWarehouseName,
+          distance_km: updated.distanceKm,
+          avg_duration_mins: updated.avgDurationMins,
+          traffic_condition: updated.trafficCondition,
+          waypoints: updated.waypoints,
+        }),
+      });
+    } catch (err) {
+      console.warn("Backend route update fallback:", err);
+    }
+
+    return updated;
+  }
+
+  async deleteRoute(id: string): Promise<void> {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_routes");
+        if (raw) {
+          const custom = JSON.parse(raw);
+          localStorage.setItem(
+            "nexus_custom_routes",
+            JSON.stringify(custom.filter((r: any) => r.id !== id && r.code !== id))
+          );
+        }
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/routes/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("Backend route delete fallback:", err);
+    }
   }
 
   async provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }> {
@@ -861,9 +1078,77 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           vehicle_code: newOrder.vehicleCode,
         }),
       });
-    } catch {}
+    } catch (err) {
+      console.warn("Backend order persistence fallback:", err);
+    }
 
     return newOrder;
+  }
+
+  async updateOrder(id: string, data: Partial<OrderItem>): Promise<OrderItem> {
+    const list = await this.getOrders();
+    const existing = list.find((o) => o.id === id || o.orderNumber === id);
+    const updated: OrderItem = {
+      ...(existing || {} as OrderItem),
+      ...data,
+      id: existing?.id || id,
+      orderNumber: data.orderNumber || existing?.orderNumber || id,
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_orders");
+        const custom = raw ? JSON.parse(raw) : [];
+        localStorage.setItem(
+          "nexus_custom_orders",
+          JSON.stringify([updated, ...custom.filter((o: any) => o.id !== id && o.orderNumber !== id)])
+        );
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/orders/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          order_number: updated.orderNumber,
+          customer_name: updated.customerName,
+          destination: updated.destination,
+          priority: updated.priority,
+          status: updated.status,
+          total_cost: updated.totalCost,
+          deadline: updated.deadline,
+          vehicle_id: updated.vehicleId,
+          vehicle_code: updated.vehicleCode,
+        }),
+      });
+    } catch (err) {
+      console.warn("Backend order update fallback:", err);
+    }
+
+    return updated;
+  }
+
+  async deleteOrder(id: string): Promise<void> {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("nexus_custom_orders");
+        if (raw) {
+          const custom = JSON.parse(raw);
+          localStorage.setItem(
+            "nexus_custom_orders",
+            JSON.stringify(custom.filter((o: any) => o.id !== id && o.orderNumber !== id))
+          );
+        }
+      } catch {}
+    }
+
+    try {
+      await this.fetchApi(`/api/v1/operations/orders/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("Backend order delete fallback:", err);
+    }
   }
 
   async getIncidents(severity?: string): Promise<IncidentItem[]> {
@@ -1426,6 +1711,28 @@ export class MockNexusDataProvider implements NexusDataProvider {
     return v;
   }
 
+  async updateVehicle(id: string, data: Partial<VehicleItem>): Promise<VehicleItem> {
+    const list = await this.getVehicles();
+    const existing = list.find((v) => v.id === id || v.code === id);
+    const updated: VehicleItem = {
+      ...(existing || {} as VehicleItem),
+      ...data,
+      id: existing?.id || id,
+      code: data.code || existing?.code || id,
+    };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nexus_custom_vehicles", JSON.stringify([updated, ...list.filter((x) => x.id !== id && x.code !== id)]));
+    }
+    return updated;
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    if (typeof window !== "undefined") {
+      const list = await this.getVehicles();
+      localStorage.setItem("nexus_custom_vehicles", JSON.stringify(list.filter((x) => x.id !== id && x.code !== id)));
+    }
+  }
+
   async getWarehouses(): Promise<WarehouseItem[]> {
     if (typeof window !== "undefined") {
       try {
@@ -1460,6 +1767,28 @@ export class MockNexusDataProvider implements NexusDataProvider {
     return wh;
   }
 
+  async updateWarehouse(id: string, data: Partial<WarehouseItem>): Promise<WarehouseItem> {
+    const list = await this.getWarehouses();
+    const existing = list.find((w) => w.id === id || w.code === id);
+    const updated: WarehouseItem = {
+      ...(existing || {} as WarehouseItem),
+      ...data,
+      id: existing?.id || id,
+      code: data.code || existing?.code || id,
+    };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nexus_custom_warehouses", JSON.stringify([updated, ...list.filter((x) => x.id !== id && x.code !== id)]));
+    }
+    return updated;
+  }
+
+  async deleteWarehouse(id: string): Promise<void> {
+    if (typeof window !== "undefined") {
+      const list = await this.getWarehouses();
+      localStorage.setItem("nexus_custom_warehouses", JSON.stringify(list.filter((x) => x.id !== id && x.code !== id)));
+    }
+  }
+
   async createRoute(data: Partial<RouteItem>): Promise<RouteItem> {
     return {
       id: data.id || `route-${Date.now()}`,
@@ -1475,6 +1804,20 @@ export class MockNexusDataProvider implements NexusDataProvider {
       trafficCondition: (data.trafficCondition as any) || "CLEAR",
       waypoints: data.waypoints || [],
     };
+  }
+
+  async updateRoute(id: string, data: Partial<RouteItem>): Promise<RouteItem> {
+    const list = await this.getRoutes();
+    const existing = list.find((r) => r.id === id || r.code === id);
+    return {
+      ...(existing || {} as RouteItem),
+      ...data,
+      id: existing?.id || id,
+    };
+  }
+
+  async deleteRoute(id: string): Promise<void> {
+    // In-memory mock no-op
   }
 
   async provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }> {
@@ -1533,6 +1876,28 @@ export class MockNexusDataProvider implements NexusDataProvider {
       } catch {}
     }
     return o;
+  }
+
+  async updateOrder(id: string, data: Partial<OrderItem>): Promise<OrderItem> {
+    const list = await this.getOrders();
+    const existing = list.find((o) => o.id === id || o.orderNumber === id);
+    const updated: OrderItem = {
+      ...(existing || {} as OrderItem),
+      ...data,
+      id: existing?.id || id,
+      orderNumber: data.orderNumber || existing?.orderNumber || id,
+    };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nexus_custom_orders", JSON.stringify([updated, ...list.filter((x) => x.id !== id && x.orderNumber !== id)]));
+    }
+    return updated;
+  }
+
+  async deleteOrder(id: string): Promise<void> {
+    if (typeof window !== "undefined") {
+      const list = await this.getOrders();
+      localStorage.setItem("nexus_custom_orders", JSON.stringify(list.filter((x) => x.id !== id && x.orderNumber !== id)));
+    }
   }
 
   async getIncidents(severity?: string): Promise<IncidentItem[]> {
