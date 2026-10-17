@@ -24,6 +24,8 @@ import {
 import { formatDateTime } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { FadeIn, StaggerContainer, StaggerItem, TactileCard } from "@/components/ui/motion-animations";
+import { Tabs } from "@/components/ui/tabs";
+import { SkeletonTable, SkeletonMetricTile } from "@/components/ui/skeleton";
 
 interface HistoricalService {
   id: string;
@@ -206,31 +208,28 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-nexus-surface-container/60 border border-nexus-outline-variant/30 w-fit">
-          <button
-            onClick={() => setActiveTab("briefings")}
-            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 ${
-              activeTab === "briefings"
-                ? "bg-nexus-surface-lowest text-nexus-on-surface shadow-tactile"
-                : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5 text-purple-400" />
-            <span>Executive Briefings</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("past_services")}
-            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 ${
-              activeTab === "past_services"
-                ? "bg-nexus-surface-lowest text-nexus-on-surface shadow-tactile"
-                : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
-            }`}
-          >
-            <History className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Past Services Ledger</span>
-          </button>
+        {/* Tab Switcher - Apple Segmented Control */}
+        <div className="w-fit">
+          <Tabs
+            tabs={[
+              {
+                id: "briefings",
+                label: "Executive Briefings",
+                icon: <FileText className="w-3.5 h-3.5" />,
+                count: reportsList.length,
+              },
+              {
+                id: "past_services",
+                label: "Past Services Ledger",
+                icon: <History className="w-3.5 h-3.5" />,
+                count: pastServices.length > 0 ? pastServices.length : undefined,
+              },
+            ]}
+            activeTab={activeTab}
+            onChange={(id) => setActiveTab(id as any)}
+            variant="segmented"
+            size="md"
+          />
         </div>
 
         {/* TAB 1: EXECUTIVE BRIEFINGS */}
@@ -323,22 +322,21 @@ export default function ReportsPage() {
               </div>
             )}
 
-            {/* Time Filter Buttons */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {[7, 30, 90, 180].map((days) => (
-                  <button
-                    key={days}
-                    onClick={() => setTimeRangeDays(days)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
-                      timeRangeDays === days
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                        : "bg-nexus-surface-container/50 text-nexus-on-surface-variant hover:text-nexus-on-surface"
-                    }`}
-                  >
-                    Past {days} Days
-                  </button>
-                ))}
+            {/* Time Filter Buttons - Apple Segmented Control */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="w-fit">
+                <Tabs
+                  tabs={[
+                    { id: "7", label: "7 Days" },
+                    { id: "30", label: "30 Days" },
+                    { id: "90", label: "90 Days" },
+                    { id: "180", label: "180 Days" },
+                  ]}
+                  activeTab={String(timeRangeDays)}
+                  onChange={(id) => setTimeRangeDays(Number(id))}
+                  variant="segmented"
+                  size="sm"
+                />
               </div>
 
               <div className="text-xs font-mono text-nexus-on-surface-variant flex items-center gap-1.5">
@@ -348,6 +346,9 @@ export default function ReportsPage() {
             </div>
 
             {/* Services Table */}
+            {loadingHistory ? (
+              <SkeletonTable rows={5} />
+            ) : (
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left font-mono text-xs">
@@ -393,6 +394,7 @@ export default function ReportsPage() {
                 </table>
               </div>
             </Card>
+            )}
           </div>
         )}
       </FadeIn>
