@@ -140,7 +140,7 @@ function AppleStyleLoginContent() {
         }, 650);
       } else {
         const errJson = await resp.json().catch(() => ({}));
-        setError(errJson.detail || errJson.message || "The corporate email or password you entered is incorrect.");
+        setError(errJson.error?.message || errJson.detail || errJson.message || "The corporate email or password you entered is incorrect.");
       }
     } catch (err: any) {
       setError(err?.message || "Unable to reach authentication service. Please check your connection.");
