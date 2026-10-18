@@ -90,7 +90,19 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
                 id=workspace_id,
                 name="Continental Fleet Ops",
                 slug=f"continental-fleet-{uuid.uuid4().hex[:6]}",
-                organization_id="org-nexus-demo",
+            )
+            db.add(new_ws)
+            await db.flush()
+    else:
+        # Check if requested workspace exists; if not, create it dynamically for the new organization
+        ws_chk = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
+        ws_existing = ws_chk.scalar_one_or_none()
+        if not ws_existing:
+            clean_name = req.department.replace(" Operations", "") if req.department else "Enterprise Fleet"
+            new_ws = Workspace(
+                id=workspace_id,
+                name=clean_name,
+                slug=f"{workspace_id}-{uuid.uuid4().hex[:6]}",
             )
             db.add(new_ws)
             await db.flush()
