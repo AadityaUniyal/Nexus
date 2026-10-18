@@ -80,25 +80,23 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
 
     workspace_id = req.workspace_id
     if not workspace_id:
-        ws_res = await db.execute(select(Workspace).limit(1))
-        ws = ws_res.scalars().first()
-        if ws:
-            workspace_id = ws.id
-        else:
-            workspace_id = "ws-continental-fleet-01"
-            new_ws = Workspace(
-                id=workspace_id,
-                name="Continental Fleet Ops",
-                slug=f"continental-fleet-{uuid.uuid4().hex[:6]}",
-            )
-            db.add(new_ws)
-            await db.flush()
+        # Generate an isolated workspace for the new user based on department, email domain, or user name
+        clean_name = req.department.replace(" Operations", "").strip() if req.department else f"{req.name.split()[0]}'s Fleet"
+        slug_prefix = "".join(c.lower() for c in clean_name if c.isalnum() or c in ("-", "_"))[:16] or "fleet"
+        workspace_id = f"ws-{slug_prefix}-{uuid.uuid4().hex[:6]}"
+        new_ws = Workspace(
+            id=workspace_id,
+            name=clean_name,
+            slug=f"{slug_prefix}-{uuid.uuid4().hex[:6]}",
+        )
+        db.add(new_ws)
+        await db.flush()
     else:
         # Check if requested workspace exists; if not, create it dynamically for the new organization
         ws_chk = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
         ws_existing = ws_chk.scalar_one_or_none()
         if not ws_existing:
-            clean_name = req.department.replace(" Operations", "") if req.department else "Enterprise Fleet"
+            clean_name = req.department.replace(" Operations", "").strip() if req.department else "Enterprise Fleet"
             new_ws = Workspace(
                 id=workspace_id,
                 name=clean_name,

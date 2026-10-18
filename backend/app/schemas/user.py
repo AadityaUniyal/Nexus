@@ -63,7 +63,12 @@ class UserRead(UserBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
     id: str
-    workspace_id: str = Field(..., alias="workspaceId")
+    workspace_id: str
+
+    @computed_field
+    @property
+    def workspaceId(self) -> str:
+        return self.workspace_id
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
