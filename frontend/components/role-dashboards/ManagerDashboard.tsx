@@ -106,14 +106,14 @@ export function ManagerDashboard({
           variant="default"
         />
         <MetricTile
-          title="AI Reroutes Staged"
+          title="Scenarios Evaluated"
           value={simulations.length}
-          subtitle="Ready to execute"
-          change="Avg net savings +82%"
+          subtitle="Alternative plans computed"
+          change="Available for comparison"
           trend="up"
-          status="SIMULATION"
-          icon={Sparkles}
-          variant="simulation"
+          status="HEALTHY"
+          icon={GitBranch}
+          variant="default"
         />
         <MetricTile
           title="Warehouse Dock Balance"
@@ -139,11 +139,11 @@ export function ManagerDashboard({
                     <ShieldAlert className="w-4 h-4" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-mono font-bold">
-                      SLA Breach Countdown Queue
+                    <CardTitle className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+                      Operational Attention Queue
                     </CardTitle>
-                    <CardDescription className="text-xs">
-                      Ranked by financial exposure & minutes to breach
+                    <CardDescription className="text-xs text-stone-500">
+                      Exceptions requiring intervention, prioritized by estimated delay impact
                     </CardDescription>
                   </div>
                 </div>
