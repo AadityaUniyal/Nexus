@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
-  Sparkles,
+  GitBranch,
   Truck,
   Building2,
   AlertTriangle,
@@ -236,7 +236,7 @@ export default function LiveWorldPage() {
                 onClick={() => setSimulationMode(!simulationMode)}
                 className="font-mono-data text-xs"
               >
-                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                <GitBranch className="h-3.5 w-3.5 mr-1.5" />
                 {simulationMode ? "Exit Scenario View" : "Scenario Overlay"}
               </Button>
             </div>
@@ -361,7 +361,7 @@ export default function LiveWorldPage() {
                       </div>
                       <Link href={`/simulations/new?vehicleId=${selectedVehicle.id}`}>
                         <Button variant="simulation" size="sm" className="w-full mt-2 font-mono-data text-xs">
-                          <Sparkles className="h-3.5 w-3.5 mr-1" />
+                          <GitBranch className="h-3.5 w-3.5 mr-1" />
                           Simulate Reroute
                         </Button>
                       </Link>

@@ -132,9 +132,9 @@ export default function SimulationsPage() {
         {/* Simulations List with Loading State */}
         {isLoading ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-xs font-mono text-purple-600 dark:text-purple-400">
-              <span className="h-2 w-2 rounded-full bg-purple-500 animate-ping" />
-              <span>Simulating deterministic branching states...</span>
+            <div className="flex items-center gap-2 text-xs font-mono text-stone-600 dark:text-stone-400">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-stone-500" />
+              <span>Loading saved scenario models...</span>
             </div>
             <SkeletonTable rows={4} />
           </div>
