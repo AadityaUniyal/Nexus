@@ -115,19 +115,19 @@ export function Navbar({
         </div>
       </div>
 
-      {/* Middle: Apple Command Search Bar */}
+      {/* Middle: Apple Spotlight Command Bar */}
       <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
         <button
           type="button"
           onClick={onOpenCommandMenu}
           aria-label="Search operational assets, vehicles, routes, and commands"
-          className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl bg-stone-100/80 dark:bg-stone-900/70 hover:bg-stone-200/70 dark:hover:bg-stone-850/80 border border-stone-200/60 dark:border-white/10 text-xs text-stone-500 dark:text-stone-400 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
+          className="w-full flex items-center justify-between px-4 py-2 rounded-full bg-stone-100/70 dark:bg-white/[0.06] hover:bg-stone-200/60 dark:hover:bg-white/[0.1] border border-black/[0.08] dark:border-white/[0.1] text-xs text-stone-500 dark:text-stone-300 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-xl active:scale-[0.99]"
         >
-          <div className="flex items-center gap-2">
-            <Search className="h-3.5 w-3.5 text-stone-400 dark:text-stone-500" />
-            <span>Search vehicles, routes, incidents, simulations...</span>
+          <div className="flex items-center gap-2.5">
+            <Search className="h-3.5 w-3.5 text-stone-400 dark:text-stone-400" />
+            <span className="tracking-tight">Search vehicles, routes, incidents, simulations...</span>
           </div>
-          <kbd className="px-2 py-0.5 rounded-md bg-white dark:bg-stone-800 text-[10px] font-mono font-bold border border-stone-200/80 dark:border-white/10 shadow-xs text-stone-600 dark:text-stone-300">
+          <kbd className="px-2 py-0.5 rounded-full bg-white dark:bg-white/10 text-[10px] font-mono font-semibold border border-black/[0.08] dark:border-white/15 shadow-xs text-stone-600 dark:text-stone-300">
             ⌘K
           </kbd>
         </button>

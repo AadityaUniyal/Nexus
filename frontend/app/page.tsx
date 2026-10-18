@@ -34,6 +34,7 @@ import { LogoMark } from "@/components/brand/Logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OperationalTimelineHero } from "@/components/brand/OperationalTimelineHero";
+import { AppleSegmentedTabs, AppleGlassCard } from "@/components/motion";
 
 export default function LandingPage() {
   const shouldReduceMotion = useReducedMotion();
@@ -222,32 +223,32 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-nexus-surface text-nexus-on-surface flex flex-col selection:bg-nexus-secondary/20 selection:text-nexus-secondary">
-      {/* Editorial Navigation */}
-      <header className="sticky top-0 z-50 h-16 border-b border-nexus-outline-variant/30 bg-nexus-surface/85 backdrop-blur-md px-6 lg:px-12 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <LogoMark size={32} />
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-bold tracking-tight text-nexus-on-surface">Nexus</span>
-            <span className="text-xs font-mono text-nexus-on-surface-variant font-medium hidden sm:inline">
-              Logistics Operating System
+      {/* Apple-Grade Global Navigation (48px Frosted Glass with Micro-Typography) */}
+      <header className="sticky top-0 z-50 h-12 border-b border-black/[0.08] dark:border-white/[0.08] bg-white/70 dark:bg-black/70 backdrop-blur-2xl px-6 lg:px-12 flex items-center justify-between transition-colors">
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <LogoMark size={24} />
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-sm font-semibold tracking-tight text-nexus-on-surface">Nexus</span>
+            <span className="text-[10px] font-mono text-nexus-on-surface-variant font-medium hidden sm:inline opacity-70">
+              OS
             </span>
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-7 text-xs font-mono font-medium text-nexus-on-surface-variant" aria-label="Main Navigation">
-          <a href="#the-stakes" className="hover:text-nexus-on-surface transition-colors">The Stakes</a>
-          <a href="#network-complexity" className="hover:text-nexus-on-surface transition-colors">Network Cascade</a>
-          <a href="#intelligence" className="hover:text-nexus-on-surface transition-colors">Product Intelligence</a>
-          <a href="#perspectives" className="hover:text-nexus-on-surface transition-colors">Workspaces</a>
+        <nav className="hidden md:flex items-center gap-8 text-[12px] font-medium tracking-tight text-nexus-on-surface-variant/80" aria-label="Main Navigation">
+          <a href="#the-stakes" className="hover:text-nexus-on-surface hover:opacity-100 transition-all">The Stakes</a>
+          <a href="#network-complexity" className="hover:text-nexus-on-surface hover:opacity-100 transition-all">Network Cascade</a>
+          <a href="#intelligence" className="hover:text-nexus-on-surface hover:opacity-100 transition-all">Product Intelligence</a>
+          <a href="#perspectives" className="hover:text-nexus-on-surface hover:opacity-100 transition-all">Workspaces</a>
         </nav>
 
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="px-4 py-2 rounded-xl text-xs font-mono font-semibold bg-nexus-primary text-white hover:bg-nexus-primary/90 shadow-tactile transition-all flex items-center gap-1.5"
+            className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-nexus-primary text-white hover:bg-nexus-primary/90 shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-all flex items-center gap-1.5 active:scale-[0.98]"
           >
             <span>Access Workspace</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       </header>
@@ -306,72 +307,74 @@ export default function LandingPage() {
               </a>
             </div>
 
-            {/* Live Corridor Topology Preview */}
-            <div className="mt-14 p-6 sm:p-8 rounded-3xl bg-nexus-surface-lowest border border-nexus-outline-variant/35 shadow-tactile-lg">
-              <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-6 border-b border-nexus-outline-variant/20 gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-nexus-primary uppercase tracking-wider">
-                      Live Physical Infrastructure Model
-                    </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold">
-                      Telemetry Synced
-                    </span>
+            {/* Live Corridor Topology Preview (Apple-Grade Glass Card) */}
+            <div className="mt-14">
+              <AppleGlassCard className="p-6 sm:p-8" hoverScale={1.01}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-6 border-b border-black/[0.08] dark:border-white/[0.08] gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-nexus-primary uppercase tracking-wider">
+                        Live Physical Infrastructure Model
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/30">
+                        Telemetry Synced
+                      </span>
+                    </div>
+                    <p className="text-xs font-mono text-nexus-on-surface-variant">
+                      Corridor RT-CHI-DEN-01 · Chicago Hub to Denver Terminal
+                    </p>
                   </div>
-                  <p className="text-xs font-mono text-nexus-on-surface-variant">
-                    Corridor RT-CHI-DEN-01 · Chicago Hub to Denver Terminal
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 text-xs font-mono text-nexus-on-surface-variant">
-                  <span>Distance: 1,620 km</span>
-                  <span>·</span>
-                  <span>Payload: 45,000 kg</span>
-                  <span>·</span>
-                  <span>Status: Active Corridor</span>
-                </div>
-              </div>
-
-              {/* Waypoint Sequence Diagram */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-nexus-surface-container/30 border border-nexus-outline-variant/25 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-nexus-on-surface flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-nexus-primary" />
-                      Origin: Chicago O&apos;Hare
-                    </span>
-                    <Badge variant="healthy" size="sm">Departed</Badge>
+                  <div className="flex items-center gap-4 text-xs font-mono text-nexus-on-surface-variant">
+                    <span>Distance: 1,620 km</span>
+                    <span>·</span>
+                    <span>Payload: 45,000 kg</span>
+                    <span>·</span>
+                    <span className="text-emerald-500 font-semibold">Active Corridor</span>
                   </div>
-                  <p className="text-[11px] font-mono text-nexus-on-surface-variant">
-                    Terminal ORD-01 · 14 freight orders cleared dock at 06:40 CST.
-                  </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-nexus-surface-container/60 border border-amber-500/30 space-y-2 relative">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-nexus-on-surface flex items-center gap-1.5">
-                      <Truck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                      In Transit: I-80 Pass
-                    </span>
-                    <Badge variant="critical" size="sm">Delay Detected</Badge>
+                {/* Waypoint Sequence Diagram */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-[20px] bg-white/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] space-y-2 backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-nexus-on-surface flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-nexus-primary" />
+                        Origin: Chicago O&apos;Hare
+                      </span>
+                      <Badge variant="healthy" size="sm">Departed</Badge>
+                    </div>
+                    <p className="text-[11px] font-mono text-nexus-on-surface-variant">
+                      Terminal ORD-01 · 14 freight orders cleared dock at 06:40 CST.
+                    </p>
                   </div>
-                  <p className="text-[11px] font-mono text-nexus-on-surface-variant">
-                    Mile 342 · Severe mountain blizzard reduces corridor flow by 65%.
-                  </p>
-                </div>
 
-                <div className="p-4 rounded-2xl bg-nexus-surface-container/30 border border-nexus-outline-variant/25 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-nexus-on-surface flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-nexus-secondary" />
-                      Destination: Denver Hub
-                    </span>
-                    <Badge variant="neutral" size="sm">Scheduled</Badge>
+                  <div className="p-4 rounded-[20px] bg-amber-500/10 border border-amber-500/30 space-y-2 relative backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-nexus-on-surface flex items-center gap-1.5">
+                        <Truck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                        In Transit: I-80 Pass
+                      </span>
+                      <Badge variant="critical" size="sm">Delay Detected</Badge>
+                    </div>
+                    <p className="text-[11px] font-mono text-nexus-on-surface-variant">
+                      Mile 342 · Severe mountain blizzard reduces corridor flow by 65%.
+                    </p>
                   </div>
-                  <p className="text-[11px] font-mono text-nexus-on-surface-variant">
-                    Terminal DEN-01 · Receiving bay reserved; ETA recalculating.
-                  </p>
+
+                  <div className="p-4 rounded-[20px] bg-white/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] space-y-2 backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-nexus-on-surface flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-nexus-secondary" />
+                        Destination: Denver Hub
+                      </span>
+                      <Badge variant="neutral" size="sm">Scheduled</Badge>
+                    </div>
+                    <p className="text-[11px] font-mono text-nexus-on-surface-variant">
+                      Terminal DEN-01 · Receiving bay reserved; ETA recalculating.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </AppleGlassCard>
             </div>
           </div>
         </section>
@@ -501,43 +504,30 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Demonstration Selector Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-nexus-outline-variant/25 text-xs font-mono">
-              {(
-                [
-                  { key: "telematics", label: "1. Fleet Visibility", icon: Truck },
-                  { key: "disruption", label: "2. Corridor Modeling", icon: AlertTriangle },
-                  { key: "hubs", label: "3. Hub Operations", icon: Building2 },
-                  { key: "simulation", label: "4. Decision Simulation", icon: Sparkles },
-                ] as const
-              ).map((tab) => {
-                const Icon = tab.icon;
-                const isSelected = activeDemoTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setActiveDemoTab(tab.key)}
-                    className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap ${
-                      isSelected
-                        ? "bg-nexus-primary text-white font-bold shadow-tactile"
-                        : "bg-nexus-surface-container/50 text-nexus-on-surface-variant hover:text-nexus-on-surface"
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
+            {/* Demonstration Selector Tabs (Apple-Style Fluid Spring Pill) */}
+            <div className="flex items-center overflow-x-auto pb-3 pt-1">
+              <AppleSegmentedTabs
+                tabs={[
+                  { id: "telematics", label: "Fleet Visibility", icon: Truck },
+                  { id: "disruption", label: "Corridor Modeling", icon: AlertTriangle },
+                  { id: "hubs", label: "Hub Operations", icon: Building2 },
+                  { id: "simulation", label: "Decision Simulation", icon: Sparkles, badge: "AI" },
+                ]}
+                activeId={activeDemoTab}
+                onChange={(id) => setActiveDemoTab(id as any)}
+                layoutId="apple-demo-active-pill"
+                size="md"
+              />
             </div>
 
-            {/* Active Product Demonstration Showcase */}
+            {/* Active Product Demonstration Showcase (Apple Glass Card) */}
             {(() => {
               const demo = PRODUCT_DEMOS[activeDemoTab];
               return (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-nexus-surface-lowest border border-nexus-outline-variant/40 rounded-3xl p-6 sm:p-10 shadow-tactile-lg">
-                  {/* Left 7 Columns: Product Behavior & Decision Narrative */}
-                  <div className="lg:col-span-7 space-y-6">
+                <AppleGlassCard className="p-6 sm:p-10" hoverScale={1.008}>
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Left 7 Columns: Product Behavior & Decision Narrative */}
+                    <div className="lg:col-span-7 space-y-6">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="simulation" size="sm">
@@ -632,8 +622,9 @@ export default function LandingPage() {
                     </div>
                   </div>
                 </div>
-              );
-            })()}
+              </AppleGlassCard>
+            );
+          })()}
           </div>
         </section>
 
@@ -654,33 +645,27 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* 5 Distinct Roles Switcher */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 border-b border-nexus-outline-variant/25 pb-3">
-              {ROLES.map((r, idx) => (
-                <button
-                  key={r.role}
-                  type="button"
-                  onClick={() => setActiveRolePerspective(idx)}
-                  className={`p-3 rounded-2xl text-left font-mono transition-all border ${
-                    activeRolePerspective === idx
-                      ? "bg-nexus-surface-lowest border-nexus-primary shadow-tactile ring-1 ring-nexus-primary/20 text-nexus-on-surface font-bold"
-                      : "bg-nexus-surface-container/30 border-transparent text-nexus-on-surface-variant hover:bg-nexus-surface-container/60"
-                  }`}
-                >
-                  <span className="text-[10px] text-nexus-secondary block uppercase tracking-wider">
-                    Role 0{idx + 1}
-                  </span>
-                  <span className="text-xs truncate block">{r.role}</span>
-                </button>
-              ))}
+            {/* 5 Distinct Roles Switcher (Apple-Grade Segmented Tabs) */}
+            <div className="flex items-center overflow-x-auto pb-4 pt-1">
+              <AppleSegmentedTabs
+                tabs={ROLES.map((r, idx) => ({
+                  id: String(idx),
+                  label: r.role,
+                  badge: `0${idx + 1}`,
+                }))}
+                activeId={String(activeRolePerspective)}
+                onChange={(id) => setActiveRolePerspective(Number(id))}
+                layoutId="apple-roles-active-pill"
+                size="md"
+              />
             </div>
 
-            {/* Detailed Active Role Card */}
+            {/* Detailed Active Role Card (Apple-Grade Glass Card) */}
             {(() => {
               const role = ROLES[activeRolePerspective];
               return (
-                <div className="bg-nexus-surface-lowest border border-nexus-outline-variant/40 rounded-3xl p-6 sm:p-10 shadow-tactile-lg space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-nexus-outline-variant/20">
+                <AppleGlassCard className="p-6 sm:p-10 space-y-6" hoverScale={1.008}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-black/[0.08] dark:border-white/[0.08]">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="simulation" size="sm">
@@ -700,7 +685,7 @@ export default function LandingPage() {
 
                     <Link
                       href={`/login?role=${encodeURIComponent(role.role)}`}
-                      className="shrink-0 px-4 py-2.5 rounded-xl bg-nexus-primary text-white text-xs font-mono font-bold shadow-tactile hover:bg-nexus-primary/95 transition-all flex items-center gap-2"
+                      className="shrink-0 px-4 py-2.5 rounded-full bg-nexus-primary text-white text-xs font-mono font-bold shadow-tactile hover:bg-nexus-primary/95 transition-all flex items-center gap-2 active:scale-[0.98]"
                     >
                       <span>Sign In as {role.role.split(" ")[0]}</span>
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -719,7 +704,7 @@ export default function LandingPage() {
                       {role.capabilities.map((cap) => (
                         <div
                           key={cap}
-                          className="p-3.5 rounded-2xl bg-nexus-surface-container/30 border border-nexus-outline-variant/20 flex items-start gap-2.5"
+                          className="p-3.5 rounded-[18px] bg-white/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] flex items-start gap-2.5 backdrop-blur-md"
                         >
                           <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                           <span className="text-xs font-mono text-nexus-on-surface leading-snug">
@@ -729,7 +714,7 @@ export default function LandingPage() {
                       ))}
                     </div>
                   </div>
-                </div>
+                </AppleGlassCard>
               );
             })()}
           </div>
@@ -739,13 +724,13 @@ export default function LandingPage() {
         {/* CHAPTER 5: THE OUTCOME — CLOSE WITH A CLEAR PROMISE */}
         {/* ========================================================================= */}
         <section className="py-28 px-6 lg:px-16 relative overflow-hidden">
-          <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-nexus-surface-container border border-nexus-outline-variant/40 text-nexus-on-surface-variant text-xs font-mono font-semibold">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <AppleGlassCard className="max-w-4xl mx-auto text-center space-y-8 relative z-10 py-16 px-8 sm:px-12" hoverScale={1.005}>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.08] text-nexus-on-surface-variant text-xs font-mono font-semibold backdrop-blur-md">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Chapter 5 · Operational Resolution</span>
             </div>
 
-            <h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-nexus-on-surface leading-tight">
+            <h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-nexus-on-surface leading-tight apple-display">
               Don&apos;t just track movement.
               <br />
               <span className="text-nexus-secondary">Shape the outcome.</span>
@@ -758,20 +743,20 @@ export default function LandingPage() {
             <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-center gap-4">
               <Link
                 href="/login"
-                className="px-8 py-4 rounded-2xl bg-nexus-primary text-white font-mono text-xs font-bold shadow-tactile-lg hover:bg-nexus-primary/95 transition-all flex items-center justify-center gap-2"
+                className="px-8 py-3.5 rounded-full bg-nexus-primary text-white font-mono text-xs font-bold shadow-tactile-lg hover:bg-nexus-primary/95 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
               >
                 <span>Access Your Workspace</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/features"
-                className="px-8 py-4 rounded-2xl border border-nexus-outline-variant/50 bg-nexus-surface-container/40 hover:bg-nexus-surface-container text-nexus-on-surface font-mono text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                className="px-8 py-3.5 rounded-full border border-black/[0.1] dark:border-white/[0.12] bg-white/[0.05] hover:bg-white/[0.1] text-nexus-on-surface font-mono text-xs font-semibold transition-colors flex items-center justify-center gap-2 active:scale-[0.98] backdrop-blur-md"
               >
                 <span>Explore Capabilities</span>
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
-          </div>
+          </AppleGlassCard>
         </section>
       </main>
 

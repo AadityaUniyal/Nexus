@@ -19,6 +19,7 @@ import {
   Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
 
 export interface NavSection {
   title?: string;
@@ -127,18 +128,30 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                 const isActive = activeHref === item.href;
                 const Icon = item.icon;
                 return (
-                  <li key={item.href}>
+                  <li key={item.href} className="relative">
                     <Link
                       href={item.href}
                       onClick={() => onNavigate?.()}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "relative flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all select-none",
+                        "relative z-10 flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors select-none",
                         isActive
-                          ? "bg-white dark:bg-stone-850 text-stone-900 dark:text-white font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.35)] border border-black/5 dark:border-white/10"
+                          ? "text-stone-900 dark:text-white font-semibold"
                           : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100/70 dark:hover:bg-white/5"
                       )}
                     >
+                      {isActive && (
+                        <motion.div
+                          layoutId="sidebar-active-pill"
+                          transition={{
+                            type: "spring",
+                            stiffness: 450,
+                            damping: 35,
+                            mass: 0.5,
+                          }}
+                          className="absolute inset-0 rounded-xl bg-white dark:bg-stone-850 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.35)] border border-black/5 dark:border-white/10 -z-10"
+                        />
+                      )}
                       <div className="flex items-center gap-2.5">
                         <Icon className={cn("h-4 w-4 transition-colors", isActive ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400 dark:text-stone-500")} />
                         <span>{item.name}</span>

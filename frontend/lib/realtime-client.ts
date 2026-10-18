@@ -1,5 +1,6 @@
 import { eventBus } from "./event-bus";
 import { useAvatarStore } from "./avatar-store";
+import { neonRealtime } from "./neon";
 
 export interface NexusPulseItem {
   id: string;
@@ -26,10 +27,25 @@ class RealtimeClient {
   private pulseListeners: Set<(item: NexusPulseItem) => void> = new Set();
   private pulseHistory: NexusPulseItem[] = [];
   private isConnected = false;
+  private unsubscribeNeon: (() => void) | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
       this.initConnection();
+      this.initNeonRealtime();
+    }
+  }
+
+  private initNeonRealtime() {
+    try {
+      this.unsubscribeNeon = neonRealtime.subscribe("*", (payload: any) => {
+        if (payload) {
+          this.handleIncomingEvent(payload);
+        }
+      });
+      console.log("[NEXUS Realtime] Neon Realtime WebSocket listener attached.");
+    } catch (e) {
+      console.warn("[NEXUS Realtime] Neon Realtime initialization notice:", e);
     }
   }
 
@@ -106,6 +122,10 @@ class RealtimeClient {
         this.eventSource.close();
       } catch {}
       this.eventSource = null;
+    }
+    if (this.unsubscribeNeon) {
+      this.unsubscribeNeon();
+      this.unsubscribeNeon = null;
     }
     this.isConnected = false;
   }
