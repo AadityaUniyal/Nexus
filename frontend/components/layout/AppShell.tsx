@@ -13,6 +13,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { SupportTicketModal } from "@/components/ui/SupportTicketModal";
+import { motion } from "motion/react";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
@@ -95,7 +96,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar className="hidden md:flex shrink-0" />
 
         <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-32 sm:pb-32 md:pb-36 space-y-6 md:space-y-8 max-w-7xl mx-auto w-full focus:outline-none">
-          {children}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
 

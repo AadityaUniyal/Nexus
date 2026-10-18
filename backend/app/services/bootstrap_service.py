@@ -19,7 +19,9 @@ from app.schemas.me import (
 logger = logging.getLogger("nexus.bootstrap")
 
 async def seed_initial_workspace_data(db: AsyncSession, workspace_id: str):
-    """Seed initial operational entities for a newly bootstrapped workspace."""
+    """Seed initial operational entities for continental demo workspace only; custom workspaces start clean."""
+    if workspace_id != "ws-continental-fleet-01":
+        return
     # Check if warehouses exist
     w_res = await db.execute(select(func.count()).select_from(Warehouse).where(Warehouse.workspace_id == workspace_id))
     if (w_res.scalar() or 0) > 0:

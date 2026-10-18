@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LogoMark } from "@/components/brand/Logo";
 import {
   ArrowRight,
@@ -12,7 +12,10 @@ import {
   Shield,
   CheckCircle2,
   Lock,
-  Mail
+  Mail,
+  Loader2,
+  Building2,
+  Sparkles
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -24,6 +27,7 @@ export default function LoginPage() {
 }
 
 function AppleStyleLoginContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get("redirect") || "/overview";
   const initialRole = searchParams.get("role") || "";
@@ -36,6 +40,8 @@ function AppleStyleLoginContent() {
   const [rememberMe, setRememberMe] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [transitionUser, setTransitionUser] = React.useState<any>(null);
 
   // Real enterprise operational identities in database
   const ENTERPRISE_PROFILES = [
@@ -111,6 +117,13 @@ function AppleStyleLoginContent() {
           localStorage.setItem("nexus_user_role", user.role);
         }
 
+        // Clear obsolete local mock storage so genuine database is single source of truth
+        localStorage.removeItem("nexus_custom_vehicles");
+        localStorage.removeItem("nexus_custom_warehouses");
+        localStorage.removeItem("nexus_custom_orders");
+        localStorage.removeItem("nexus_custom_routes");
+        localStorage.removeItem("nexus_custom_incidents");
+
         let dest = "/overview";
         if (redirectTarget && redirectTarget.startsWith("/") && !redirectTarget.startsWith("//")) {
           dest = redirectTarget;
@@ -118,7 +131,13 @@ function AppleStyleLoginContent() {
           dest = "/admin/company";
         }
 
-        window.location.href = dest;
+        setTransitionUser(user);
+        setIsTransitioning(true);
+        router.prefetch(dest);
+
+        setTimeout(() => {
+          router.push(dest);
+        }, 650);
       } else {
         const errJson = await resp.json().catch(() => ({}));
         setError(errJson.detail || errJson.message || "The corporate email or password you entered is incorrect.");
@@ -318,6 +337,34 @@ function AppleStyleLoginContent() {
           </div>
         </div>
       </main>
+
+      {/* Apple Keynote Transition Overlay */}
+      {isTransitioning && (
+        <div className="fixed inset-0 z-50 bg-[#f5f5f7]/95 dark:bg-[#000000]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-sm mx-auto text-center space-y-6">
+            <div className="relative h-20 w-20 mx-auto flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full border-2 border-[#0071e3]/20 animate-ping" />
+              <span className="absolute inset-0 rounded-full border-2 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent animate-spin" />
+              <div className="h-14 w-14 rounded-full bg-white dark:bg-[#1c1c1e] shadow-lg flex items-center justify-center">
+                <LogoMark size={28} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
+                Welcome back, {transitionUser?.name || "Operator"}
+              </h3>
+              <p className="text-xs text-black/50 dark:text-white/50 leading-relaxed">
+                Connecting to {transitionUser?.workspace_id || transitionUser?.workspaceId || "Nexus Network"}
+              </p>
+            </div>
+
+            <div className="w-48 mx-auto h-1 bg-black/[0.08] dark:bg-white/[0.1] rounded-full overflow-hidden">
+              <div className="h-full bg-[#0071e3] rounded-full animate-pulse w-full" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Apple-style Footer */}
       <footer className="border-t border-black/[0.08] dark:border-white/[0.1] py-6 px-6 lg:px-12 text-[11px] text-black/50 dark:text-white/50 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">

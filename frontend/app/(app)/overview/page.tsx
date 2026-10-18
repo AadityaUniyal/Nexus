@@ -82,7 +82,7 @@ export default function OverviewPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [worldView, setWorldView] = React.useState<"GIS" | "3D">("GIS");
   
-  const [operationalMode, setOperationalMode] = React.useState<"PRODUCTION" | "SANDBOX">("SANDBOX");
+  const [operationalMode, setOperationalMode] = React.useState<"PRODUCTION" | "SANDBOX">("PRODUCTION");
   const [activeRole, setActiveRole] = React.useState<RoleType>("OPERATIONS_MANAGER");
   const [timelineOffset, setTimelineOffset] = React.useState<number>(0);
 

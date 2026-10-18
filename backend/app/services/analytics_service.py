@@ -83,16 +83,8 @@ class AnalyticsService:
                     "efficiency": w.efficiency_pct
                 })
         else:
-            # Standard hubs if none in DB
-            hub_throughput = [
-                {"hub": "Chicago", "volume": 12450, "capacity": 15000, "docks": "6/8", "efficiency": 94.2},
-                {"hub": "Dallas", "volume": 14200, "capacity": 18000, "docks": "7/8", "efficiency": 96.0},
-                {"hub": "Atlanta", "volume": 11100, "capacity": 14000, "docks": "5/6", "efficiency": 92.5},
-                {"hub": "Denver", "volume": 7200, "capacity": 10000, "docks": "4/4", "efficiency": 98.1},
-                {"hub": "Seattle", "volume": 8900, "capacity": 12000, "docks": "5/6", "efficiency": 95.0},
-                {"hub": "New York", "volume": 17800, "capacity": 20000, "docks": "8/10", "efficiency": 91.8},
-            ]
-            total_network_units = sum(h["volume"] for h in hub_throughput)
+            hub_throughput = []
+            total_network_units = 0
 
         # 3. Fleet Utilization & Health
         v_stmt = select(Vehicle)

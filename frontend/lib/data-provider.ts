@@ -84,8 +84,9 @@ export interface NexusDataProvider {
 }
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (typeof window !== "undefined" ? "" : "http://127.0.0.1:8000");
+  typeof window !== "undefined"
+    ? ""
+    : (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000");
 const demoModeEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
 
 /**
@@ -230,12 +231,10 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           currentRouteId: v.current_route_id || null,
           currentRouteName: v.current_route_name || "Active Corridor",
         }));
-        // Merge custom with API without duplicate IDs
-        const existingIds = new Set(apiVehicles.map((v) => v.id));
-        return [...customVehicles.filter((v) => !existingIds.has(v.id)), ...apiVehicles];
+        return apiVehicles;
       }
     } catch {
-      // Fall through to custom vehicles
+      // Fall through to custom vehicles only on network error
     }
     return customVehicles;
   }
@@ -392,11 +391,10 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           status: (w.status as any) || "OPERATIONAL",
           createdAt: w.created_at || new Date().toISOString(),
         }));
-        const existingIds = new Set(apiWarehouses.map((w) => w.id));
-        return [...customWarehouses.filter((w) => !existingIds.has(w.id)), ...apiWarehouses];
+        return apiWarehouses;
       }
     } catch {
-      // Fall through to custom
+      // Fall through to custom only on network error
     }
     return customWarehouses;
   }
@@ -935,11 +933,10 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           trafficCondition: (r.traffic_condition as any) || "CLEAR",
           waypoints: r.waypoints || [],
         }));
-        const existingIds = new Set(apiRoutes.map((r) => r.id));
-        return [...customRoutes.filter((r) => !existingIds.has(r.id)), ...apiRoutes];
+        return apiRoutes;
       }
     } catch {
-      // Fall through to custom routes
+      // Fall through to custom routes only on network error
     }
     return customRoutes;
   }
@@ -1001,10 +998,11 @@ export class ApiNexusDataProvider implements NexusDataProvider {
           totalCost: o.total_cost || 1200,
           slaCompliant: o.status !== "DELAYED",
         }));
-        const existingIds = new Set(apiOrders.map((o) => o.id));
-        return [...customOrders.filter((o) => !existingIds.has(o.id)), ...apiOrders];
+        return apiOrders;
       }
-    } catch {}
+    } catch {
+      // Fall through to custom orders only on network error
+    }
     return customOrders;
   }
 
@@ -1194,10 +1192,11 @@ export class ApiNexusDataProvider implements NexusDataProvider {
             createdAt: t.created_at,
           })),
         }));
-        const existingIds = new Set(apiIncidents.map((i) => i.id));
-        return [...customIncidents.filter((i) => !existingIds.has(i.id)), ...apiIncidents];
+        return apiIncidents;
       }
-    } catch {}
+    } catch {
+      // Fall through to custom incidents only on network error
+    }
     return customIncidents;
   }
 

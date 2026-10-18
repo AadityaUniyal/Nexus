@@ -63,7 +63,7 @@ async def get_current_principal(
         is_active = user.is_active
 
         # If user has an explicit active workspace switch request in header, verify membership
-        if x_workspace_id and x_workspace_id != workspace_id:
+        if isinstance(x_workspace_id, str) and x_workspace_id.strip() and x_workspace_id != workspace_id:
             from app.models.user import WorkspaceMembership
             m_stmt = select(WorkspaceMembership).where(
                 WorkspaceMembership.user_id == user.id,
@@ -110,14 +110,20 @@ async def get_current_principal(
 
 async def get_optional_principal(
     authorization: Optional[str] = Header(None),
+    x_workspace_id: Optional[str] = Header(None, alias="X-Workspace-ID"),
     db: AsyncSession = Depends(get_db)
 ) -> Optional[RequestPrincipal]:
     """Optional authentication for endpoints that support public or anonymous access."""
     if not authorization or not authorization.startswith("Bearer "):
         return None
     try:
-        return await get_current_principal(authorization=authorization, db=db)
-    except Exception:
+        return await get_current_principal(
+            authorization=authorization,
+            x_workspace_id=x_workspace_id if isinstance(x_workspace_id, str) else None,
+            db=db
+        )
+    except Exception as e:
+        logger.warning(f"get_optional_principal authentication bypassed: {e}")
         return None
 
 def require_authenticated(principal: RequestPrincipal = Depends(get_current_principal)) -> RequestPrincipal:

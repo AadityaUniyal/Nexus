@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LogoMark } from "@/components/brand/Logo";
 import {
   ArrowRight,
@@ -12,10 +13,12 @@ import {
   Lock,
   Mail,
   Building,
-  User
+  User,
+  Sparkles
 } from "lucide-react";
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [step, setStep] = React.useState<1 | 2>(1);
 
   // Step 1: Personal & Corporate Email
@@ -29,6 +32,8 @@ export default function SignUpPage() {
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [createdUser, setCreatedUser] = React.useState<any>(null);
 
   const handleStep1Continue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +102,20 @@ export default function SignUpPage() {
         }
       }
 
-      window.location.href = "/overview";
+      // Clear any stale local mock state
+      localStorage.removeItem("nexus_custom_vehicles");
+      localStorage.removeItem("nexus_custom_warehouses");
+      localStorage.removeItem("nexus_custom_orders");
+      localStorage.removeItem("nexus_custom_routes");
+      localStorage.removeItem("nexus_custom_incidents");
+
+      setCreatedUser(user);
+      setIsTransitioning(true);
+      router.prefetch("/overview");
+
+      setTimeout(() => {
+        router.push("/overview");
+      }, 750);
     } catch (err: any) {
       setError(err?.message || "Unable to create account. Please check your connection.");
     } finally {
@@ -273,6 +291,34 @@ export default function SignUpPage() {
           </div>
         </div>
       </main>
+
+      {/* Apple Keynote Transition Overlay */}
+      {isTransitioning && (
+        <div className="fixed inset-0 z-50 bg-[#f5f5f7]/95 dark:bg-[#000000]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-sm mx-auto text-center space-y-6">
+            <div className="relative h-20 w-20 mx-auto flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full border-2 border-[#0071e3]/20 animate-ping" />
+              <span className="absolute inset-0 rounded-full border-2 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent animate-spin" />
+              <div className="h-14 w-14 rounded-full bg-white dark:bg-[#1c1c1e] shadow-lg flex items-center justify-center">
+                <LogoMark size={28} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
+                Preparing {companyName} Workspace
+              </h3>
+              <p className="text-xs text-black/50 dark:text-white/50 leading-relaxed">
+                Initializing autonomous logistics infrastructure for {name || "your team"}
+              </p>
+            </div>
+
+            <div className="w-48 mx-auto h-1 bg-black/[0.08] dark:bg-white/[0.1] rounded-full overflow-hidden">
+              <div className="h-full bg-[#0071e3] rounded-full animate-pulse w-full" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Apple-style Footer */}
       <footer className="border-t border-black/[0.08] dark:border-white/[0.1] py-6 px-6 lg:px-12 text-[11px] text-black/50 dark:text-white/50 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
