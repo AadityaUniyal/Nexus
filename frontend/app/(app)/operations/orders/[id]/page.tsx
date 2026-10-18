@@ -24,6 +24,8 @@ import { FadeIn, SpringCard } from '@/components/motion';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/components/ui/toast';
 import { usePermissions } from '@/components/providers/AuthProvider';
+import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
+import { DataProvenanceBadge } from '@/components/ui/DataProvenanceBadge';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -34,6 +36,7 @@ export default function OrderDetailPage() {
   const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
   const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
@@ -64,9 +67,8 @@ export default function OrderDetailPage() {
   const { toast } = useToast();
   const [deleting, setDeleting] = React.useState(false);
 
-  const handleDelete = async () => {
+  const executeDelete = async () => {
     if (!order) return;
-    if (!confirm(`Are you sure you want to cancel and remove consignment ${order.orderNumber}?`)) return;
 
     setDeleting(true);
     tactileAudio.playCriticalAlert();
@@ -140,7 +142,7 @@ export default function OrderDetailPage() {
               <Button
                 variant="critical"
                 size="sm"
-                onClick={handleDelete}
+                onClick={() => setDeleteConfirmOpen(true)}
                 disabled={deleting}
                 className="font-mono text-xs gap-1.5"
               >
@@ -154,7 +156,9 @@ export default function OrderDetailPage() {
           <SpringCard className="p-5 space-y-2">
             <div className="flex items-center justify-between text-nexus-on-surface-variant text-xs font-mono uppercase">
               <span>Delivery Status</span>
-              <StatusLed status={order.status === 'DELIVERED' ? 'healthy' : order.status === 'DELAYED' ? 'attention' : 'neutral'} />
+              <DataProvenanceBadge
+                status={order.status === 'DELIVERED' ? 'CONFIRMED' : order.status === 'DELAYED' ? 'ESTIMATED' : 'REPORTED'}
+              />
             </div>
             <div className="text-2xl font-bold font-mono text-nexus-on-surface">{order.status}</div>
             <p className="text-xs text-nexus-on-surface-variant">Priority: {order.priority}</p>
@@ -181,10 +185,10 @@ export default function OrderDetailPage() {
           <SpringCard className="p-5 space-y-2">
             <div className="flex items-center justify-between text-nexus-on-surface-variant text-xs font-mono uppercase">
               <span>SLA Promised ETA</span>
-              <Clock className="h-4 w-4 text-nexus-secondary" />
+              <DataProvenanceBadge status="PREDICTED" />
             </div>
             <div className="text-xs font-bold font-mono text-nexus-on-surface">{formatDateTime(order.deadline)}</div>
-            <p className="text-xs text-nexus-on-surface-variant">Est: {formatDateTime(order.estimatedEta)}</p>
+            <p className="text-xs text-nexus-on-surface-variant">Est: {formatDateTime(order.estimatedEta)} (Local)</p>
           </SpringCard>
         </div>
 
@@ -237,6 +241,26 @@ export default function OrderDetailPage() {
             </SpringCard>
           </div>
         </div>
+
+        {/* Destructive Cancel Modal — Blueprint §35 */}
+        <ConfirmActionModal
+          isOpen={deleteConfirmOpen}
+          onClose={() => setDeleteConfirmOpen(false)}
+          onConfirm={executeDelete}
+          title={`Cancel Consignment ${order.orderNumber}`}
+          description={`Are you sure you want to cancel consignment ${order.orderNumber} for ${order.customerName}?`}
+          affectedEntities={[
+            {
+              type: "Consignment",
+              id: order.id,
+              name: `${order.orderNumber} (${order.destination})`,
+            },
+          ]}
+          consequenceWarning="This will remove the shipment from active vehicle manifests and cancel scheduled destination dock check-in."
+          confirmLabel="Cancel Consignment"
+          confirmVariant="danger"
+          isLoading={deleting}
+        />
       </FadeIn>
     </AppShell>
   );

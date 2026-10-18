@@ -13,7 +13,7 @@ import {
   Battery,
   Gauge,
   MapPin,
-  Sparkles,
+  GitBranch,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
@@ -23,6 +23,7 @@ import { FadeIn, SpringCard } from '@/components/motion';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/components/ui/toast';
 import { usePermissions } from '@/components/providers/AuthProvider';
+import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -34,6 +35,7 @@ export default function VehicleDetailPage() {
   const [orders, setOrders] = React.useState<OrderItem[]>([]);
   const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [confirmModalOpen, setConfirmModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
@@ -63,9 +65,8 @@ export default function VehicleDetailPage() {
   const [deleting, setDeleting] = React.useState(false);
   const { toast } = useToast();
 
-  const handleDelete = async () => {
+  const executeDelete = async () => {
     if (!vehicle) return;
-    if (!confirm(`Are you sure you want to decommission and remove vehicle ${vehicle.code}?`)) return;
 
     setDeleting(true);
     tactileAudio.playCriticalAlert();
@@ -139,14 +140,14 @@ export default function VehicleDetailPage() {
           <div className="flex items-center gap-3">
             <Link href={`/simulations/new?targetVehicle=${vehicle.id}`}>
               <Button variant="simulation" size="sm" className="font-mono text-xs gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> Simulate Reroute
+                <GitBranch className="h-3.5 w-3.5" /> Simulate Reroute
               </Button>
             </Link>
             {canDecommission && (
               <Button
                 variant="critical"
                 size="sm"
-                onClick={handleDelete}
+                onClick={() => setConfirmModalOpen(true)}
                 disabled={deleting}
                 className="font-mono text-xs gap-1.5"
               >
@@ -284,6 +285,26 @@ export default function VehicleDetailPage() {
             </SpringCard>
           </div>
         </div>
+
+        {/* Decommission Confirmation Modal — Blueprint §35 */}
+        <ConfirmActionModal
+          isOpen={confirmModalOpen}
+          onClose={() => setConfirmModalOpen(false)}
+          onConfirm={executeDelete}
+          title={`Decommission Vehicle ${vehicle.code}`}
+          description={`Are you sure you want to decommission commercial hauler ${vehicle.code} (${vehicle.model})?`}
+          affectedEntities={[
+            {
+              type: "Commercial Hauler",
+              id: vehicle.id,
+              name: `${vehicle.code} (${vehicle.driverName || "Assigned Driver"})`,
+            },
+          ]}
+          consequenceWarning="This vehicle will be unassigned from any active corridors and cannot receive new freight manifests until re-enrolled."
+          confirmLabel="Decommission Hauler"
+          confirmVariant="danger"
+          isLoading={deleting}
+        />
       </FadeIn>
     </AppShell>
   );

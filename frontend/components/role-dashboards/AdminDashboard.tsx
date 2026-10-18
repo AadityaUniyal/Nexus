@@ -51,7 +51,7 @@ export function AdminDashboard() {
     {
       id: "tx-8901",
       action: "REROUTE_DISPATCHED",
-      actor: "Nexus Neural Engine",
+      actor: "Automated Dispatch Policy",
       target: "Vehicle NX-804",
       hash: "8f4a...92b1",
       time: "2 mins ago",
@@ -78,7 +78,7 @@ export function AdminDashboard() {
     ? realLogs.map((log) => ({
         id: log.id,
         action: log.action || "SYSTEM_AUDIT",
-        actor: log.actorName || "Autonomous Kernel",
+        actor: log.actorName || "System Policy Engine",
         target: `${log.entityType || "ENTITY"}: ${log.entityId || "N/A"}`,
         hash: `sha256:${log.id.slice(0, 8)}...${log.id.slice(-4)}`,
         time: log.createdAt ? formatRelativeTime(log.createdAt) : "Just now",

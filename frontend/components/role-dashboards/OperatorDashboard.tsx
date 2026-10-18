@@ -26,6 +26,7 @@ import { VehicleItem, WarehouseItem } from "@/lib/mock-data";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
 import { DriverBeaconModal } from "@/components/innovations/DriverBeaconModal";
+import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 
 export interface OperatorDashboardProps {
   vehicles: VehicleItem[];
@@ -47,6 +48,7 @@ export function OperatorDashboard({
     vehicles[0] || null
   );
   const [beaconModalOpen, setBeaconModalOpen] = React.useState(false);
+  const [sosConfirmOpen, setSosConfirmOpen] = React.useState(false);
 
   // Keyboard shortcut listener for field dispatchers
   React.useEffect(() => {
@@ -337,12 +339,8 @@ export function OperatorDashboard({
                       variant="danger"
                       size="sm"
                       onClick={() => {
-                        tactileAudio.playCriticalAlert();
-                        toast({
-                          title: "Emergency SOS Triggered",
-                          message: `Highway breakdown alert broadcast for ${selectedVehicle.code}.`,
-                          type: "critical",
-                        });
+                        tactileAudio.playClick();
+                        setSosConfirmOpen(true);
                       }}
                       className="w-full font-mono text-xs shadow-tactile"
                     >
@@ -379,6 +377,34 @@ export function OperatorDashboard({
         driverName={selectedVehicle?.driverName || "Rajesh Sharma"}
         routeCode={selectedVehicle?.currentRouteName || "COR-DEL-DED-01"}
       />
+
+      {/* Emergency SOS Confirmation Modal — Blueprint §35 */}
+      {selectedVehicle && (
+        <ConfirmActionModal
+          isOpen={sosConfirmOpen}
+          onClose={() => setSosConfirmOpen(false)}
+          onConfirm={() => {
+            tactileAudio.playCriticalAlert();
+            toast({
+              title: "Emergency SOS Broadcasted",
+              message: `High-priority breakdown alert transmitted to regional dispatch for ${selectedVehicle.code}.`,
+              type: "critical",
+            });
+          }}
+          title={`Broadcast Emergency SOS: ${selectedVehicle.code}`}
+          description={`You are initiating a high-priority corridor breakdown alert for vehicle ${selectedVehicle.code} operated by ${selectedVehicle.driverName}.`}
+          affectedEntities={[
+            {
+              type: "Vehicle",
+              id: selectedVehicle.id,
+              name: `${selectedVehicle.code} (${selectedVehicle.driverName})`,
+            },
+          ]}
+          consequenceWarning="This will alert regional roadside assistance and reroute trailing commercial haulers away from this corridor segment."
+          confirmLabel="Broadcast Critical SOS"
+          confirmVariant="danger"
+        />
+      )}
     </div>
   );
 }

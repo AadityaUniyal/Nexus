@@ -25,6 +25,7 @@ import { MetricTile } from "@/components/ui/metric-tile";
 import { IncidentItem, SimulationItem, WarehouseItem } from "@/lib/mock-data";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
+import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 
 export interface ManagerDashboardProps {
   incidents: IncidentItem[];
@@ -48,6 +49,7 @@ export function ManagerDashboard({
     incidents[0] || null
   );
   const [isApplying, setIsApplying] = React.useState(false);
+  const [pendingSimId, setPendingSimId] = React.useState<string | null>(null);
 
   const activeIncidents = incidents.filter(
     (i) => i.status !== "RESOLVED" && i.status !== "ARCHIVED"
@@ -66,18 +68,19 @@ export function ManagerDashboard({
       }
       tactileAudio.playSuccess();
       toast({
-        title: "Autonomous Decision Committed",
-        message: "Reroute waypoints synchronized with active fleet and audit ledger signed.",
+        title: "Operational Plan Applied",
+        message: "Reroute plan applied and synchronized with fleet dispatch records.",
         type: "success",
       });
     } catch {
       toast({
-        title: "Commit Failed",
-        message: "Unable to apply scenario to production.",
+        title: "Update Failed",
+        message: "Unable to apply plan to active operations. Check permissions or network.",
         type: "critical",
       });
     } finally {
       setIsApplying(false);
+      setPendingSimId(null);
     }
   };
 
@@ -275,7 +278,7 @@ export function ManagerDashboard({
 
                     <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
                       <span className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 font-bold block mb-1">
-                        AI Recommended Bypass
+                        Recommended Mitigation Plan
                       </span>
                       <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
                         +14 mins
@@ -284,48 +287,75 @@ export function ManagerDashboard({
                         Net Savings: <span className="font-bold text-emerald-600 dark:text-emerald-400">+$3,820.00</span>
                       </div>
                       <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 mt-2">
-                        Confidence: 96.4% on I-80 Alternate
+                        Transit Risk: Low • Verified via DOT status feed
                       </div>
                     </div>
                   </div>
 
-                  {/* AI Reasoning Brief */}
+                  {/* Operational Rationale Brief */}
                   <div className="p-3.5 rounded-xl bg-nexus-surface-container-high border border-nexus-outline/20 text-xs text-nexus-on-surface leading-relaxed">
                     <span className="font-bold text-nexus-secondary font-mono block mb-1">
-                      🧠 Aegis Tactical Decision Rationale:
+                      Route Evaluation Rationale:
                     </span>
-                    Rerouting 8 Class-8 EV haulers through Exit 142 avoids the 3-foot snowdrift chokepoint on I-80. Dock turnaround at Warehouse WH-CHI-01 remains within SLA tolerance.
+                    Rerouting vehicles through secondary bypass avoids the high-elevation snow obstruction on I-80. Dock turnaround at receiving terminal remains within operational schedule tolerance.
                   </div>
 
                   {/* Action Bar */}
                   <div className="flex items-center justify-between pt-2">
                     <Link href={`/simulations/new?incidentId=${selectedIncident.id}`}>
                       <Button variant="outline" size="sm" className="font-mono text-xs">
-                        <GitBranch className="w-3.5 h-3.5 mr-1" /> Fine-Tune Variables
+                        <GitBranch className="w-3.5 h-3.5 mr-1" /> Compare Variables
                       </Button>
                     </Link>
 
                     <Button
-                      variant="simulation"
+                      variant="primary"
                       size="sm"
-                      onClick={() => handleExecuteReroute(simulations[0]?.id || "sim-1")}
-                      isLoading={isApplying}
+                      onClick={() => setPendingSimId(simulations[0]?.id || "sim-1")}
+                      disabled={isApplying}
                       className="font-mono text-xs shadow-tactile"
                     >
-                      <Zap className="w-3.5 h-3.5 mr-1 text-amber-300" />
-                      Authorize & Dispatch Reroute
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-300" />
+                      Apply Plan
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="py-12 text-center text-xs font-mono text-nexus-on-surface-variant">
-                  Select an incident from the left queue to inspect AI mitigation alternatives.
+                  Select an incident from the queue to review scenario alternatives and operational trade-offs.
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <ConfirmActionModal
+        isOpen={!!pendingSimId}
+        onClose={() => setPendingSimId(null)}
+        onConfirm={async () => {
+          if (pendingSimId) {
+            await handleExecuteReroute(pendingSimId);
+          }
+        }}
+        title="Execute Reroute Plan"
+        description="Applying this mitigation scenario will issue route modifications to active vehicles and notify downstream receiving docks."
+        affectedEntities={
+          selectedIncident
+            ? [
+                {
+                  type: "Incident",
+                  id: selectedIncident.id,
+                  name: selectedIncident.title || selectedIncident.id,
+                },
+              ]
+            : []
+        }
+        consequenceWarning="This will update active driver dispatch instructions. Drivers will be prompted to confirm route deviation."
+        confirmLabel="Apply & Dispatch Reroute"
+        confirmVariant="primary"
+        isLoading={isApplying}
+      />
     </div>
   );
 }

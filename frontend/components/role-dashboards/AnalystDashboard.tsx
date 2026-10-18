@@ -6,7 +6,7 @@ import {
   TrendingUp,
   BarChart3,
   Sliders,
-  Sparkles,
+  Calculator,
   Download,
   Database,
   FileSpreadsheet,
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { MetricTile } from "@/components/ui/metric-tile";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
+import { apiFetch } from "@/lib/api/http";
 
 export function AnalystDashboard() {
   const { toast } = useToast();
@@ -33,10 +34,8 @@ export function AnalystDashboard() {
     setIsSimulating(true);
     tactileAudio.playClick();
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-      const res = await fetch(`${apiBase}/api/v1/simulations/evaluate-stochastic?iterations=${Math.min(iterations, 1000)}`, {
+      const res = await apiFetch(`/api/v1/simulations/evaluate-stochastic?iterations=${Math.min(iterations, 1000)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           base_metrics: {
             totalDistanceKm: 1620.0,
@@ -62,7 +61,7 @@ export function AnalystDashboard() {
         toast({
           title: "Monte Carlo Run Completed",
           message: `Calculated ${iterations.toLocaleString()} iterations. P90 Delay: ${simData.p90_delay_mins || 45}m · P50 Cost: $${simData.p50_cost_usd || 1530}.`,
-          type: "ai",
+          type: "info",
         });
       } else {
         throw new Error("Stochastic simulation fallback");
@@ -72,7 +71,7 @@ export function AnalystDashboard() {
       toast({
         title: "Monte Carlo Engine Completed",
         message: `Calculated ${iterations.toLocaleString()} iterations at ${confidenceInterval}% confidence interval.`,
-        type: "ai",
+        type: "info",
       });
     } finally {
       setIsSimulating(false);
@@ -82,8 +81,7 @@ export function AnalystDashboard() {
   const handleExportData = async (format: "CSV" | "PARQUET" | "JSON") => {
     tactileAudio.playClick();
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-      const res = await fetch(`${apiBase}/api/v1/analytics/export?format=${format.toLowerCase()}`);
+      const res = await apiFetch(`/api/v1/analytics/export?format=${format.toLowerCase()}`);
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -141,7 +139,7 @@ export function AnalystDashboard() {
           change="+18% over naive dispatch"
           trend="up"
           status="SIMULATION"
-          icon={Sparkles}
+          icon={Calculator}
           variant="simulation"
         />
         <MetricTile
@@ -259,7 +257,7 @@ export function AnalystDashboard() {
                 isLoading={isSimulating}
                 className="w-full font-mono text-xs shadow-tactile"
               >
-                <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Execute Multi-Variate Model
+                <Calculator className="w-3.5 h-3.5 mr-1.5" /> Execute Multi-Variate Model
               </Button>
             </CardContent>
           </Card>

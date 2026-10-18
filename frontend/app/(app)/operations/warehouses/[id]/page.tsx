@@ -21,6 +21,7 @@ import { FadeIn, SpringCard } from '@/components/motion';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/components/ui/toast';
 import { usePermissions } from '@/components/providers/AuthProvider';
+import { ConfirmActionModal } from '@/components/ui/ConfirmActionModal';
 
 export default function WarehouseDetailPage() {
   const params = useParams();
@@ -30,6 +31,7 @@ export default function WarehouseDetailPage() {
   const [warehouse, setWarehouse] = React.useState<WarehouseItem | null>(null);
   const [orders, setOrders] = React.useState<OrderItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [confirmModalOpen, setConfirmModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
@@ -59,9 +61,8 @@ export default function WarehouseDetailPage() {
   const { toast } = useToast();
   const [deleting, setDeleting] = React.useState(false);
 
-  const handleDelete = async () => {
+  const executeDelete = async () => {
     if (!warehouse) return;
-    if (!confirm(`Are you sure you want to decommission warehouse hub ${warehouse.name}?`)) return;
 
     setDeleting(true);
     tactileAudio.playCriticalAlert();
@@ -140,7 +141,7 @@ export default function WarehouseDetailPage() {
               <Button
                 variant="critical"
                 size="sm"
-                onClick={handleDelete}
+                onClick={() => setConfirmModalOpen(true)}
                 disabled={deleting}
                 className="font-mono text-xs gap-1.5"
               >
@@ -230,6 +231,26 @@ export default function WarehouseDetailPage() {
             </SpringCard>
           </div>
         </div>
+
+        {/* Decommission Confirmation Modal — Blueprint §35 */}
+        <ConfirmActionModal
+          isOpen={confirmModalOpen}
+          onClose={() => setConfirmModalOpen(false)}
+          onConfirm={executeDelete}
+          title={`Decommission Warehouse Hub ${warehouse.name}`}
+          description={`Are you sure you want to decommission warehouse hub ${warehouse.name} (${warehouse.code})?`}
+          affectedEntities={[
+            {
+              type: "Warehouse Hub",
+              id: warehouse.id,
+              name: `${warehouse.name} (${warehouse.city}, ${warehouse.state})`,
+            },
+          ]}
+          consequenceWarning="Active dock bays and pallet staging inventory will need to be reallocated to alternate regional facilities."
+          confirmLabel="Decommission Hub"
+          confirmVariant="danger"
+          isLoading={deleting}
+        />
       </FadeIn>
     </AppShell>
   );
