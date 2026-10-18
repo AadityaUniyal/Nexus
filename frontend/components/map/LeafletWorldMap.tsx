@@ -111,6 +111,7 @@ export function LeafletWorldMap({
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
   const [tileLayerType, setTileLayerType] = useState<'CARTO_VOYAGER' | 'OSM' | 'CARTO_DARK'>('CARTO_VOYAGER');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VEHICLES' | 'WAREHOUSES' | 'INCIDENTS'>('ALL');
+  const [showGrid, setShowGrid] = useState<boolean>(false);
   const [packetCount, setPacketCount] = useState(1480);
 
   useEffect(() => {
@@ -481,6 +482,19 @@ export function LeafletWorldMap({
       {/* Real OpenStreetMap Leaflet Container */}
       <div ref={containerRef} className="w-full h-full z-0" />
 
+      {/* Controlled Grid Overlay — Disappears completely when showGrid is false (Blueprint §12.6) */}
+      {showGrid && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none z-[200] opacity-30 dark:opacity-40 transition-opacity duration-200"
+          style={{
+            backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
+            backgroundSize: '64px 64px',
+            color: 'rgba(16, 185, 129, 0.4)',
+          }}
+        />
+      )}
+
       {/* Floating Apple-Grade Map Control HUD */}
       <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
         {/* Zoom & Reset Pill */}
@@ -562,6 +576,20 @@ export function LeafletWorldMap({
             }`}
           >
             OpenStreet
+          </button>
+          <div className="h-px bg-stone-200/80 dark:border-stone-800 my-0.5" />
+          <button
+            type="button"
+            onClick={() => {
+              setShowGrid((prev) => !prev);
+              tactileAudio.playClick();
+            }}
+            className={`px-2 py-1 text-[10px] font-mono rounded-xl font-bold transition-all text-left flex items-center justify-between ${
+              showGrid ? 'bg-emerald-600 text-white' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+            }`}
+          >
+            <span>Grid Overlay</span>
+            <span className="text-[9px] opacity-80">{showGrid ? 'ON' : 'OFF'}</span>
           </button>
         </div>
       </div>
