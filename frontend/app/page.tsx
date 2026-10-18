@@ -33,7 +33,7 @@ import {
 import { LogoMark } from "@/components/brand/Logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AppleVisionProScrollHero } from "@/components/brand/AppleVisionProScrollHero";
+import { OperationalTimelineHero } from "@/components/brand/OperationalTimelineHero";
 
 export default function LandingPage() {
   const shouldReduceMotion = useReducedMotion();
@@ -381,9 +381,9 @@ export default function LandingPage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* APPLE VISION PRO-STYLE HARDWARE SCROLL EXPERIENCE */}
+        {/* OPERATIONAL INTELLIGENCE TIMELINE SCROLL STAGE */}
         {/* ========================================================================= */}
-        <AppleVisionProScrollHero />
+        <OperationalTimelineHero />
 
         {/* ========================================================================= */}
         {/* CHAPTER 2: THE PROBLEM — REVEAL NETWORK COMPLEXITY */}
