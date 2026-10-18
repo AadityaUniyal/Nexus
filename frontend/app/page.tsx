@@ -238,11 +238,7 @@ export default function LandingPage() {
           <a href="#the-stakes" className="hover:text-nexus-on-surface transition-colors">The Stakes</a>
           <a href="#network-complexity" className="hover:text-nexus-on-surface transition-colors">Network Cascade</a>
           <a href="#intelligence" className="hover:text-nexus-on-surface transition-colors">Product Intelligence</a>
-          <a href="#perspectives" className="hover:text-nexus-on-surface transition-colors">Perspectives</a>
-          <Link href="/status" className="hover:text-nexus-on-surface transition-colors flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            System Status
-          </Link>
+          <a href="#perspectives" className="hover:text-nexus-on-surface transition-colors">Workspaces</a>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -768,11 +764,11 @@ export default function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/status"
+                href="/features"
                 className="px-8 py-4 rounded-2xl border border-nexus-outline-variant/50 bg-nexus-surface-container/40 hover:bg-nexus-surface-container text-nexus-on-surface font-mono text-xs font-semibold transition-colors flex items-center justify-center gap-2"
               >
-                <span>Inspect Platform Probes</span>
-                <Activity className="h-4 w-4 text-emerald-500" />
+                <span>Explore Capabilities</span>
+                <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -804,10 +800,10 @@ export default function LandingPage() {
           </div>
 
           <div className="space-y-2">
-            <span className="font-bold uppercase tracking-wider text-nexus-on-surface block">Infrastructure</span>
+            <span className="font-bold uppercase tracking-wider text-nexus-on-surface block">Product</span>
             <ul className="space-y-1.5">
-              <li><Link href="/status" className="hover:text-nexus-on-surface transition-colors">Health &amp; Telemetry Status</Link></li>
-              <li><Link href="/features" className="hover:text-nexus-on-surface transition-colors">Architecture Specification</Link></li>
+              <li><Link href="/features" className="hover:text-nexus-on-surface transition-colors">Platform Capabilities</Link></li>
+              <li><Link href="/live-world" className="hover:text-nexus-on-surface transition-colors">Live World Map</Link></li>
               <li><Link href="/driver-pass" className="hover:text-nexus-on-surface transition-colors">Driver Gateway Pass</Link></li>
               <li><Link href="/faq" className="hover:text-nexus-on-surface transition-colors">Operational FAQ</Link></li>
             </ul>
@@ -832,7 +828,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <Link href="/contact" className="hover:text-nexus-on-surface transition-colors">Contact Support</Link>
             <Link href="/feedback" className="hover:text-nexus-on-surface transition-colors">Feedback</Link>
-            <Link href="/status" className="hover:text-nexus-on-surface transition-colors">Operational Probes</Link>
+            <Link href="/features" className="hover:text-nexus-on-surface transition-colors">Platform Overview</Link>
           </div>
         </div>
       </footer>
