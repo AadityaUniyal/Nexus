@@ -8,6 +8,7 @@ import { ResolvedLocation } from "@/lib/api/endpoints/location";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Sparkles,
   Truck,
@@ -223,31 +224,24 @@ export default function LiveWorldPage() {
     <AppShell>
       <FadeIn className="space-y-6">
         {/* Header with Dual Mode Toggle & Location Search */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono-data text-nexus-on-surface-variant uppercase">
-              <PulseLED color="emerald" size="sm" />
-              <span>Spatial Telemetry Viewport</span>
-              <span>·</span>
-              <span>Real-Time Leaflet GPS World Map</span>
+        <PageHeader
+          eyebrow="Spatial Operations · Live Geographic Viewport"
+          title="Live Operations Map"
+          description="Inspect geographic distribution of fleet vehicles, fulfillment hubs, active transit corridors, and reported route exceptions."
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant={simulationMode ? "simulation" : "secondary"}
+                size="sm"
+                onClick={() => setSimulationMode(!simulationMode)}
+                className="font-mono-data text-xs"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                {simulationMode ? "Exit Scenario View" : "Scenario Overlay"}
+              </Button>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Global Operations Fleet Map
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant={simulationMode ? "simulation" : "secondary"}
-              size="sm"
-              onClick={() => setSimulationMode(!simulationMode)}
-              className="font-mono-data text-xs"
-            >
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              {simulationMode ? "Exit Simulation" : "Simulation Layer"}
-            </Button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Natural Location Search Bar */}
         <div className="max-w-xl">

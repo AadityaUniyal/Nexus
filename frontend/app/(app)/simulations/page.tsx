@@ -81,9 +81,9 @@ export default function SimulationsPage() {
       <div className="space-y-6 animate-in fade-in duration-500">
         {/* Header */}
         <PageHeader
-          eyebrow="Decision Simulation Engine · Deterministic Branching"
-          title="Simulation Lab"
-          description="Evaluate operational variables and alternate routing policies across digital twins without live dispatch impact."
+          eyebrow="Scenario Planning & Comparison"
+          title="Planning Lab"
+          description="Compare route alternatives, evaluate schedule trade-offs, and inspect assumptions before updating active dispatch."
           actions={
             <div className="flex items-center gap-2">
               <Button
@@ -107,18 +107,17 @@ export default function SimulationsPage() {
         />
 
         {/* Feature Explainer Banner with AppleCard */}
-        <AppleCard glass interactive={false} className="border-purple-500/20 bg-purple-500/[0.03]">
+        <AppleCard glass interactive={false} className="border-stone-200/60 dark:border-white/10 bg-stone-50/50 dark:bg-stone-900/50">
           <AppleCardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-1.5">
-              <Badge variant="simulation" size="sm">
-                Safe Hypothesis Layer
+              <Badge variant="neutral" size="sm">
+                Scenario Modeling
               </Badge>
               <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 tracking-tight">
-                Test Operational Variables Without Live Dispatch Impact
+                Compare Operational Variables Without Live Dispatch Impact
               </h3>
               <p className="text-xs text-stone-500 dark:text-stone-400 max-w-2xl leading-relaxed">
-                Every simulation executes in isolation on a deterministic mathematical model. Once a scenario
-                is evaluated and approved, apply the decision with ACID transactional integrity.
+                Scenarios run as isolated comparisons. Running a scenario calculates potential time and cost deltas against your baseline plan. Applying a plan requires deliberate operator confirmation.
               </p>
             </div>
 

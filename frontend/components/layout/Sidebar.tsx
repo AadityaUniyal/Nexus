@@ -39,31 +39,27 @@ export interface SidebarProps {
 
 const NAVIGATION: NavSection[] = [
   {
-    title: "Analytics",
+    title: "Operations",
     items: [
       { name: "Overview", href: "/overview", icon: LayoutDashboard },
-      { name: "Analytics", href: "/analytics", icon: BarChart3 },
-      { name: "Insights", href: "/intelligence", icon: Lightbulb },
-      { name: "Reports", href: "/reports", icon: FileText },
+      { name: "Shipments & Fleet", href: "/operations", icon: Truck },
+      { name: "Live Operations", href: "/live-world", icon: Map },
     ],
   },
   {
-    title: "Operations",
+    title: "Decisions & Planning",
     items: [
-      { name: "Live map", href: "/live-world", icon: Map },
-      { name: "Fleet & assets", href: "/operations", icon: Truck },
-      { name: "Incidents", href: "/incidents", icon: AlertTriangle },
-      { name: "Scenario planner", href: "/simulations", icon: GitBranch },
+      { name: "Exceptions Queue", href: "/incidents", icon: AlertTriangle },
+      { name: "Planning & Scenarios", href: "/simulations", icon: GitBranch },
+      { name: "Operations Analytics", href: "/analytics", icon: BarChart3 },
     ],
   },
   {
     title: "Workspace",
     items: [
       { name: "Notifications", href: "/notifications", icon: Bell },
-      { name: "Admin Console", href: "/admin/dashboard", icon: Shield },
-      { name: "Audit Trail", href: "/admin/audit", icon: LineChart },
-      { name: "Settings", href: "/settings", icon: Settings },
-      { name: "Status & Health", href: "/status", icon: Building2 },
+      { name: "System Settings", href: "/settings", icon: Settings },
+      { name: "Audit & Access", href: "/admin/audit", icon: Shield },
     ],
   },
 ];

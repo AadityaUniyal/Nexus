@@ -145,9 +145,9 @@ export default function IncidentCenterPage() {
       <div className="space-y-6 animate-in fade-in duration-500">
         {/* Header */}
         <PageHeader
-          eyebrow="Telemetry Anomaly Triage · State Machine Engine"
-          title="Incident Intelligence Center"
-          description="Live corridor telemetry stream anomaly triage, real-time risk scoring, and deterministic intervention triggers."
+          eyebrow="Exceptions & Disruptions Queue"
+          title="Operational Exceptions"
+          description="Identify shipments, routes, and vehicles that require intervention, view estimated delay impacts, and take corrective action."
           actions={
             <div className="flex items-center gap-2">
               <Button
