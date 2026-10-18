@@ -35,6 +35,7 @@ import { dataProvider } from "@/lib/data-provider";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -194,45 +195,39 @@ export default function OperationsPage() {
         </AnimatePresence>
 
         {/* Header with Quick Provision Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono-data text-stone-500 uppercase tracking-wider">
-              <span>Operational Assets</span>
-              <span>·</span>
-              <span>Global Topology Command</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-stone-900 dark:text-stone-100 tracking-tight mt-1">
-              Fleet & Infrastructure Command
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button
-              onClick={() => setIsAddHubOpen(true)}
-              variant="outline"
-              size="sm"
-              className="text-xs font-semibold gap-1.5"
-            >
-              <Plus className="h-3.5 w-3.5 text-stone-600" />
-              Provision Hub
-            </Button>
-            <Button
-              onClick={() => setIsAddVehicleOpen(true)}
-              variant="outline"
-              size="sm"
-              className="text-xs font-semibold gap-1.5"
-            >
-              <Truck className="h-3.5 w-3.5 text-emerald-600" />
-              Deploy Vehicle
-            </Button>
-            <Link href="/simulations/new">
-              <Button variant="simulation" size="sm" className="font-mono text-xs gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" />
-                Simulate Allocation
+        <PageHeader
+          eyebrow="Operational Assets · Global Topology Command"
+          title="Fleet & Infrastructure Command"
+          description="Provision distribution hubs, monitor live autonomous EV fleet health, and dispatch intermodal consignments."
+          actions={
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                onClick={() => setIsAddHubOpen(true)}
+                variant="outline"
+                size="sm"
+                className="text-xs font-semibold gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5 text-stone-600" />
+                Provision Hub
               </Button>
-            </Link>
-          </div>
-        </div>
+              <Button
+                onClick={() => setIsAddVehicleOpen(true)}
+                variant="outline"
+                size="sm"
+                className="text-xs font-semibold gap-1.5"
+              >
+                <Truck className="h-3.5 w-3.5 text-emerald-600" />
+                Deploy Vehicle
+              </Button>
+              <Link href="/simulations/new">
+                <Button variant="simulation" size="sm" className="font-mono text-xs gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Simulate Allocation
+                </Button>
+              </Link>
+            </div>
+          }
+        />
 
         {/* Global Regional Topology Presets Switcher (Apple Control Strip) */}
         <div className="p-2.5 bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl rounded-2xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] flex flex-col md:flex-row items-start md:items-center justify-between gap-3">

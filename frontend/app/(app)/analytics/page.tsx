@@ -10,6 +10,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { SkeletonMetricTile, SkeletonCard } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/http";
 import { track } from "@/lib/analytics/tracker";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { AIInsightsPanel } from "@/components/analytics/AIInsightsPanel";
 import {
   BarChart3,
@@ -141,57 +142,53 @@ export default function AnalyticsPage() {
     <AppShell>
       <div className="space-y-8 max-w-6xl mx-auto">
         {/* Header & Controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
-              <span>Analytics</span>
+        <PageHeader
+          eyebrow="Intelligence & Network Dynamics"
+          title="Operations analytics"
+          description="High-frequency operational metrics, predictive throughput forecasts, and autonomous anomaly detection."
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Global Timeframe Selector */}
+              <div className="inline-flex rounded-lg bg-nexus-surface-container p-1 text-xs font-mono">
+                {(["24h", "7d", "30d", "90d"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTimeframe(t)}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                      timeframe === t
+                        ? "bg-nexus-surface-container-lowest text-nexus-on-surface shadow-sm font-bold"
+                        : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
+                    }`}
+                  >
+                    {t.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={fetchAnalytics}
+                disabled={loading}
+                className="font-mono text-xs"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleExportCSV}
+                disabled={exporting}
+                className="font-mono text-xs"
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                {exporting ? "Exporting..." : "Export CSV"}
+              </Button>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Operations analytics
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Global Timeframe Selector */}
-            <div className="inline-flex rounded-lg bg-nexus-surface-container p-1 text-xs font-mono">
-              {(["24h", "7d", "30d", "90d"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTimeframe(t)}
-                  className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
-                    timeframe === t
-                      ? "bg-nexus-surface-container-lowest text-nexus-on-surface shadow-sm font-bold"
-                      : "text-nexus-on-surface-variant hover:text-nexus-on-surface"
-                  }`}
-                >
-                  {t.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={fetchAnalytics}
-              disabled={loading}
-              className="font-mono text-xs"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleExportCSV}
-              disabled={exporting}
-              className="font-mono text-xs"
-            >
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              {exporting ? "Exporting..." : "Export CSV"}
-            </Button>
-          </div>
-        </div>
+          }
+        />
 
         <AIInsightsPanel timeframe={timeframe} />
 
