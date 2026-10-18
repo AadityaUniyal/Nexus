@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DataProvenanceBadge } from "@/components/ui/DataProvenanceBadge";
 import { apiFetch } from "@/lib/api/http";
 
 export default function IncidentCenterPage() {
@@ -268,6 +269,13 @@ export default function IncidentCenterPage() {
                   <TableCell className="text-xs max-w-sm">
                     <p className="font-semibold text-nexus-on-surface line-clamp-1">{inc.title}</p>
                     <p className="text-nexus-on-surface-variant text-[11px] line-clamp-1 mt-0.5">{inc.summary}</p>
+                    <div className="mt-1">
+                      <DataProvenanceBadge
+                        status={inc.status === "RESOLVED" ? "CONFIRMED" : "REPORTED"}
+                        updatedAt={inc.createdAt}
+                        source="Telemetry corridor stream"
+                      />
+                    </div>
                   </TableCell>
                   <TableCell className="font-mono-data text-xs">{inc.affectedEntityName}</TableCell>
                   <TableCell className="font-mono-data text-xs font-semibold text-red-700">

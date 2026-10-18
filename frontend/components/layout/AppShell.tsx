@@ -13,6 +13,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { SupportTicketModal } from "@/components/ui/SupportTicketModal";
+import { DemoModeBanner } from "@/components/ui/DemoModeBanner";
 import { motion } from "motion/react";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [commandMenuOpen, setCommandMenuOpen] = React.useState(false);
   const [supportModalOpen, setSupportModalOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState<any[]>([]);
+  const [isSandboxMode, setIsSandboxMode] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const mode = localStorage.getItem("nexus_operational_mode");
+      setIsSandboxMode(mode === "SANDBOX");
+    }
+  }, []);
 
   // Fetch initial notifications from dataProvider
   React.useEffect(() => {
@@ -91,6 +100,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onOpenMobileMenu={() => setMobileNavOpen(true)}
         onOpenSupport={() => setSupportModalOpen(true)}
       />
+
+      {isSandboxMode && (
+        <DemoModeBanner
+          onExitDemo={() => {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("nexus_operational_mode", "PRODUCTION");
+              setIsSandboxMode(false);
+              window.location.reload();
+            }
+          }}
+        />
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         <Sidebar className="hidden md:flex shrink-0" />
