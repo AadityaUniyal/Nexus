@@ -265,7 +265,7 @@ export default function LandingPage() {
             {/* Architecture Category Identifier */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nexus-surface-container border border-nexus-outline-variant/40 text-nexus-on-surface-variant text-xs font-mono font-medium mb-8">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Intelligent Logistics Operating System</span>
+              <span>Logistics Operating System</span>
             </div>
 
             {/* Core Opening Headline */}
@@ -276,7 +276,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-nexus-on-surface leading-[1.08]"
               >
-                Logistics doesn&apos;t wait.
+                Every shipment. One clearer picture.
               </motion.h1>
 
               <motion.p
@@ -285,7 +285,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                 className="text-lg sm:text-2xl text-nexus-on-surface-variant font-normal leading-relaxed max-w-3xl"
               >
-                Every shipment is a promise. Every delay changes what happens next.
+                Bring shipments, fleet activity, operational exceptions, and planning decisions into one clear workspace.
               </motion.p>
             </div>
 

@@ -7,6 +7,7 @@ import { LeafletWorldMap, MapWarehouse, MapVehicle, MapIncident } from "@/compon
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   Truck,
   Building2,
@@ -242,103 +243,90 @@ export default function OverviewPage() {
   return (
     <AppShell>
       <FadeIn className="space-y-6">
-        {/* Top Header & War Room Presence */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
-              <span>Operational GIS Nerve Center</span>
-              <span>·</span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-                <PulseLED color="emerald" size="sm" />
-                Live Operations Network
-              </span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Command & Intelligence Center
-            </h1>
-          </div>
+        {/* Top Header & Overview Actions */}
+        <PageHeader
+          eyebrow="Workspace Overview · Active Operations"
+          title="Overview"
+          description="Identify operational items requiring immediate attention, review recent activity, and track active dispatch status."
+          actions={
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    tactileAudio.playClick();
+                    setIsWarehouseModalOpen(true);
+                  }}
+                  className="font-mono text-xs h-7.5 px-3 rounded-xl shadow-xs"
+                >
+                  <Building2 className="w-3.5 h-3.5 mr-1" />
+                  + Hub
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    tactileAudio.playClick();
+                    setIsVehicleModalOpen(true);
+                  }}
+                  className="font-mono text-xs h-7.5 px-3 rounded-xl"
+                >
+                  <Truck className="w-3.5 h-3.5 mr-1 text-nexus-secondary" />
+                  + Vehicle
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    tactileAudio.playClick();
+                    setIsOrderModalOpen(true);
+                  }}
+                  className="font-mono text-xs h-7.5 px-3 rounded-xl"
+                >
+                  <Package className="w-3.5 h-3.5 mr-1 text-nexus-primary" />
+                  + Order
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    tactileAudio.playClick();
+                    setIsIncidentModalOpen(true);
+                  }}
+                  className="font-mono text-xs h-7.5 px-3 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+                  + Exception
+                </Button>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Apple Action Modals Toolbar */}
-            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => {
-                  tactileAudio.playClick();
-                  setIsWarehouseModalOpen(true);
-                }}
-                className="font-mono text-xs h-7.5 px-3 rounded-xl shadow-xs"
-              >
-                <Building2 className="w-3.5 h-3.5 mr-1" />
-                + Hub
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  tactileAudio.playClick();
-                  setIsVehicleModalOpen(true);
-                }}
-                className="font-mono text-xs h-7.5 px-3 rounded-xl"
-              >
-                <Truck className="w-3.5 h-3.5 mr-1 text-nexus-secondary" />
-                + Vehicle
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  tactileAudio.playClick();
-                  setIsOrderModalOpen(true);
-                }}
-                className="font-mono text-xs h-7.5 px-3 rounded-xl"
-              >
-                <Package className="w-3.5 h-3.5 mr-1 text-nexus-primary" />
-                + Order
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  tactileAudio.playClick();
-                  setIsIncidentModalOpen(true);
-                }}
-                className="font-mono text-xs h-7.5 px-3 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 mr-1" />
-                + Incident
-              </Button>
+              {/* Apple Segmented Sandbox / Production Toggle */}
+              <div className="flex items-center p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] text-xs font-mono">
+                <button
+                  onClick={() => handleToggleSandbox("PRODUCTION")}
+                  className={`px-3 py-1.5 rounded-xl transition-all ${
+                    operationalMode === "PRODUCTION"
+                      ? "bg-white dark:bg-stone-850 text-stone-900 dark:text-white font-bold shadow-xs border border-black/5 dark:border-white/10"
+                      : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
+                  }`}
+                >
+                  Live Data
+                </button>
+                <button
+                  onClick={() => handleToggleSandbox("SANDBOX")}
+                  className={`px-3 py-1.5 rounded-xl transition-all ${
+                    operationalMode === "SANDBOX"
+                      ? "bg-emerald-600 text-white font-bold shadow-xs"
+                      : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
+                  }`}
+                >
+                  Demo Sandbox
+                </button>
+              </div>
             </div>
-
-            {/* Live War Room Presence */}
-            <MultiplayerPresence />
-
-            {/* Apple Segmented Sandbox / Production Toggle */}
-            <div className="flex items-center p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] text-xs font-mono">
-              <button
-                onClick={() => handleToggleSandbox("PRODUCTION")}
-                className={`px-3 py-1.5 rounded-xl transition-all ${
-                  operationalMode === "PRODUCTION"
-                    ? "bg-white dark:bg-stone-850 text-stone-900 dark:text-white font-bold shadow-xs border border-black/5 dark:border-white/10"
-                    : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
-                }`}
-              >
-                Production (0-State)
-              </button>
-              <button
-                onClick={() => handleToggleSandbox("SANDBOX")}
-                className={`px-3 py-1.5 rounded-xl transition-all ${
-                  operationalMode === "SANDBOX"
-                    ? "bg-emerald-600 text-white font-bold shadow-xs"
-                    : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
-                }`}
-              >
-                Sandbox Demo
-              </button>
-            </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Apple Segmented Role Cockpit Switcher */}
         <div className="flex items-center justify-between flex-wrap gap-3">
