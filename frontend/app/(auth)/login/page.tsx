@@ -9,10 +9,10 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  Shield,
   CheckCircle2,
   Lock,
-  Mail,
-  Fingerprint
+  Mail
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -28,7 +28,7 @@ function AppleStyleLoginContent() {
   const redirectTarget = searchParams.get("redirect") || "/overview";
   const initialRole = searchParams.get("role") || "";
 
-  // Step 1: Email entry -> Step 2: Password entry (exact Apple ID style)
+  // Progressive Apple ID Flow: Stage 1 = Email -> Stage 2 = Password
   const [stage, setStage] = React.useState<"email" | "password">("email");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -37,23 +37,24 @@ function AppleStyleLoginContent() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
 
-  // Preset quick identities
-  const DEMO_ACCOUNTS = [
-    { label: "Operations Manager", email: "sarah.chen@nexus.ops" },
-    { label: "Fleet Operator", email: "elena.rostova@nexus.ops" },
-    { label: "Supply Chain Analyst", email: "marcus.vance@nexus.ops" },
-    { label: "System Administrator", email: "admin@nexus.ops" },
+  // Real enterprise operational identities in database
+  const ENTERPRISE_PROFILES = [
+    { label: "Operations Manager", name: "Marcus Vance", email: "marcus.vance@nexus.continental" },
+    { label: "Fleet Operator", name: "David Kim", email: "david.kim@nexus.continental" },
+    { label: "Supply Chain Analyst", name: "Elena Rostova", email: "elena.rostova@nexus.continental" },
+    { label: "System Administrator", name: "Sarah Chen", email: "sarah.chen@nexus.continental" },
+    { label: "Executive Viewer", name: "Audit Viewer", email: "audit.viewer@nexus.continental" },
   ];
 
   // Auto-fill from query param if provided
   React.useEffect(() => {
     if (initialRole) {
-      const match = DEMO_ACCOUNTS.find((a) =>
+      const match = ENTERPRISE_PROFILES.find((a) =>
         a.label.toLowerCase().includes(initialRole.toLowerCase())
       );
       if (match) {
         setEmail(match.email);
-        setPassword("nexus-demo-password");
+        setPassword("Password123!");
       }
     }
   }, [initialRole]);
@@ -65,9 +66,8 @@ function AppleStyleLoginContent() {
       return;
     }
     setError("");
-    // If it's a known demo email, preload standard password
     if (!password) {
-      setPassword("nexus-demo-password");
+      setPassword("Password123!");
     }
     setStage("password");
   };
@@ -83,8 +83,8 @@ function AppleStyleLoginContent() {
     setError("");
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-      const resp = await fetch(`${baseUrl}/api/v1/auth/login`, {
+      // In production and local, always use relative /api/v1 rewrite to guarantee seamless origin handling
+      const resp = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
@@ -93,10 +93,10 @@ function AppleStyleLoginContent() {
       if (resp.ok) {
         const data = await resp.json();
         const user = data.user;
-        const token = data.access_token;
+        const token = data.access_token || data.accessToken;
 
         if (!token) {
-          throw new Error("Authentication failed: No token received.");
+          throw new Error("Authentication failed: No access token returned.");
         }
 
         const isSecure = window.location.protocol === "https:";
@@ -106,7 +106,7 @@ function AppleStyleLoginContent() {
 
         localStorage.setItem("nexus_access_token", token);
         if (user) {
-          localStorage.setItem("nexus_active_workspace_id", user.workspace_id || "ws-continental-fleet-01");
+          localStorage.setItem("nexus_active_workspace_id", user.workspace_id || user.workspaceId || "ws-continental-fleet-01");
           localStorage.setItem("nexus_demo_user", JSON.stringify(user));
           localStorage.setItem("nexus_user_role", user.role);
         }
@@ -121,10 +121,10 @@ function AppleStyleLoginContent() {
         window.location.href = dest;
       } else {
         const errJson = await resp.json().catch(() => ({}));
-        setError(errJson.detail || errJson.message || "The email or password you entered is incorrect.");
+        setError(errJson.detail || errJson.message || "The corporate email or password you entered is incorrect.");
       }
     } catch (err: any) {
-      setError(err?.message || "Unable to reach service. Please check your connection.");
+      setError(err?.message || "Unable to reach authentication service. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ function AppleStyleLoginContent() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col justify-between selection:bg-[#0071e3]/20 selection:text-[#0071e3] transition-colors duration-300">
-      {/* Apple-style Minimal Navigation Bar */}
+      {/* Apple-style Global Nav */}
       <header className="h-12 w-full border-b border-black/[0.08] dark:border-white/[0.12] bg-[#f5f5f7]/80 dark:bg-[#000000]/80 backdrop-blur-xl px-6 lg:px-12 flex items-center justify-between z-50">
         <Link href="/" className="flex items-center gap-2 group transition-opacity hover:opacity-75">
           <LogoMark size={22} />
@@ -162,7 +162,7 @@ function AppleStyleLoginContent() {
               Sign In to Nexus
             </h1>
             <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed max-w-sm mx-auto">
-              Use your verified corporate credentials to access your organization&apos;s logistics operations.
+              Use your corporate account to access your organization&apos;s logistics operations.
             </p>
           </div>
 
@@ -279,19 +279,19 @@ function AppleStyleLoginContent() {
               </form>
             )}
 
-            {/* Subtle Workspace Identity Quick Select (Clean Apple style) */}
+            {/* Quick Workspace Switcher */}
             <div className="pt-4 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
               <span className="text-[11px] uppercase tracking-wider text-black/40 dark:text-white/40 block font-medium">
-                Demo Accounts
+                Select Workspace Account
               </span>
               <div className="grid grid-cols-2 gap-2">
-                {DEMO_ACCOUNTS.map((acc) => (
+                {ENTERPRISE_PROFILES.slice(0, 4).map((acc) => (
                   <button
                     key={acc.email}
                     type="button"
                     onClick={() => {
                       setEmail(acc.email);
-                      setPassword("nexus-demo-password");
+                      setPassword("Password123!");
                       setStage("password");
                       setError("");
                     }}
@@ -325,7 +325,6 @@ function AppleStyleLoginContent() {
         <div className="flex items-center gap-5">
           <Link href="/contact" className="hover:underline">Privacy Policy</Link>
           <Link href="/contact" className="hover:underline">Terms of Use</Link>
-          <Link href="/contact" className="hover:underline">Sales and Refunds</Link>
           <Link href="/contact" className="hover:underline">Legal</Link>
         </div>
       </footer>

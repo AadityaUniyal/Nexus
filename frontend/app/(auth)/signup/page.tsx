@@ -60,9 +60,8 @@ export default function SignUpPage() {
 
     try {
       const workspaceId = `ws-${companyName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 20)}`;
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
-      const resp = await fetch(`${baseUrl}/api/v1/auth/signup`, {
+      const resp = await fetch("/api/v1/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
