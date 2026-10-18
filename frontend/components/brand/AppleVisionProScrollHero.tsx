@@ -14,7 +14,10 @@ import {
   ChevronDown,
   Sparkles,
   Gauge,
-  Compass
+  Compass,
+  Server,
+  BarChart3,
+  Network
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -27,44 +30,44 @@ interface SpecFeature {
 const PHASES = [
   {
     index: 0,
-    stage: '01 · PHYSICAL HARDWARE',
-    title: 'The Autonomous Platform',
-    headline: 'Aerospace-Grade Freight Architecture',
+    stage: '01 · TELEMETRY INGESTION',
+    title: 'Nexus Edge Telematics Gateway',
+    headline: 'Physical Fleets. Sub-Second Signals.',
     description:
-      'Engineered for continental endurance. 800V silicon-carbide architecture, active regenerative drag management, and sub-millimeter chassis sensor calibration.',
-    image: '/hero-nexus-hauler-side.jpg',
+      'Nexus connects directly to your existing vehicles, trailers, and temperature probes via high-throughput CAN-bus and 5G uplink—turning physical movement into continuous structured data.',
+    image: '/hero-nexus-gateway.jpg',
     specs: [
-      { label: 'Battery Capacity', value: '750 kWh', sub: 'Liquid-cooled SiC pack' },
-      { label: 'Continuous Range', value: '820 km', sub: 'Class-8 laden weight' },
-      { label: 'Aero Efficiency', value: '0.24 Cd', sub: 'Dynamic wind deflector' },
+      { label: 'Uplink Latency', value: '< 25 ms', sub: 'Sub-second real-time sync' },
+      { label: 'Bus Compatibility', value: 'J1939 / OBD-II', sub: 'Universal fleet protocol' },
+      { label: 'Signal Encryption', value: 'mTLS & SHA-256', sub: 'Hardware tamper-proof' },
     ],
   },
   {
     index: 1,
-    stage: '02 · OPTICAL PERCEPTION',
-    title: 'Solid-State LiDAR Array',
-    headline: 'Continuous Corridor Triangulation',
+    stage: '02 · HARDWARE ARCHITECTURE',
+    title: 'Edge Processing & Neural Telemetry',
+    headline: 'Real-Time Edge Telemetry Teardown',
     description:
-      'Dual solid-state roof LiDAR coupled with long-range radar sweeps freight corridors 300 meters ahead, penetrating severe blizzard fog and zero-visibility grades.',
-    image: '/hero-nexus-hauler-front.jpg',
+      'Multi-core ARM processing and GNSS satellite positioning filter sensor noise at the edge, computing fuel burn, battery thermodynamics, and corridor elevation before transmitting to the cloud.',
+    image: '/hero-nexus-gateway-exploded.jpg',
     specs: [
-      { label: 'Perception Range', value: '300m', sub: 'Multi-spectral LiDAR' },
-      { label: 'Scan Frequency', value: '100 Hz', sub: 'Dynamic corridor refresh' },
-      { label: 'Corridor Safety', value: 'ASIL-D', sub: 'Redundant failsafe bus' },
+      { label: 'Onboard Compute', value: 'Nexus AI Engine', sub: 'Edge anomaly detection' },
+      { label: 'Satellite Precision', value: 'Multi-GNSS L1/L5', sub: 'Centimeter corridor lock' },
+      { label: 'Power Resilience', value: 'Supercap Reserve', sub: 'Zero-drop telemetry buffer' },
     ],
   },
   {
     index: 2,
-    stage: '03 · COMPUTATIONAL TWIN',
-    title: 'Architectural Teardown',
-    headline: 'Synchronized Physical & Digital Twin',
+    stage: '03 · OPERATIONAL INTELLIGENCE',
+    title: 'Executive Logistics Command Console',
+    headline: 'From Raw Signals to Decisive Action',
     description:
-      'Every rotational stator, thermal valve, and high-voltage bus streams live telemetry directly into Nexus OS. Anomalies are isolated before mechanical degradation occurs.',
-    image: '/hero-nexus-hauler-exploded.jpg',
+      'Where fleet owners, operations managers, and analysts command their entire distribution footprint. Real-time corridor routing, predictive delay alerts, and instant what-if re-dispatching.',
+    image: '/hero-nexus-console.jpg',
     specs: [
-      { label: 'Compute Unit', value: 'Dual AI Module', sub: 'On-board neural inference' },
-      { label: 'Telemetry Stream', value: '18 ms', sub: 'Low-latency edge socket' },
-      { label: 'Predictive Window', value: '180 mins', sub: 'Autonomous reroute horizon' },
+      { label: 'On-Time Delivery', value: '98.1%', sub: 'Continuous SLA audit' },
+      { label: 'Active Corridors', value: '1,452 Routes', sub: 'Live topology tracking' },
+      { label: 'Delay Avoidance', value: '112 mins saved', sub: 'Automated detour reroute' },
     ],
   },
 ];
@@ -118,10 +121,10 @@ export function AppleVisionProScrollHero() {
         <div className="relative z-20 max-w-6xl mx-auto w-full flex items-center justify-between border-b border-black/[0.08] pb-4">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono font-bold tracking-widest uppercase text-emerald-800 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-              Nexus Hardware Twin
+              Nexus Telematics Architecture
             </span>
             <span className="text-xs font-mono text-black/50 hidden sm:inline">
-              Scroll-Linked Architectural Transition
+              How Physical Movement Becomes Operational Intelligence
             </span>
           </div>
 
@@ -169,15 +172,15 @@ export function AppleVisionProScrollHero() {
 
           {/* Layered Hardware Image Stages with Apple Studio Drop Shadow */}
           <div className="relative w-full max-w-4xl h-[320px] sm:h-[440px] md:h-[500px] flex items-center justify-center">
-            {/* Image 1: Side Profile */}
+            {/* Image 1: Telematics Edge Gateway */}
             <motion.div
               style={{ opacity: img1Opacity, scale: img1Scale }}
               className="absolute inset-0 flex items-center justify-center transition-all"
             >
               <div className="relative w-full h-full">
                 <Image
-                  src="/hero-nexus-hauler-side.jpg"
-                  alt="Nexus Autonomous Electric Freight Hauler Side Profile"
+                  src="/hero-nexus-gateway.jpg"
+                  alt="Nexus Telematics Edge Gateway Hardware Device"
                   fill
                   priority
                   className="object-contain mix-blend-multiply"
@@ -185,15 +188,15 @@ export function AppleVisionProScrollHero() {
               </div>
             </motion.div>
 
-            {/* Image 2: Front 3/4 LiDAR Angle */}
+            {/* Image 2: Exploded Telematics Hardware Teardown */}
             <motion.div
               style={{ opacity: img2Opacity, scale: img2Scale }}
               className="absolute inset-0 flex items-center justify-center transition-all"
             >
               <div className="relative w-full h-full">
                 <Image
-                  src="/hero-nexus-hauler-front.jpg"
-                  alt="Nexus Autonomous Hauler Optical LiDAR Array"
+                  src="/hero-nexus-gateway-exploded.jpg"
+                  alt="Nexus Edge Gateway Exploded Architecture Teardown"
                   fill
                   priority
                   className="object-contain mix-blend-multiply"
@@ -201,15 +204,15 @@ export function AppleVisionProScrollHero() {
               </div>
             </motion.div>
 
-            {/* Image 3: Exploded Architecture Teardown */}
+            {/* Image 3: Executive Logistics Command Console */}
             <motion.div
               style={{ opacity: img3Opacity, scale: img3Scale }}
               className="absolute inset-0 flex items-center justify-center transition-all"
             >
               <div className="relative w-full h-full">
                 <Image
-                  src="/hero-nexus-hauler-exploded.jpg"
-                  alt="Nexus Autonomous Hauler Exploded Architecture Teardown"
+                  src="/hero-nexus-console.jpg"
+                  alt="Nexus Logistics Operations Analytics Console"
                   fill
                   priority
                   className="object-contain mix-blend-multiply"
@@ -238,13 +241,13 @@ export function AppleVisionProScrollHero() {
           <div className="mt-4 flex items-center justify-between text-xs font-mono text-black/40">
             <span className="flex items-center gap-1.5">
               <ChevronDown className="h-3.5 w-3.5 animate-bounce text-emerald-600" />
-              Scroll down to explore optical perception & teardown
+              Scroll down to explore edge architecture & live analytics console
             </span>
             <Link
               href="/login"
               className="font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 transition-colors"
             >
-              <span>Connect Live Telematics</span>
+              <span>Access Operations Console</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
