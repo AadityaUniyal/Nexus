@@ -102,40 +102,45 @@ export class ApiNexusDataProvider implements NexusDataProvider {
 
     if (typeof window !== "undefined") {
       if (!headers.has("Authorization")) {
-        try {
-          const clerk = (window as any).Clerk;
-          if (clerk?.session) {
-            const token = await clerk.session.getToken();
-            if (token) {
-              headers.set("Authorization", `Bearer ${token}`);
+        // 1. Check verified local JWT access token
+        const accessToken = localStorage.getItem("nexus_access_token");
+        if (accessToken && accessToken.length > 10) {
+          headers.set("Authorization", `Bearer ${accessToken}`);
+        } else {
+          // 2. Check Clerk session token if initialized
+          try {
+            const clerk = (window as any).Clerk;
+            if (clerk?.session) {
+              const token = await clerk.session.getToken();
+              if (token) {
+                headers.set("Authorization", `Bearer ${token}`);
+              }
             }
+          } catch (e) {
+            // Clerk session token unavailable or not initialized yet
           }
-        } catch (e) {
-          // Clerk session token unavailable or not initialized yet
         }
-        if (demoModeEnabled && !headers.has("Authorization")) {
-          const accessToken = localStorage.getItem("nexus_access_token");
-          if (accessToken && accessToken.length > 10) {
-            headers.set("Authorization", `Bearer ${accessToken}`);
-          } else {
-            const demoUserRaw = localStorage.getItem("nexus_demo_user");
-            if (demoUserRaw) {
-              try {
-                const demoUser = JSON.parse(demoUserRaw);
-                const role = (demoUser.role || "OPERATIONS_MANAGER").toUpperCase();
-                if (role === "ADMINISTRATOR") {
-                  headers.set("Authorization", "Bearer demo-admin-token");
-                } else if (role === "VIEWER") {
-                  headers.set("Authorization", "Bearer demo-viewer-token");
-                } else {
-                  headers.set("Authorization", "Bearer demo-operator-token");
-                }
-              } catch {
+
+        // 3. Optional isolated demo fallback strictly in non-production environments
+        const isProd = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
+        if (demoModeEnabled && !isProd && !headers.has("Authorization")) {
+          const demoUserRaw = localStorage.getItem("nexus_demo_user");
+          if (demoUserRaw) {
+            try {
+              const demoUser = JSON.parse(demoUserRaw);
+              const role = (demoUser.role || "OPERATIONS_MANAGER").toUpperCase();
+              if (role === "ADMINISTRATOR") {
+                headers.set("Authorization", "Bearer demo-admin-token");
+              } else if (role === "VIEWER") {
+                headers.set("Authorization", "Bearer demo-viewer-token");
+              } else {
                 headers.set("Authorization", "Bearer demo-operator-token");
               }
-            } else if (document.cookie.includes("nexus_demo_session")) {
+            } catch {
               headers.set("Authorization", "Bearer demo-operator-token");
             }
+          } else if (document.cookie.includes("nexus_demo_session")) {
+            headers.set("Authorization", "Bearer demo-operator-token");
           }
         }
       }

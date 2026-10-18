@@ -12,21 +12,28 @@ export async function authFetch<T = any>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // If running in browser, inject active Clerk session token
+  // If running in browser, inject active JWT session token or Clerk token
   if (typeof window !== 'undefined') {
     if (!headers.has('Authorization')) {
-      try {
-        const clerk = (window as any).Clerk;
-        if (clerk?.session) {
-          const token = await clerk.session.getToken();
-          if (token) {
-            headers.set('Authorization', `Bearer ${token}`);
+      const localToken = localStorage.getItem('nexus_access_token');
+      if (localToken && localToken.length > 10) {
+        headers.set('Authorization', `Bearer ${localToken}`);
+      } else {
+        try {
+          const clerk = (window as any).Clerk;
+          if (clerk?.session) {
+            const token = await clerk.session.getToken();
+            if (token) {
+              headers.set('Authorization', `Bearer ${token}`);
+            }
           }
+        } catch (e) {
+          // Clerk session token unavailable or not initialized yet
         }
-      } catch (e) {
-        // Clerk session token unavailable or not initialized yet
       }
-      if (demoModeEnabled && !headers.has('Authorization')) {
+
+      const isProd = process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
+      if (demoModeEnabled && !isProd && !headers.has('Authorization')) {
         const demoUser = localStorage.getItem('nexus_demo_user');
         if (demoUser || document.cookie.includes('nexus_demo_session')) {
           headers.set('Authorization', 'Bearer demo-operator-token');

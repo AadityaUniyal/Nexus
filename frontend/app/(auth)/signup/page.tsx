@@ -75,31 +75,42 @@ export default function SignUpPage() {
       const workspaceId = `ws-${(companyName || "company").toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 20)}`;
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
-      // Attempt backend signup
-      try {
-        await fetch(`${baseUrl}/api/v1/auth/signup`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            role: "ADMINISTRATOR",
-            department: `${companyName || "Enterprise"} Executive Command`,
-            workspace_id: workspaceId,
-          }),
-        });
-      } catch {
-        // Continue to provision in workspace
+      // Authoritative backend registration (role constrained to standard OPERATIONS_MANAGER)
+      const resp = await fetch(`${baseUrl}/api/v1/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role: "OPERATIONS_MANAGER",
+          department: `${companyName || "Enterprise"} Operations`,
+          workspace_id: workspaceId,
+        }),
+      });
+
+      if (!resp.ok) {
+        const errJson = await resp.json().catch(() => ({}));
+        setError(errJson.detail || errJson.message || "Registration failed. Please check your information.");
+        return;
       }
 
-      const user = {
-        id: `usr-admin-${Date.now()}`,
-        name,
-        email,
-        role: "ADMINISTRATOR",
-        workspace_id: workspaceId,
-      };
+      const data = await resp.json();
+      const token = data.access_token;
+      const user = data.user;
+
+      if (!token) {
+        throw new Error("Registration succeeded but no authorization token was received.");
+      }
+
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = `nexus_session_token=${token}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
+      localStorage.setItem("nexus_access_token", token);
+      if (user) {
+        localStorage.setItem("nexus_active_workspace_id", user.workspace_id || workspaceId);
+        localStorage.setItem("nexus_demo_user", JSON.stringify(user));
+        localStorage.setItem("nexus_user_role", user.role);
+      }
 
       const companyProfile = {
         companyName: companyName || "My Logistics Enterprise",
@@ -107,33 +118,13 @@ export default function SignUpPage() {
         fleetSize: fleetSize || 75,
         region,
         targetSla: targetSla || 98,
-        autoApproveReroutes: true,
-        tempMonitoring: sector.includes("Cold-Chain") || sector.includes("Pharma"),
-        evBatteryBufferPct: 20,
-        driverMaxHours: 11,
-        hazmatRestrictions: sector.includes("HAZMAT"),
-        carbonTargetReductionPct: 15,
-        supervisors: [
-          { level: 1, role: "REGIONAL_DIRECTOR", title: "Regional Operations Director", name: regionalDirectorName, email: `regional.dir@${workspaceId}.com` },
-          { level: 2, role: "DISPATCH_SUPERVISOR", title: "Fleet & Hub Dispatch Supervisor", name: dispatchSupervisorName, email: `dispatch.sup@${workspaceId}.com` },
-          { level: 3, role: "SAFETY_SPECIALIST", title: "Field Safety & Incident Specialist", name: safetySpecialistName, email: `safety.spec@${workspaceId}.com` },
-        ],
       };
+      localStorage.setItem("nexus_company_profile", JSON.stringify(companyProfile));
 
-      if (typeof window !== "undefined") {
-        document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
-        localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
-        localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-        localStorage.setItem("nexus_access_token", "demo-operator-token");
-        localStorage.setItem("nexus_company_profile", JSON.stringify(companyProfile));
-        localStorage.setItem("nexus_company_name", companyProfile.companyName);
-        localStorage.setItem("nexus_company_sector", companyProfile.sector);
-      }
-
-      // Route directly to the Company Admin command center!
-      window.location.href = "/admin/company";
+      // Successfully registered & authenticated
+      window.location.href = "/overview";
     } catch (err: any) {
-      setError(err?.message || "Network error occurred during provisioning.");
+      setError(err?.message || "Network error occurred during registration. Please verify your connection.");
     } finally {
       setLoading(false);
     }

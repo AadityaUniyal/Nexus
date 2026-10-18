@@ -22,10 +22,30 @@ import { MetricTile } from "@/components/ui/metric-tile";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
 import { AzureCloudAnalytics } from "@/components/analytics/AzureCloudAnalytics";
+import { dataProvider } from "@/lib/data-provider";
+import { formatRelativeTime } from "@/lib/utils";
 
 export function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = React.useState<"azure" | "ledger" | "security">("azure");
+  const [realLogs, setRealLogs] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const logs = await dataProvider.getAuditLogs();
+        if (mounted && logs && logs.length > 0) {
+          setRealLogs(logs);
+        }
+      } catch {
+        // graceful fallback to illustrative ledger
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const sampleLedger = [
     {
@@ -53,6 +73,17 @@ export function AdminDashboard() {
       time: "1 hour ago",
     },
   ];
+
+  const displayLedger = realLogs.length > 0
+    ? realLogs.map((log) => ({
+        id: log.id,
+        action: log.action || "SYSTEM_AUDIT",
+        actor: log.actorName || "Autonomous Kernel",
+        target: `${log.entityType || "ENTITY"}: ${log.entityId || "N/A"}`,
+        hash: `sha256:${log.id.slice(0, 8)}...${log.id.slice(-4)}`,
+        time: log.createdAt ? formatRelativeTime(log.createdAt) : "Just now",
+      }))
+    : sampleLedger;
 
   return (
     <div className="space-y-6">
@@ -129,7 +160,7 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-nexus-outline/10">
-                {sampleLedger.map((tx) => (
+                {displayLedger.map((tx) => (
                   <tr key={tx.id} className="hover:bg-nexus-surface-container-high/40 transition-colors">
                     <td className="py-3 px-4 font-bold text-nexus-on-surface">{tx.action}</td>
                     <td className="py-3 px-3 text-nexus-on-surface-variant">{tx.actor}</td>

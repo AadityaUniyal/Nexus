@@ -1,7 +1,6 @@
 /**
- * Thin fetch wrapper for same-origin /api/v1 calls that attaches the Clerk
- * session token and active workspace header. Returns the raw Response so
- * callers can stream blobs (CSV export) or parse JSON as needed.
+ * Thin fetch wrapper for /api/v1 calls that attaches the authenticated
+ * session token and active workspace header.
  */
 const demoModeEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
 
@@ -10,15 +9,27 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-    if (typeof window !== "undefined") {
-    try {
-      const clerk = (window as unknown as { Clerk?: { session?: { getToken: () => Promise<string | null> } } }).Clerk;
-      const token = await clerk?.session?.getToken();
-      if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
-    } catch {
-      /* not signed in */
+  if (typeof window !== "undefined") {
+    // 1. Check verified local JWT access token
+    const localToken = localStorage.getItem("nexus_access_token");
+    if (localToken && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${localToken}`);
     }
-    if (demoModeEnabled && !headers.has("Authorization")) {
+
+    // 2. Check Clerk session token if available
+    if (!headers.has("Authorization")) {
+      try {
+        const clerk = (window as unknown as { Clerk?: { session?: { getToken: () => Promise<string | null> } } }).Clerk;
+        const token = await clerk?.session?.getToken();
+        if (token) headers.set("Authorization", `Bearer ${token}`);
+      } catch {
+        /* not signed in */
+      }
+    }
+
+    // 3. Optional isolated demo mode strictly in non-production environments
+    const isProd = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
+    if (demoModeEnabled && !isProd && !headers.has("Authorization")) {
       const demoUser = localStorage.getItem("nexus_demo_user");
       if (demoUser || document.cookie.includes("nexus_demo_session")) {
         headers.set("Authorization", "Bearer demo-operator-token");

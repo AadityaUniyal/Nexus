@@ -45,20 +45,22 @@ export function middleware(req: NextRequest) {
 
   let hasValidSession = false;
 
-  // 1. Valid verified session token
-  if (sessionToken && sessionToken.length > 20) {
+  // 1. Valid verified session token (JWT structure check)
+  if (sessionToken && sessionToken.length > 20 && sessionToken.split('.').length >= 2) {
     hasValidSession = true;
   }
 
-  // 2. Local development demo persona cookie (only when not in production environment)
-  const isProd = process.env.NODE_ENV === 'production';
+  // 2. Local development demo persona cookie (strictly forbidden in production)
+  const isProd = process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
   if (!isProd && demoCookie && demoCookie.trim().length > 0) {
     hasValidSession = true;
   }
 
   if (!hasValidSession) {
     const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('redirect', pathname);
+    // Sanitize redirect target to ensure it is a safe relative pathname
+    const safeRedirect = pathname.startsWith('/') && !pathname.startsWith('//') ? pathname : '/overview';
+    loginUrl.searchParams.set('redirect', safeRedirect);
     return NextResponse.redirect(loginUrl);
   }
 

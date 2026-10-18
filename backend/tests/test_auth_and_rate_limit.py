@@ -37,3 +37,44 @@ async def test_cors_preflight_allows_workspace_id_header(async_client: AsyncClie
     assert response.status_code == 200
     allow_headers = response.headers.get("access-control-allow-headers", "").lower()
     assert "x-workspace-id" in allow_headers
+
+@pytest.mark.asyncio
+async def test_signup_privileged_role_forbidden(async_client: AsyncClient):
+    """Test that public registration cannot self-assign ADMINISTRATOR role."""
+    response = await async_client.post(
+        "/api/v1/auth/signup",
+        json={
+            "email": "attacker@nexus.unauthorized",
+            "name": "Attacker",
+            "password": "Password123!",
+            "role": "ADMINISTRATOR"
+        }
+    )
+    assert response.status_code == 403
+    data = response.json()
+    assert "PRIVILEGED_ROLE_FORBIDDEN" in str(data)
+
+@pytest.mark.asyncio
+async def test_forgot_password_logger_execution(async_client: AsyncClient):
+    """Test that forgot-password executes cleanly without logger NameError."""
+    response = await async_client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "nonexistent@nexus.ops"}
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "SUCCESS"
+
+@pytest.mark.asyncio
+async def test_hs256_token_verification():
+    """Verify local HS256 tokens decode properly through verify_clerk_token."""
+    from app.core.security import create_access_token
+    from app.auth.clerk_jwt import verify_clerk_token
+
+    token = create_access_token(
+        subject="usr-test-hs256",
+        extra_claims={"email": "operator@nexus.ops", "role": "OPERATOR"}
+    )
+    claims = await verify_clerk_token(token)
+    assert claims["sub"] == "usr-test-hs256"
+    assert claims["role"] == "OPERATOR"
+

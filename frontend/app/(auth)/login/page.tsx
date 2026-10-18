@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { LogoMark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,26 +12,98 @@ import {
   Mail,
   ArrowRight,
   ShieldCheck,
-  Sparkles,
+  Eye,
+  EyeOff,
+  AlertCircle,
   Truck,
-  Compass,
   Building2,
-  AlertTriangle,
-  Globe2,
-  Activity,
-  Layers,
+  Sparkles,
   ChevronRight,
-  CheckCircle2,
+  Shield,
+  Layers,
 } from "lucide-react";
 
-type RoleOption = "ADMINISTRATOR" | "REGIONAL_DIRECTOR" | "DISPATCH_SUPERVISOR" | "SAFETY_SPECIALIST";
+interface RolePreset {
+  key: string;
+  name: string;
+  role: string;
+  email: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
 
-export default function LoginPage() {
-  const [email, setEmail] = React.useState("admin@nexus.continental");
-  const [password, setPassword] = React.useState("Password123!");
+const PRESET_ACCOUNTS: RolePreset[] = [
+  {
+    key: "admin",
+    name: "Alex Rivera",
+    role: "ADMINISTRATOR",
+    email: "admin@nexus.ops",
+    title: "System Administrator",
+    description: "Enterprise workspace governance, cloud telemetry bridges, and security ledger.",
+    icon: ShieldCheck,
+  },
+  {
+    key: "manager",
+    name: "Sarah Chen",
+    role: "OPERATIONS_MANAGER",
+    email: "sarah.chen@nexus.ops",
+    title: "Operations Manager",
+    description: "Corridor disruption triage, incident response, and SLA penalty mitigation.",
+    icon: Sparkles,
+  },
+  {
+    key: "operator",
+    name: "Elena Rostova",
+    role: "OPERATOR",
+    email: "elena.rostova@nexus.ops",
+    title: "Fleet Operator",
+    description: "Live commercial vehicle telemetry, driver dispatch, and terminal turnaround queues.",
+    icon: Truck,
+  },
+  {
+    key: "analyst",
+    name: "Marcus Vance",
+    role: "ANALYST",
+    email: "marcus.vance@nexus.ops",
+    title: "Supply Chain Analyst",
+    description: "Monte Carlo stochastic simulations, weather modeling, and dataset exports.",
+    icon: Layers,
+  },
+];
+
+function LoginFormContent() {
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "/overview";
+  const initialRole = searchParams.get("role") || "";
+
+  const [email, setEmail] = React.useState("admin@nexus.ops");
+  const [password, setPassword] = React.useState("nexus-demo-password");
+  const [showPassword, setShowPassword] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
-  const [selectedRole, setSelectedRole] = React.useState<RoleOption>("ADMINISTRATOR");
+  const [selectedPreset, setSelectedPreset] = React.useState<string>("admin");
+
+  // Sync initial role query parameter if provided
+  React.useEffect(() => {
+    if (initialRole) {
+      const matched = PRESET_ACCOUNTS.find(
+        (p) => p.role.toLowerCase() === initialRole.toLowerCase() || p.title.toLowerCase().includes(initialRole.toLowerCase())
+      );
+      if (matched) {
+        setSelectedPreset(matched.key);
+        setEmail(matched.email);
+        setPassword("nexus-demo-password");
+      }
+    }
+  }, [initialRole]);
+
+  const handleSelectPreset = (preset: RolePreset) => {
+    setSelectedPreset(preset.key);
+    setEmail(preset.email);
+    setPassword("nexus-demo-password");
+    setError("");
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +115,7 @@ export default function LoginPage() {
       const resp = await fetch(`${baseUrl}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
       if (resp.ok) {
@@ -50,320 +123,297 @@ export default function LoginPage() {
         const user = data.user;
         const token = data.access_token;
 
-        document.cookie = `nexus_session_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+        if (!token) {
+          throw new Error("Authentication response did not contain access token.");
+        }
+
+        // 1. Establish verified session cookie
+        const isSecure = window.location.protocol === "https:";
+        document.cookie = `nexus_session_token=${token}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
+
+        // 2. Persist authoritative token and workspace context in client storage
+        localStorage.setItem("nexus_access_token", token);
         if (user) {
           localStorage.setItem("nexus_active_workspace_id", user.workspace_id || "ws-continental-fleet-01");
           localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-          localStorage.setItem("nexus_access_token", token);
-          window.location.href = user.role === "ADMINISTRATOR" ? "/admin/company" : "/overview";
-        } else {
-          window.location.href = "/overview";
+          localStorage.setItem("nexus_user_role", user.role);
         }
+
+        // 3. Safe redirect validation (prevent open redirect attacks)
+        let destination = "/overview";
+        if (redirectTarget && redirectTarget.startsWith("/") && !redirectTarget.startsWith("//")) {
+          destination = redirectTarget;
+        } else if (user?.role === "ADMINISTRATOR") {
+          destination = "/admin/company";
+        }
+
+        window.location.href = destination;
       } else {
         const errJson = await resp.json().catch(() => ({}));
-        setError(errJson.detail || errJson.message || "Invalid email or password. Please try again.");
+        setError(errJson.detail || errJson.message || "Invalid credentials. Please verify your email and password.");
       }
-    } catch {
-      setError("Unable to connect to authentication service. Please check your connection.");
+    } catch (err: any) {
+      setError(err?.message || "Unable to reach authentication gateway. Please check your network connection.");
     } finally {
       setLoading(false);
     }
   };
 
-  const loginAsRole = (role: RoleOption) => {
-    let user = {
-      id: "usr-demo-admin",
-      name: "Alex Rivera",
-      title: "Chief Operating Officer & Solo Admin",
-      email: "alex.rivera@continental-logistics.com",
-      role: "ADMINISTRATOR",
-      workspace_id: "ws-continental-fleet-01",
-    };
-    let target = "/admin/company";
+  return (
+    <div className="w-full max-w-4xl flex flex-col items-center">
+      {/* Editorial Header */}
+      <div className="mb-8 text-center space-y-2 max-w-lg">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nexus-surface-container border border-nexus-outline-variant/40 text-nexus-on-surface-variant text-xs font-mono font-medium">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span>Nexus Logistics Command Gateway</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-nexus-on-surface">
+          Sign In to Your Workspace
+        </h1>
+        <p className="text-xs sm:text-sm text-nexus-on-surface-variant font-mono leading-relaxed">
+          Authenticate using verified enterprise credentials or select an operational role identity below.
+        </p>
+      </div>
 
-    if (role === "REGIONAL_DIRECTOR") {
-      user = {
-        id: "usr-sarah-104",
-        name: "Sarah Chen",
-        title: "Regional Operations Director (Level 1 Supervisor)",
-        email: "sarah.chen@continental-logistics.com",
-        role: "OPERATIONS_MANAGER",
-        workspace_id: "ws-continental-fleet-01",
-      };
-      target = "/overview";
-    } else if (role === "DISPATCH_SUPERVISOR") {
-      user = {
-        id: "usr-david-04",
-        name: "David Kim",
-        title: "Fleet & Hub Dispatch Supervisor (Level 2 Supervisor)",
-        email: "david.kim@continental-logistics.com",
-        role: "OPERATOR",
-        workspace_id: "ws-continental-fleet-01",
-      };
-      target = "/operations";
-    } else if (role === "SAFETY_SPECIALIST") {
-      user = {
-        id: "usr-elena-92",
-        name: "Elena Rostova",
-        title: "Field Safety & Incident Specialist (Level 3 Supervisor)",
-        email: "elena.rostova@continental-logistics.com",
-        role: "FIELD_OPERATOR",
-        workspace_id: "ws-continental-fleet-01",
-      };
-      target = "/incidents";
-    }
+      {/* Main Authentication Grid */}
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 bg-nexus-surface-lowest border border-nexus-outline-variant/35 rounded-3xl p-6 sm:p-10 shadow-tactile-lg">
+        {/* Left 7 Columns: Verified Persona Quick-Fill */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-nexus-outline-variant/25">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface">
+              1. Role Identity Presets
+            </span>
+            <span className="text-[11px] font-mono text-nexus-secondary font-semibold">
+              Pre-Seeded Credentials
+            </span>
+          </div>
 
-    document.cookie = `nexus_demo_session=${user.id}; path=/; max-age=86400; SameSite=Lax`;
-    localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
-    localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-    localStorage.setItem("nexus_access_token", "demo-operator-token");
-    window.location.href = target;
-  };
+          <div className="space-y-2.5">
+            {PRESET_ACCOUNTS.map((preset) => {
+              const Icon = preset.icon;
+              const isSelected = selectedPreset === preset.key;
+              return (
+                <div
+                  key={preset.key}
+                  onClick={() => handleSelectPreset(preset)}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    isSelected
+                      ? "border-nexus-primary bg-nexus-primary/5 shadow-tactile ring-1 ring-nexus-primary/30"
+                      : "border-nexus-outline-variant/30 bg-nexus-surface-container/20 hover:bg-nexus-surface-container/50"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                        isSelected
+                          ? "bg-nexus-primary text-white shadow-xs"
+                          : "bg-nexus-surface-container text-nexus-on-surface-variant"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5 text-left">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-nexus-on-surface">{preset.name}</span>
+                        <Badge variant={isSelected ? "simulation" : "neutral"} size="sm">
+                          {preset.title}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] font-mono text-nexus-secondary font-medium">
+                        {preset.email}
+                      </p>
+                      <p className="text-[11px] text-nexus-on-surface-variant font-mono leading-relaxed">
+                        {preset.description}
+                      </p>
+                    </div>
+                  </div>
 
-  const ROLES = [
-    {
-      key: "ADMINISTRATOR" as RoleOption,
-      levelBadge: "Solo Admin / Executive",
-      name: "Solo Company Administrator (COO)",
-      person: "Alex Rivera · Executive Master Authority",
-      desc: "Full company partition governance, SLA policies, supervisor delegation, and cloud integrations.",
-      targetPage: "/admin/company",
-      icon: ShieldCheck,
-      color: "purple",
-      badgeVariant: "simulation" as const,
-    },
-    {
-      key: "REGIONAL_DIRECTOR" as RoleOption,
-      levelBadge: "Level 1 Supervisor",
-      name: "Regional Operations Director",
-      person: "Sarah Chen · Multi-Hub Fleet Director",
-      desc: "Multi-hub operational oversight, regional KPI health, critical disruption triage, and AI synthesis.",
-      targetPage: "/overview",
-      icon: Sparkles,
-      color: "blue",
-      badgeVariant: "healthy" as const,
-    },
-    {
-      key: "DISPATCH_SUPERVISOR" as RoleOption,
-      levelBadge: "Level 2 Supervisor",
-      name: "Fleet & Hub Dispatch Supervisor",
-      person: "David Kim · Lead Dispatch Controller",
-      desc: "Live route telematics, active vehicle allocation, detour simulation runs, and driver coordination.",
-      targetPage: "/operations",
-      icon: Truck,
-      color: "amber",
-      badgeVariant: "ai" as const,
-    },
-    {
-      key: "SAFETY_SPECIALIST" as RoleOption,
-      levelBadge: "Level 3 Supervisor",
-      name: "Field Safety & Incident Specialist",
-      person: "Elena Rostova · Incident Response Lead",
-      desc: "Atmospheric weather hazards, mechanical anomalies, cold-chain temperature alerts, and 3D digital twin.",
-      targetPage: "/incidents",
-      icon: AlertTriangle,
-      color: "rose",
-      badgeVariant: "critical" as const,
-    },
-  ];
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectPreset(preset);
+                    }}
+                    className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1 self-end sm:self-center ${
+                      isSelected
+                        ? "bg-nexus-primary text-white shadow-tactile"
+                        : "bg-nexus-surface-container hover:bg-nexus-surface-container-high text-nexus-on-surface"
+                    }`}
+                  >
+                    <span>Select</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
+        {/* Right 5 Columns: Authoritative Authentication Form */}
+        <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-nexus-outline-variant/25 pt-6 lg:pt-0 lg:pl-8 space-y-6">
+          <div>
+            <div className="flex items-center justify-between pb-2 border-b border-nexus-outline-variant/25 mb-4">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface">
+                2. Authenticate
+              </span>
+              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                TLS Encrypted
+              </span>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="email-input"
+                  className="block text-xs font-mono font-semibold text-nexus-on-surface mb-1.5"
+                >
+                  Corporate Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-nexus-on-surface-variant pointer-events-none" />
+                  <Input
+                    id="email-input"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-9 font-mono text-xs h-9.5 rounded-xl"
+                    placeholder="operator@nexus.ops"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label
+                    htmlFor="password-input"
+                    className="block text-xs font-mono font-semibold text-nexus-on-surface"
+                  >
+                    Security Key
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-[11px] font-mono text-nexus-secondary hover:underline"
+                  >
+                    Forgot key?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-nexus-on-surface-variant pointer-events-none" />
+                  <Input
+                    id="password-input"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-9 pr-9 font-mono text-xs h-9.5 rounded-xl"
+                    placeholder="••••••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-2.5 text-nexus-on-surface-variant hover:text-nexus-on-surface transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div
+                  role="alert"
+                  className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs font-mono flex items-start gap-2"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={loading}
+                className="w-full py-2.5 font-mono text-xs font-bold shadow-tactile gap-2 rounded-xl mt-2"
+              >
+                <span>Enter Workspace</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </form>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-nexus-surface-container/30 border border-nexus-outline-variant/20 text-left space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-nexus-on-surface font-mono">
+              <Shield className="h-3.5 w-3.5 text-nexus-secondary" />
+              Role Authorization Active
+            </div>
+            <p className="text-[10px] text-nexus-on-surface-variant font-mono leading-relaxed">
+              Session is cryptographically signed and bound to your tenant workspace partition.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Info */}
+      <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 w-full text-xs font-mono text-nexus-on-surface-variant px-2">
+        <Link href="/" className="hover:text-nexus-on-surface transition-colors">
+          ← Return to Public Network Story
+        </Link>
+        <div className="flex items-center gap-4">
+          <span>Need a company partition?</span>
+          <Link
+            href="/signup"
+            className="font-bold text-nexus-secondary hover:underline"
+          >
+            Register Workspace
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
   return (
     <div className="min-h-screen bg-nexus-surface text-nexus-on-surface flex flex-col selection:bg-nexus-secondary/20 selection:text-nexus-secondary">
       {/* Top Header */}
-      <header className="h-16 border-b border-nexus-outline-variant/30 bg-nexus-surface/80 backdrop-blur-md sticky top-0 z-50 px-6 sm:px-10 flex items-center justify-between">
+      <header className="h-16 border-b border-nexus-outline-variant/30 bg-nexus-surface/85 backdrop-blur-md sticky top-0 z-50 px-6 sm:px-12 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <LogoMark size={34} />
+          <LogoMark size={32} />
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold tracking-tight text-nexus-on-surface">Nexus</span>
-            <span className="text-xs font-mono-data text-nexus-on-surface-variant font-medium hidden sm:inline">
+            <span className="text-base font-bold tracking-tight text-nexus-on-surface">Nexus</span>
+            <span className="text-xs font-mono text-nexus-on-surface-variant font-medium hidden sm:inline">
               Command Gateway
             </span>
           </div>
         </Link>
 
-        <div className="flex items-center gap-4 text-xs font-mono-data text-nexus-on-surface-variant">
-          <span className="hidden sm:inline">Need a company partition?</span>
+        <div className="flex items-center gap-4 text-xs font-mono text-nexus-on-surface-variant">
+          <Link
+            href="/status"
+            className="hidden sm:flex items-center gap-1.5 hover:text-nexus-on-surface transition-colors"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span>Systems Normal</span>
+          </Link>
           <Link
             href="/signup"
-            className="px-3 py-1.5 rounded-lg border border-nexus-outline-variant/40 bg-nexus-surface-container/60 hover:bg-nexus-surface-container text-nexus-on-surface font-semibold transition-colors"
+            className="px-3.5 py-1.5 rounded-xl border border-nexus-outline-variant/40 bg-nexus-surface-container/60 hover:bg-nexus-surface-container text-nexus-on-surface font-semibold transition-colors"
           >
-            Provision Company
+            New Workspace
           </Link>
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Main Content Area */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-4xl flex flex-col items-center">
-          <div className="mb-6 text-center space-y-1 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nexus-surface-container text-nexus-on-surface-variant text-[11px] font-mono-data font-semibold mb-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Multi-Tenant Enterprise Logistics Gateway</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-nexus-on-surface">
-              Logistics Command Sign In
-            </h1>
-            <p className="text-xs font-mono-data text-nexus-on-surface-variant">
-              Select your company leadership role for 1-click instant evaluation or sign in with your corporate credentials.
-            </p>
-          </div>
-
-          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 bg-nexus-surface-lowest border border-nexus-outline-variant/40 rounded-3xl p-6 sm:p-8 shadow-tactile-lg">
-            {/* Left 7 Cols: 4-Tier Company Role Selector */}
-            <div className="lg:col-span-7 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-nexus-outline-variant/30">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface">
-                  1. Select Company Role (1-Click Instant Access)
-                </span>
-                <span className="text-[10px] font-mono text-nexus-secondary font-bold">4 Distinct Personas</span>
-              </div>
-
-              <div className="space-y-2.5">
-                {ROLES.map((r) => {
-                  const Icon = r.icon;
-                  const isSelected = selectedRole === r.key;
-                  return (
-                    <div
-                      key={r.key}
-                      onClick={() => {
-                        setSelectedRole(r.key);
-                        if (r.key === "ADMINISTRATOR") {
-                          setEmail("admin@nexus.continental");
-                        } else if (r.key === "REGIONAL_DIRECTOR") {
-                          setEmail("sarah.chen@nexus.continental");
-                        } else if (r.key === "DISPATCH_SUPERVISOR") {
-                          setEmail("david.kim@nexus.continental");
-                        } else {
-                          setEmail("elena.rostova@nexus.continental");
-                        }
-                      }}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isSelected
-                          ? "border-nexus-primary bg-nexus-primary/5 shadow-tactile ring-1 ring-nexus-primary/30"
-                          : "border-nexus-outline-variant/40 bg-nexus-surface-container/20 hover:bg-nexus-surface-container/50"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`p-2 rounded-xl shrink-0 mt-0.5 ${
-                            isSelected
-                              ? "bg-nexus-primary text-white shadow-sm"
-                              : "bg-nexus-surface-container text-nexus-on-surface-variant"
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="space-y-0.5 text-left">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-nexus-on-surface">{r.name}</span>
-                            <Badge variant={r.badgeVariant} size="sm">
-                              {r.levelBadge}
-                            </Badge>
-                          </div>
-                          <p className="text-[11px] font-mono-data text-nexus-secondary font-medium">
-                            {r.person}
-                          </p>
-                          <p className="text-[11px] text-nexus-on-surface-variant font-mono-data leading-relaxed">
-                            {r.desc}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          loginAsRole(r.key);
-                        }}
-                        className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1 self-end sm:self-center ${
-                          isSelected
-                            ? "bg-nexus-primary text-white shadow-tactile"
-                            : "bg-nexus-surface-container hover:bg-nexus-surface-container-high text-nexus-on-surface"
-                        }`}
-                      >
-                        <span>Launch</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Right 5 Cols: Standard Sign In Form */}
-            <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-nexus-outline-variant/30 pt-6 lg:pt-0 lg:pl-6 space-y-4">
-              <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface block mb-3">
-                  2. Authenticate Credentials
-                </span>
-
-                <form onSubmit={handleLogin} className="space-y-3.5">
-                  <div>
-                    <label className="block text-xs font-mono-data font-semibold text-nexus-on-surface mb-1">
-                      Corporate Identifier (Email)
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-nexus-on-surface-variant" />
-                      <Input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-9 font-mono-data text-xs h-9"
-                        placeholder="operator@nexus.continental"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono-data font-semibold text-nexus-on-surface mb-1">
-                      Password Key
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-nexus-on-surface-variant" />
-                      <Input
-                        type="password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-9 font-mono-data text-xs h-9"
-                        placeholder="••••••••••••"
-                      />
-                    </div>
-                  </div>
-
-                  {error && <p className="text-xs text-rose-500 font-mono-data">{error}</p>}
-
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    isLoading={loading}
-                    className="w-full py-2.5 font-mono-data text-xs font-semibold shadow-tactile gap-2 mt-2"
-                  >
-                    Enter Command Gateway
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </form>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-nexus-surface-container/30 border border-nexus-outline-variant/20 text-left space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-nexus-on-surface font-mono">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                  Enterprise RBAC Active
-                </div>
-                <p className="text-[10px] text-nexus-on-surface-variant font-mono-data leading-relaxed">
-                  Active workspace session is cryptographically bound to your designated operational partition and cloud telemetry streams.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <p className="mt-6 text-center text-xs text-nexus-on-surface-variant font-mono-data">
-            Protected by multi-tier encryption &amp; enterprise RBAC session tokens · Nexus 2.1
-          </p>
-        </div>
+        <React.Suspense fallback={<div className="font-mono text-xs text-nexus-on-surface-variant">Loading command gateway...</div>}>
+          <LoginFormContent />
+        </React.Suspense>
       </main>
     </div>
   );
 }
-

@@ -18,19 +18,10 @@ export interface AuthContextType {
   isLoading: boolean;
 }
 
-const DEFAULT_OPERATOR: UserContextType = {
-  id: 'usr-sarah-104',
-  email: 'sarah.chen@nexus.continental',
-  name: 'Sarah Chen',
-  role: 'ADMINISTRATOR',
-  workspace_id: 'ws-continental-fleet-01',
-  publicMetadata: { role: 'ADMINISTRATOR', workspace_id: 'ws-continental-fleet-01' },
-};
-
 const AuthContext = createContext<AuthContextType>({
-  user: DEFAULT_OPERATOR,
+  user: null,
   logout: () => {},
-  isLoading: false,
+  isLoading: true,
 });
 
 export function useAuth() {

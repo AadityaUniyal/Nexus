@@ -65,43 +65,43 @@ export function ViewerDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Executive Macro Indices */}
+      {/* Executive Macro Indices with Clear Source, Time Range, and Interpretation */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricTile
-          title="Global On-Time Delivery"
+          title="On-Time Delivery (OTD)"
           value="98.4%"
-          subtitle="Enterprise SLA Target"
-          change="+3.2% vs previous quarter"
+          subtitle="Timeframe: Q3 Rolling · Source: TMS Telematics"
+          change="+3.2% vs Q2 baseline"
           trend="up"
           status="HEALTHY"
           icon={Award}
           variant="default"
         />
         <MetricTile
-          title="Supply Chain Net Savings"
+          title="Mitigated Penalty Savings"
           value="$1.42M"
-          subtitle="Mitigated Penalties"
-          change="+24% ROI on AI"
+          subtitle="Timeframe: YTD 2026 · Source: Disruption Ledger"
+          change="+24% ROI on automated reroutes"
           trend="up"
           status="HEALTHY"
           icon={DollarSign}
           variant="default"
         />
         <MetricTile
-          title="ESG Carbon Avoidance"
+          title="Carbon Avoidance (Scope 1)"
           value="42.8 T"
-          subtitle="Metric Tons CO2e"
-          change="≈ 1,940 trees planted"
+          subtitle="Unit: Metric Tons CO2e · Source: EV Fleet Log"
+          change="≈ 1,940 trees equivalent"
           trend="up"
           status="HEALTHY"
           icon={Leaf}
           variant="default"
         />
         <MetricTile
-          title="Network Resilience Score"
+          title="Network Resilience Index"
           value="96.8"
-          subtitle="out of 100 Index"
-          change="Optimal fault tolerance"
+          subtitle="Scale: 0-100 · Source: Corridor Stress Test"
+          change="P95 Fault Tolerance"
           trend="up"
           status="SIMULATION"
           icon={Globe2}

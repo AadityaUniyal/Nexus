@@ -1,4 +1,5 @@
 import uuid
+import logging
 from datetime import timedelta
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,8 @@ from app.schemas.user import (
 from app.core.security import create_access_token, decode_token, get_password_hash, verify_password
 from app.core.errors import NexusException, UnauthorizedException
 from app.core.config import settings
+
+logger = logging.getLogger("nexus.auth")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -59,6 +62,13 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user in the designated workspace and issue access token."""
+    if req.role and req.role.strip().upper() == "ADMINISTRATOR":
+        raise NexusException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="PRIVILEGED_ROLE_FORBIDDEN",
+            message="Self-assignment of the ADMINISTRATOR role is prohibited during public registration.",
+        )
+
     stmt = select(User).where(User.email == req.email)
     result = await db.execute(stmt)
     if result.scalar_one_or_none():

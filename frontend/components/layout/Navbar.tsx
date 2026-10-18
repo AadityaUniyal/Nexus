@@ -217,102 +217,46 @@ export function Navbar({
               {/* Role Delegation Quick Switcher */}
               <div className="border-t border-nexus-outline-variant/30 my-1 pt-1">
                 <p className="px-3 py-1 text-[10px] font-mono-data uppercase font-bold text-nexus-on-surface-variant">
-                  Switch Active Role
+                  Operational Workspaces
                 </p>
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    const adminUser = {
-                      id: "usr-admin-alex",
-                      name: "Alex Rivera",
-                      email: "alex.rivera@continental-logistics.com",
-                      role: "ADMINISTRATOR",
-                      workspace_id: "ws-continental-fleet-01",
-                    };
-                    localStorage.setItem("nexus_demo_user", JSON.stringify(adminUser));
-                    window.location.href = "/admin/company";
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 transition-colors font-medium text-left"
-                >
-                  <span>👑 Solo Company Admin</span>
-                  <span className="text-[10px] font-mono">COO</span>
-                </button>
 
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    const l1User = {
-                      id: "usr-sarah-104",
-                      name: "Sarah Chen",
-                      email: "sarah.chen@continental-logistics.com",
-                      role: "SUPERVISOR_L1",
-                      workspace_id: "ws-continental-fleet-01",
-                    };
-                    localStorage.setItem("nexus_demo_user", JSON.stringify(l1User));
-                    window.location.href = "/overview";
-                  }}
+                <Link
+                  href="/overview"
+                  onClick={() => setMenuOpen(false)}
                   className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 transition-colors font-medium text-left"
                 >
-                  <span>🌐 Regional Director (L1)</span>
-                  <span className="text-[10px] font-mono">Hubs</span>
-                </button>
+                  <span>Operations Overview</span>
+                  <span className="text-[10px] font-mono">Hubs &amp; Incidents</span>
+                </Link>
 
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    const l2User = {
-                      id: "usr-david-04",
-                      name: "David Kim",
-                      email: "david.kim@continental-logistics.com",
-                      role: "SUPERVISOR_L2",
-                      workspace_id: "ws-continental-fleet-01",
-                    };
-                    localStorage.setItem("nexus_demo_user", JSON.stringify(l2User));
-                    window.location.href = "/operations";
-                  }}
+                <Link
+                  href="/operations"
+                  onClick={() => setMenuOpen(false)}
                   className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 transition-colors font-medium text-left"
                 >
-                  <span>⚡ Dispatch Supervisor (L2)</span>
-                  <span className="text-[10px] font-mono">Fleet</span>
-                </button>
+                  <span>Fleet Operations</span>
+                  <span className="text-[10px] font-mono">Telematics &amp; Dispatch</span>
+                </Link>
 
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    const l3User = {
-                      id: "usr-elena-92",
-                      name: "Elena Rostova",
-                      email: "elena.rostova@continental-logistics.com",
-                      role: "SUPERVISOR_L3",
-                      workspace_id: "ws-continental-fleet-01",
-                    };
-                    localStorage.setItem("nexus_demo_user", JSON.stringify(l3User));
-                    window.location.href = "/incidents";
-                  }}
+                <Link
+                  href="/analytics"
+                  onClick={() => setMenuOpen(false)}
                   className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 transition-colors font-medium text-left"
                 >
-                  <span>🛡️ Safety Specialist (L3)</span>
-                  <span className="text-[10px] font-mono">Safety</span>
-                </button>
+                  <span>Supply Chain Analytics</span>
+                  <span className="text-[10px] font-mono">Simulations</span>
+                </Link>
 
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    const viewerUser = {
-                      id: "usr-viewer-01",
-                      name: "Guest Auditor",
-                      email: "auditor@external-esg.org",
-                      role: "VIEWER",
-                      workspace_id: "ws-continental-fleet-01",
-                    };
-                    localStorage.setItem("nexus_demo_user", JSON.stringify(viewerUser));
-                    window.location.href = "/overview";
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-stone-600 dark:text-stone-300 hover:bg-stone-500/10 transition-colors font-medium text-left"
-                >
-                  <span>👁️ Auditor / Guest (Viewer)</span>
-                  <span className="text-[10px] font-mono">Read-Only</span>
-                </button>
+                {user?.role === "ADMINISTRATOR" && (
+                  <Link
+                    href="/admin/company"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 transition-colors font-medium text-left"
+                  >
+                    <span>System Administration</span>
+                    <span className="text-[10px] font-mono">Governance</span>
+                  </Link>
+                )}
               </div>
 
               <div className="border-t border-nexus-outline-variant/30 my-1" />

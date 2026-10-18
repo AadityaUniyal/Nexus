@@ -128,9 +128,9 @@ export default function AnalyticsPage() {
     }
   };
 
-  const slaRate = overviewData?.slaComplianceRate ?? 97.4;
-  const turnaround = overviewData?.avgTurnaroundMins ?? 42;
-  const totalUnits = (overviewData?.totalNetworkUnits ?? 71650).toLocaleString();
+  const slaRate = overviewData?.slaComplianceRate !== undefined ? Number(overviewData.slaComplianceRate) : null;
+  const turnaround = overviewData?.avgTurnaroundMins !== undefined ? Number(overviewData.avgTurnaroundMins) : null;
+  const totalUnits = overviewData?.totalNetworkUnits !== undefined ? Number(overviewData.totalNetworkUnits).toLocaleString() : null;
   const slaTrends = overviewData?.slaTrends ?? [];
   const hubThroughput = overviewData?.hubThroughput ?? [];
   const forecastList = forecastData?.forecast ?? [];
@@ -230,24 +230,24 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <MetricTile
                 title="SLA Compliance Rate"
-                value={`${slaRate}%`}
+                value={slaRate !== null ? `${slaRate}%` : "No Telemetry"}
                 subtitle={`Target benchmark 95.0% (${timeframe})`}
-                trend={slaRate >= 95 ? "up" : "down"}
-                status={slaRate >= 95 ? "HEALTHY" : "ATTENTION"}
+                trend={slaRate !== null ? (slaRate >= 95 ? "up" : "down") : "neutral"}
+                status={slaRate !== null ? (slaRate >= 95 ? "HEALTHY" : "ATTENTION") : "ATTENTION"}
                 icon={Activity}
               />
               <MetricTile
                 title="Avg Corridor Turnaround"
-                value={`${turnaround} mins`}
+                value={turnaround !== null ? `${turnaround} mins` : "Pending Telemetry"}
                 subtitle="Calculated across active corridors"
-                trend="up"
+                trend="neutral"
                 status="HEALTHY"
                 icon={Truck}
               />
               <MetricTile
                 title="Total Network Volume"
-                value={totalUnits}
-                subtitle={`Units across ${hubThroughput.length || 6} regional hubs`}
+                value={totalUnits !== null ? `${totalUnits} Units` : "0 Units"}
+                subtitle={`Units across ${hubThroughput.length || 0} regional hubs`}
                 trend="neutral"
                 status="OPERATIONAL"
                 icon={Building2}
@@ -267,8 +267,8 @@ export default function AnalyticsPage() {
                       Continuous delivery adherence vs 95% target threshold
                     </CardDescription>
                   </div>
-                  <Badge variant={slaRate >= 95 ? "healthy" : "attention"} size="sm">
-                    {slaRate}% Live
+                  <Badge variant={slaRate !== null && slaRate >= 95 ? "healthy" : "attention"} size="sm">
+                    {slaRate !== null ? `${slaRate}% Live` : "No Telemetry"}
                   </Badge>
                 </CardHeader>
                 <CardContent>
