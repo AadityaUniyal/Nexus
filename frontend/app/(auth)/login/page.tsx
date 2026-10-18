@@ -1,8 +1,9 @@
 "use client";
-import { apiFetch } from '@/app/lib/api';
+
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import { LogoMark } from "@/components/brand/Logo";
 import {
   ArrowRight,
@@ -15,12 +16,13 @@ import {
   Mail,
   Loader2,
   Building2,
-  Sparkles
 } from "lucide-react";
+import { apiFetch } from "@/lib/api/http";
+import { AppleHelloGreeting } from "@/components/auth/AppleHelloGreeting";
 
 export default function LoginPage() {
   return (
-    <React.Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#000000]" />}>
+    <React.Suspense fallback={<div className="min-h-screen bg-[#F6F4EE] dark:bg-[#0B0B0D]" />}>
       <AppleStyleLoginContent />
     </React.Suspense>
   );
@@ -31,6 +33,10 @@ function AppleStyleLoginContent() {
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get("redirect") || "/overview";
   const initialRole = searchParams.get("role") || "";
+  const skipGreetingParam = searchParams.get("skip_greeting") === "true";
+
+  // Apple Hello / Namaste greeting state
+  const [showGreeting, setShowGreeting] = React.useState(!skipGreetingParam);
 
   // Progressive Apple ID Flow: Stage 1 = Email -> Stage 2 = Password
   const [stage, setStage] = React.useState<"email" | "password">("email");
@@ -49,7 +55,6 @@ function AppleStyleLoginContent() {
     { label: "Fleet Operator", name: "David Kim", email: "david.kim@nexus.continental" },
     { label: "Supply Chain Analyst", name: "Elena Rostova", email: "elena.rostova@nexus.continental" },
     { label: "System Administrator", name: "Sarah Chen", email: "sarah.chen@nexus.continental" },
-    { label: "Executive Viewer", name: "Audit Viewer", email: "audit.viewer@nexus.continental" },
   ];
 
   // Auto-fill from query param if provided
@@ -61,6 +66,7 @@ function AppleStyleLoginContent() {
       if (match) {
         setEmail(match.email);
         setPassword("Password123!");
+        setShowGreeting(false);
       }
     }
   }, [initialRole]);
@@ -89,10 +95,8 @@ function AppleStyleLoginContent() {
     setError("");
 
     try {
-      // In production and local, always use relative /api/v1 rewrite to guarantee seamless origin handling
       const resp = await apiFetch("/api/v1/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       });
 
@@ -116,13 +120,6 @@ function AppleStyleLoginContent() {
           localStorage.setItem("nexus_demo_user", JSON.stringify(user));
           localStorage.setItem("nexus_user_role", user.role);
         }
-
-        // Clear obsolete local mock storage so genuine database is single source of truth
-        localStorage.removeItem("nexus_custom_vehicles");
-        localStorage.removeItem("nexus_custom_warehouses");
-        localStorage.removeItem("nexus_custom_orders");
-        localStorage.removeItem("nexus_custom_routes");
-        localStorage.removeItem("nexus_custom_incidents");
 
         let dest = "/overview";
         if (redirectTarget && redirectTarget.startsWith("/") && !redirectTarget.startsWith("//")) {
@@ -150,47 +147,71 @@ function AppleStyleLoginContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col justify-between selection:bg-[#0071e3]/20 selection:text-[#0071e3] transition-colors duration-300">
-      {/* Apple-style Global Nav */}
-      <header className="h-12 w-full border-b border-black/[0.08] dark:border-white/[0.12] bg-[#f5f5f7]/80 dark:bg-[#000000]/80 backdrop-blur-xl px-6 lg:px-12 flex items-center justify-between z-50">
-        <Link href="/" className="flex items-center gap-2 group transition-opacity hover:opacity-75">
+    <div className="min-h-screen bg-[#F6F4EE] dark:bg-[#0B0B0D] text-[#11120F] dark:text-[#F4F2EC] flex flex-col justify-between selection:bg-amber-500/20 selection:text-amber-600 font-sans transition-colors duration-300">
+      {/* ===================================================================== */}
+      {/* APPLE HELLO / NAMASTE GREETING OVERLAY */}
+      {/* ===================================================================== */}
+      <AnimatePresence>
+        {showGreeting && (
+          <AppleHelloGreeting onUnlock={() => setShowGreeting(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Apple-style Global Nav with XERJ 1px Hairline */}
+      <header className="h-13 w-full border-b border-[#CFCBBF] dark:border-[#3A3836] bg-[#F6F4EE]/85 dark:bg-[#0B0B0D]/85 backdrop-blur-2xl px-6 lg:px-12 flex items-center justify-between z-40 transition-colors">
+        <Link href="/" className="flex items-center gap-2.5 group">
           <LogoMark size={22} />
-          <span className="text-sm font-semibold tracking-tight">Nexus</span>
+          <div className="flex items-baseline gap-1 font-mono">
+            <span className="text-sm font-bold tracking-tight text-[#11120F] dark:text-white uppercase">Nexus</span>
+            <span className="text-[10px] text-[#7F5200] dark:text-[#FFC400] font-bold">OS</span>
+          </div>
         </Link>
 
-        <div className="flex items-center gap-6 text-xs text-black/60 dark:text-white/60">
+        <div className="flex items-center gap-6 text-xs font-mono text-stone-500 dark:text-stone-400">
           <Link href="/" className="hover:text-black dark:hover:text-white transition-colors">
-            Overview
+            HOME
           </Link>
-          <Link href="/features" className="hover:text-black dark:hover:text-white transition-colors">
-            Capabilities
+          <Link href="/live-world" className="hover:text-black dark:hover:text-white transition-colors">
+            LIVE MAP
           </Link>
+          <button
+            type="button"
+            onClick={() => setShowGreeting(true)}
+            className="text-[11px] font-mono px-2 py-0.5 rounded border border-[#CFCBBF] dark:border-[#3A3836] hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            HELLO SCREEN
+          </button>
         </div>
       </header>
 
-      {/* Main Apple ID Card Container */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="w-full max-w-[460px] mx-auto text-center space-y-8">
+      {/* Main Authentication Stage */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-14">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-[440px] mx-auto text-center space-y-7"
+        >
           {/* Brand Icon & Heading */}
-          <div className="space-y-3">
-            <div className="h-16 w-16 mx-auto rounded-full bg-white dark:bg-[#1c1c1e] shadow-sm border border-black/[0.06] dark:border-white/[0.1] flex items-center justify-center">
-              <LogoMark size={32} />
+          <div className="space-y-2">
+            <div className="h-14 w-14 mx-auto rounded-2xl bg-white dark:bg-[#121216] border border-[#CFCBBF] dark:border-[#3A3836] shadow-tactile flex items-center justify-center">
+              <LogoMark size={28} />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+            <h1 className="text-3xl font-black uppercase tracking-tight text-[#11120F] dark:text-white font-mono">
               Sign In to Nexus
             </h1>
-            <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed max-w-sm mx-auto">
-              Use your corporate account to access your organization&apos;s logistics operations.
+            <p className="text-xs font-mono text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
+              Authentic multi-tenant logistics workspace authentication.
             </p>
           </div>
 
-          {/* Form Card */}
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-black/[0.06] dark:border-white/[0.1] p-8 sm:p-10 space-y-6 text-left">
+          {/* Form Card (XERJ 1px rule + Apple Spring Interior) */}
+          <div className="bg-white dark:bg-[#121216] rounded-2xl border border-[#CFCBBF] dark:border-[#3A3836] shadow-tactile p-7 sm:p-8 space-y-6 text-left transition-colors">
             {error && (
               <div
                 role="alert"
-                className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-start gap-2.5"
+                className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-mono flex items-start gap-2.5"
               >
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span className="leading-snug">{error}</span>
@@ -199,59 +220,56 @@ function AppleStyleLoginContent() {
 
             {stage === "email" ? (
               <form onSubmit={handleEmailContinue} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="apple-email" className="block text-xs font-medium text-black/70 dark:text-white/70">
-                    Corporate Email
+                <div className="space-y-1.5 font-mono text-xs">
+                  <label htmlFor="apple-email" className="block text-stone-600 dark:text-stone-300 font-bold uppercase tracking-wider text-[10px]">
+                    Corporate Email Address
                   </label>
-                  <div className="relative">
-                    <input
-                      id="apple-email"
-                      type="email"
-                      required
-                      autoFocus
-                      autoComplete="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@company.com"
-                      className="w-full h-11 px-3.5 rounded-xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.1] dark:border-white/[0.12] text-sm text-[#1d1d1f] dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-all"
-                    />
-                  </div>
+                  <input
+                    id="apple-email"
+                    type="email"
+                    required
+                    autoFocus
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="w-full h-11 px-3.5 rounded-xl bg-[#F1EEE6] dark:bg-[#1C1C22] border border-[#CFCBBF] dark:border-[#3A3836] text-sm text-[#11120F] dark:text-[#F4F2EC] placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#7F5200] dark:focus:ring-[#FFC400] font-mono transition-all"
+                  />
                 </div>
 
-                <div className="flex items-center justify-between text-xs pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-black/70 dark:text-white/70 select-none">
+                <div className="flex items-center justify-between text-xs font-mono pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-stone-600 dark:text-stone-400 select-none">
                     <input
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-black/20 dark:border-white/20 text-[#0071e3] focus:ring-[#0071e3] h-4 w-4"
+                      className="rounded border-[#CFCBBF] dark:border-[#3A3836] text-amber-500 focus:ring-amber-500 h-4 w-4"
                     />
-                    <span>Remember my address</span>
+                    <span>Remember address</span>
                   </label>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full h-11 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-sm font-medium tracking-tight transition-all flex items-center justify-center gap-2 shadow-sm"
+                  className="w-full h-11 rounded-xl bg-[#11120F] dark:bg-[#FFC400] text-white dark:text-[#0B0B0D] text-xs font-mono font-bold uppercase tracking-wider hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-tactile"
                 >
                   <span>Continue</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </form>
             ) : (
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 font-mono text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-black/50 dark:text-white/50">{email}</span>
+                    <span className="text-[11px] text-stone-500">{email}</span>
                     <button
                       type="button"
                       onClick={() => setStage("email")}
-                      className="text-xs text-[#0071e3] hover:underline"
+                      className="text-[11px] text-[#7F5200] dark:text-[#FFC400] hover:underline"
                     >
                       Change
                     </button>
                   </div>
-
                   <div className="relative">
                     <input
                       id="apple-password"
@@ -261,50 +279,46 @@ function AppleStyleLoginContent() {
                       autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
-                      className="w-full h-11 px-3.5 pr-10 rounded-xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.1] dark:border-white/[0.12] text-sm text-[#1d1d1f] dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#0071e3] transition-all"
+                      placeholder="••••••••••••"
+                      className="w-full h-11 px-3.5 pr-10 rounded-xl bg-[#F1EEE6] dark:bg-[#1C1C22] border border-[#CFCBBF] dark:border-[#3A3836] text-sm text-[#11120F] dark:text-[#F4F2EC] placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#7F5200] dark:focus:ring-[#FFC400] font-mono transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-3 top-3 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end text-xs">
-                  <Link href="/forgot-password" className="text-[#0071e3] hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
-
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-50 text-white text-sm font-medium tracking-tight transition-all flex items-center justify-center gap-2 shadow-sm"
+                  className="w-full h-11 rounded-xl bg-[#11120F] dark:bg-[#FFC400] text-white dark:text-[#0B0B0D] text-xs font-mono font-bold uppercase tracking-wider hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-tactile disabled:opacity-50"
                 >
                   {loading ? (
-                    <span className="inline-block h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Authenticating...</span>
+                    </>
                   ) : (
                     <>
                       <span>Sign In</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </>
                   )}
                 </button>
               </form>
             )}
 
-            {/* Quick Workspace Switcher */}
-            <div className="pt-4 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
-              <span className="text-[11px] uppercase tracking-wider text-black/40 dark:text-white/40 block font-medium">
-                Select Workspace Account
+            {/* Quick Enterprise Profiles Switcher */}
+            <div className="pt-4 border-t border-[#CFCBBF] dark:border-[#3A3836] space-y-2.5">
+              <span className="text-[10px] uppercase tracking-wider font-mono text-stone-400 block font-bold">
+                Direct Enterprise Identities
               </span>
               <div className="grid grid-cols-2 gap-2">
-                {ENTERPRISE_PROFILES.slice(0, 4).map((acc) => (
+                {ENTERPRISE_PROFILES.map((acc) => (
                   <button
                     key={acc.email}
                     type="button"
@@ -314,12 +328,12 @@ function AppleStyleLoginContent() {
                       setStage("password");
                       setError("");
                     }}
-                    className="p-2.5 text-left rounded-xl bg-[#f5f5f7] dark:bg-[#2c2c2e] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.06] transition-colors"
+                    className="p-2.5 text-left rounded-xl bg-[#F1EEE6] dark:bg-[#1C1C22] hover:border-amber-500/50 border border-[#CFCBBF]/60 dark:border-[#3A3836] transition-all"
                   >
-                    <span className="text-xs font-medium text-[#1d1d1f] dark:text-white block truncate">
+                    <span className="text-xs font-bold font-mono text-[#11120F] dark:text-white block truncate">
                       {acc.label}
                     </span>
-                    <span className="text-[11px] text-black/50 dark:text-white/50 block truncate">
+                    <span className="text-[10px] font-mono text-stone-500 block truncate">
                       {acc.email}
                     </span>
                   </button>
@@ -328,51 +342,47 @@ function AppleStyleLoginContent() {
             </div>
           </div>
 
-          {/* Create Account Link */}
-          <div className="text-xs text-black/60 dark:text-white/60 space-x-1">
-            <span>Don&apos;t have an organization workspace?</span>
-            <Link href="/signup" className="text-[#0071e3] hover:underline font-medium">
-              Create yours now.
+          {/* Sign Up Link */}
+          <div className="text-xs font-mono text-stone-500 space-x-1">
+            <span>New workspace?</span>
+            <Link href="/signup" className="text-[#7F5200] dark:text-[#FFC400] hover:underline font-bold">
+              Enroll your organization now.
             </Link>
           </div>
-        </div>
+        </motion.div>
       </main>
 
-      {/* Apple Keynote Transition Overlay */}
+      {/* Transition Overlay */}
       {isTransitioning && (
-        <div className="fixed inset-0 z-50 bg-[#f5f5f7]/95 dark:bg-[#000000]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="w-full max-w-sm mx-auto text-center space-y-6">
-            <div className="relative h-20 w-20 mx-auto flex items-center justify-center">
-              <span className="absolute inset-0 rounded-full border-2 border-[#0071e3]/20 animate-ping" />
-              <span className="absolute inset-0 rounded-full border-2 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent animate-spin" />
-              <div className="h-14 w-14 rounded-full bg-white dark:bg-[#1c1c1e] shadow-lg flex items-center justify-center">
-                <LogoMark size={28} />
-              </div>
+        <div className="fixed inset-0 z-50 bg-[#F6F4EE]/95 dark:bg-[#0B0B0D]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-sm mx-auto text-center space-y-5 font-mono">
+            <div className="h-14 w-14 mx-auto rounded-2xl bg-white dark:bg-[#121216] border border-[#CFCBBF] dark:border-[#3A3836] shadow-tactile flex items-center justify-center">
+              <LogoMark size={28} />
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold tracking-tight text-[#11120F] dark:text-white">
                 Welcome back, {transitionUser?.name || "Operator"}
               </h3>
-              <p className="text-xs text-black/50 dark:text-white/50 leading-relaxed">
-                Connecting to {transitionUser?.workspace_id || transitionUser?.workspaceId || "Nexus Network"}
+              <p className="text-xs text-stone-500">
+                Opening workspace: {transitionUser?.workspace_id || "ws-continental-fleet-01"}
               </p>
             </div>
 
-            <div className="w-48 mx-auto h-1 bg-black/[0.08] dark:bg-white/[0.1] rounded-full overflow-hidden">
-              <div className="h-full bg-[#0071e3] rounded-full animate-pulse w-full" />
+            <div className="w-40 mx-auto h-1 bg-stone-200 dark:bg-stone-800 rounded-full overflow-hidden">
+              <div className="h-full bg-amber-500 rounded-full animate-pulse w-full" />
             </div>
           </div>
         </div>
       )}
 
-      {/* Apple-style Footer */}
-      <footer className="border-t border-black/[0.08] dark:border-white/[0.1] py-6 px-6 lg:px-12 text-[11px] text-black/50 dark:text-white/50 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
-        <span>Copyright © {new Date().getFullYear()} Nexus Inc. All rights reserved.</span>
+      {/* Footer */}
+      <footer className="border-t border-[#CFCBBF] dark:border-[#3A3836] py-5 px-6 lg:px-12 text-[11px] font-mono text-stone-500 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
+        <span>NEXUS.OS · APACHE-2.0 · 2026</span>
         <div className="flex items-center gap-5">
-          <Link href="/contact" className="hover:underline">Privacy Policy</Link>
-          <Link href="/contact" className="hover:underline">Terms of Use</Link>
-          <Link href="/contact" className="hover:underline">Legal</Link>
+          <Link href="/contact" className="hover:underline">Privacy</Link>
+          <Link href="/contact" className="hover:underline">Terms</Link>
+          <Link href="/contact" className="hover:underline">Security</Link>
         </div>
       </footer>
     </div>

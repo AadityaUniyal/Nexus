@@ -1,84 +1,79 @@
 /*
- * Nexus brand system: "Harbor"
- * Deep teal (trust, data) + burnt-orange accent (focus, action) on calm neutrals.
+ * Nexus Design Tokens — XERJ Palette Integration
+ * Night: #0b0b0d canvas, #f4f2ec ink, #3a3836 1px hairline rules, #ffc400 solid gold/amber.
+ * Day: #f6f4ee canvas, #11120f ink, #cfcbbf rules, #7f5200 deep ochre/amber.
+ * Strict rule: Solid colors only, 1px rules, no neon cyan/purple glows, no 3D canvas noise.
  * All text/background pairs target WCAG AA (>= 4.5:1).
  */
 :root {
-  /* Brand scale */
-  --brand-50: #effaf8;
-  --brand-100: #d3f0ec;
-  --brand-200: #a8e0d9;
-  --brand-300: #73c8be;
-  --brand-400: #3fa79c;
-  --brand-500: #1f8a80;
-  --brand-600: #137c72;
-  --brand-700: #0e5e58;
-  --brand-800: #0b4f4a;
-  --brand-900: #083b38;
-  --accent-500: #e0652a;
-  --accent-600: #c2410c;
+  /* XERJ Direct Tokens (Day Mode) */
+  --z-bg: #f6f4ee;
+  --z-ink: #11120f;
+  --z-mute: #696762;
+  --z-faint: #e3dfd4;
+  --z-line: #cfcbbf;
+  --z-accent: #7f5200; /* Solid ochre, not neon */
+  --z-cmp: #6f8aa8;
 
-  /* Surfaces */
-  --surface: #f7f8f7;
-  --surface-dim: #e3e6e5;
+  /* Semantic Scale */
+  --surface: #f6f4ee;
+  --surface-dim: #ebe8df;
   --surface-bright: #ffffff;
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #f1f3f2;
-  --surface-container: #eaedec;
-  --surface-container-high: #e3e7e6;
-  --surface-container-highest: #dbe0df;
+  --surface-container-low: #f1eee6;
+  --surface-container: #ebe7de;
+  --surface-container-high: #e3dfd5;
+  --surface-container-highest: #dcd7cc;
 
-  --on-surface: #0f1a1f;
-  --on-surface-variant: #46535a;
-  --inverse-surface: #1b262b;
-  --inverse-on-surface: #eef2f3;
+  --on-surface: #11120f;
+  --on-surface-variant: #696762;
+  --inverse-surface: #11120f;
+  --inverse-on-surface: #f6f4ee;
 
-  --outline: #5f6b72;
-  --outline-variant: #d5dbdd;
-  --surface-tint: var(--brand-700);
+  --outline: #8c8880;
+  --outline-variant: #cfcbbf;
+  --surface-tint: #7f5200;
 
-  --primary: var(--brand-800);
+  --primary: #11120f;
   --on-primary: #ffffff;
-  --primary-container: var(--brand-700);
-  --on-primary-container: #d6f2ee;
+  --primary-container: #e3dfd5;
+  --on-primary-container: #11120f;
 
-  --secondary: var(--brand-600);
+  --secondary: #7f5200;
   --on-secondary: #ffffff;
-  --secondary-container: var(--brand-100);
-  --on-secondary-container: var(--brand-800);
+  --secondary-container: #fef3c7;
+  --on-secondary-container: #7f5200;
 
-  --tertiary: var(--accent-600);
+  --tertiary: #7f5200;
   --on-tertiary: #ffffff;
-  --tertiary-container: #fde7da;
-  --on-tertiary-container: #7a2a07;
+  --tertiary-container: #fef3c7;
+  --on-tertiary-container: #7f5200;
 
   --error: #b42318;
   --on-error: #ffffff;
   --error-container: #fee4e2;
   --on-error-container: #7a1a12;
 
-  /* Scenario planning uses calm blue (not purple) */
-  --simulation: #3a55c0;
+  --simulation: #2b45a0;
   --simulation-container: #e6ebfb;
   --on-simulation: #ffffff;
 
-  /* AI features share the brand teal: no "AI purple" */
-  --ai: var(--brand-700);
-  --ai-container: var(--brand-50);
-  --on-ai: #ffffff;
+  --ai: #7f5200;
+  --ai-container: #fef3c7;
+  --on-ai: #11120f;
 
   --color-healthy: #15803d;
   --color-attention: #b45309;
   --color-critical: #b42318;
-  --color-simulation: #3a55c0;
-  --color-ai: var(--brand-700);
+  --color-simulation: #2b45a0;
+  --color-ai: #7f5200;
 
-  /* Chart palette (colour-blind safe ordering) */
-  --chart-1: #137c72;
-  --chart-2: #e0652a;
-  --chart-3: #3a55c0;
-  --chart-4: #b8912f;
-  --chart-5: #7a8a91;
+  /* Chart palette */
+  --chart-1: #11120f;
+  --chart-2: #7f5200;
+  --chart-3: #2b45a0;
+  --chart-4: #8a8680;
+  --chart-5: #6f8aa8;
 
   --font-size-display: clamp(2.25rem, 4.6vw, 4rem);
   --font-size-heading: clamp(1.4rem, 2.4vw, 2.25rem);
@@ -91,31 +86,30 @@
   --surface-float: var(--surface-container-lowest);
   --text-primary: var(--on-surface);
   --text-secondary: var(--on-surface-variant);
-  --border-subtle: rgba(15, 26, 31, 0.08);
-  --shadow-soft: 0 1px 2px rgba(15, 26, 31, 0.04), 0 4px 16px rgba(15, 26, 31, 0.04);
+  --border-subtle: #cfcbbf;
+  --shadow-soft: 0 1px 2px rgba(17, 18, 15, 0.04), 0 4px 12px rgba(17, 18, 15, 0.04);
   --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --apple-spring-snappy: cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* Apple Typographic Tracking System */
+  /* Apple Typographic Tracking */
   --tracking-hero: -0.038em;
   --tracking-display: -0.032em;
   --tracking-title: -0.024em;
   --tracking-headline: -0.016em;
   --tracking-body: -0.005em;
-  --tracking-eyebrow: 0.08em;
+  --tracking-eyebrow: 0.12em;
 
   /* Apple Glass & Materiality */
-  --apple-card-light: rgba(255, 255, 255, 0.75);
-  --apple-card-dark: rgba(22, 22, 23, 0.78);
-  --apple-border-light: rgba(0, 0, 0, 0.08);
-  --apple-border-dark: rgba(255, 255, 255, 0.08);
-  --apple-specular-glow: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), transparent 70%);
+  --apple-card-light: rgba(246, 244, 238, 0.85);
+  --apple-card-dark: rgba(18, 18, 22, 0.88);
+  --apple-border-light: rgba(0, 0, 0, 0.09);
+  --apple-border-dark: rgba(255, 255, 255, 0.09);
 
-  /* Motion spring presets (use in CSS transitions / JS spring config) */
+  /* Motion spring presets */
   --spring-snappy: cubic-bezier(0.25, 1, 0.5, 1);
   --spring-gentle: cubic-bezier(0.34, 1.56, 0.64, 1);
   --spring-stiff: cubic-bezier(0.22, 1, 0.36, 1);
@@ -124,45 +118,50 @@
   --duration-base: 280ms;
   --duration-slow: 450ms;
   --duration-enter: 350ms;
-
-  /* Page scroll blur transition */
-  --navbar-blur-base: blur(0px);
-  --navbar-blur-scrolled: blur(20px) saturate(180%);
 }
 
 .dark {
-  --surface: #0c1215;
-  --surface-dim: #0c1215;
-  --surface-bright: #2a363b;
-  --surface-container-lowest: #080c0e;
-  --surface-container-low: #11181c;
-  --surface-container: #151e22;
-  --surface-container-high: #1c262b;
-  --surface-container-highest: #243035;
+  /* XERJ Direct Tokens (Night Mode) */
+  --z-bg: #0b0b0d;
+  --z-ink: #f4f2ec;
+  --z-mute: #8a8680;
+  --z-faint: #2b2a28;
+  --z-line: #3a3836;
+  --z-accent: #ffc400; /* Solid industrial gold/amber, NOT neon */
+  --z-cmp: #7f93aa;
 
-  --on-surface: #e6ecee;
-  --on-surface-variant: #a9b5ba;
-  --inverse-surface: #e6ecee;
-  --inverse-on-surface: #0c1215;
+  --surface: #0b0b0d;
+  --surface-dim: #0b0b0d;
+  --surface-bright: #1c1c21;
+  --surface-container-lowest: #070709;
+  --surface-container-low: #111114;
+  --surface-container: #16161a;
+  --surface-container-high: #1c1c22;
+  --surface-container-highest: #25252c;
 
-  --outline: #85929a;
-  --outline-variant: #2c383d;
-  --surface-tint: #7ccfc5;
+  --on-surface: #f4f2ec;
+  --on-surface-variant: #8a8680;
+  --inverse-surface: #f4f2ec;
+  --inverse-on-surface: #0b0b0d;
 
-  --primary: #7ccfc5;
-  --on-primary: #04302c;
-  --primary-container: #12665f;
-  --on-primary-container: #d6f2ee;
+  --outline: #5c5954;
+  --outline-variant: #3a3836;
+  --surface-tint: #ffc400;
 
-  --secondary: #6cc6bb;
-  --on-secondary: #04302c;
-  --secondary-container: #0f4a45;
-  --on-secondary-container: #cff0ec;
+  --primary: #f4f2ec;
+  --on-primary: #0b0b0d;
+  --primary-container: #1c1c22;
+  --on-primary-container: #f4f2ec;
 
-  --tertiary: #f59e6b;
-  --on-tertiary: #3d1404;
-  --tertiary-container: #5a2410;
-  --on-tertiary-container: #fde7da;
+  --secondary: #ffc400;
+  --on-secondary: #0b0b0d;
+  --secondary-container: #332700;
+  --on-secondary-container: #ffc400;
+
+  --tertiary: #ffc400;
+  --on-tertiary: #0b0b0d;
+  --tertiary-container: #332700;
+  --on-tertiary-container: #ffc400;
 
   --error: #f97066;
   --on-error: #3d0a05;
@@ -173,20 +172,22 @@
   --simulation-container: #1d2a5c;
   --on-simulation: #0b1440;
 
-  --ai: #7ccfc5;
-  --ai-container: #0f3e3a;
-  --on-ai: #04302c;
+  --ai: #ffc400;
+  --ai-container: #332700;
+  --on-ai: #ffc400;
 
   --color-healthy: #4ade80;
-  --color-attention: #fbbf24;
+  --color-attention: #ffc400;
   --color-critical: #f97066;
+  --color-simulation: #8da2f0;
+  --color-ai: #ffc400;
 
-  --chart-1: #6cc6bb;
-  --chart-2: #f59e6b;
+  --chart-1: #f4f2ec;
+  --chart-2: #ffc400;
   --chart-3: #8da2f0;
-  --chart-4: #d9b65c;
-  --chart-5: #94a3aa;
+  --chart-4: #8a8680;
+  --chart-5: #7f93aa;
 
-  --border-subtle: rgba(230, 236, 238, 0.08);
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --border-subtle: #3a3836;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.35);
 }
