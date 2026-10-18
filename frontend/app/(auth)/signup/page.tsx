@@ -1,5 +1,5 @@
 "use client";
-
+import { apiFetch } from '@/app/lib/api';
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -69,7 +69,7 @@ export default function SignUpPage() {
     try {
       const workspaceId = `ws-${companyName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 20)}` || "ws-default";
 
-      const resp = await fetch("/api/v1/auth/signup", {
+      const resp = await apiFetch("/api/v1/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

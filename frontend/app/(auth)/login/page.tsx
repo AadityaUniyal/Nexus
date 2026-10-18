@@ -1,5 +1,5 @@
 "use client";
-
+import { apiFetch } from '@/app/lib/api';
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -90,7 +90,7 @@ function AppleStyleLoginContent() {
 
     try {
       // In production and local, always use relative /api/v1 rewrite to guarantee seamless origin handling
-      const resp = await fetch("/api/v1/auth/login", {
+      const resp = await apiFetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),

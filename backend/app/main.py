@@ -88,6 +88,17 @@ async def add_process_time_and_security_headers(request: Request, call_next):
             token in ("demo-operator-token", "demo_operator", "nexus_demo_token") or token.startswith("demo_")
         ):
             role = "OPERATIONS_MANAGER"
+    # Fallback to session cookie if role not set from Authorization header
+    if role is None:
+        token = request.cookies.get("nexus_session_token")
+        if token:
+            payload = decode_token(token)
+            if payload:
+                role = payload.get("role")
+            elif settings.ENABLE_DEMO_AUTH and (
+                token in ("demo-operator-token", "demo_operator", "nexus_demo_token") or token.startswith("demo_")
+            ):
+                role = "OPERATIONS_MANAGER"
     request.state.role = role
     start_time = time.time()
     # Admin authorization is enforced per-route via require_permission(...)

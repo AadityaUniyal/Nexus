@@ -17,6 +17,8 @@ import { useToast } from "@/components/ui/toast";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
 import { SkeletonTable } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { apiFetch } from "@/lib/api/http";
 
 export default function IncidentCenterPage() {
   const { toast } = useToast();
@@ -34,7 +36,7 @@ export default function IncidentCenterPage() {
   const fetchIncidents = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/v1/incidents");
+      const res = await apiFetch("/api/v1/incidents");
       if (res.ok) {
         const json = await res.json();
         const list = Array.isArray(json) ? json : (json?.data && Array.isArray(json.data)) ? json.data : [];
@@ -81,9 +83,8 @@ export default function IncidentCenterPage() {
   const handleCreateIncident = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("/api/v1/incidents", {
+      const res = await apiFetch("/api/v1/incidents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
           summary,
@@ -143,40 +144,34 @@ export default function IncidentCenterPage() {
     <AppShell>
       <div className="space-y-6 animate-in fade-in duration-500">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono-data text-nexus-on-surface-variant uppercase">
-              <span>Telemetry Anomaly Triage</span>
-              <span>·</span>
-              <span>State Machine Engine</span>
+        <PageHeader
+          eyebrow="Telemetry Anomaly Triage · State Machine Engine"
+          title="Incident Intelligence Center"
+          description="Live corridor telemetry stream anomaly triage, real-time risk scoring, and deterministic intervention triggers."
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={fetchIncidents}
+                isLoading={isLoading}
+                className="font-mono-data text-xs"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Refresh
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsCreateOpen(true)}
+                className="font-mono-data text-xs"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Report Incident
+              </Button>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Incident Intelligence Center
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={fetchIncidents}
-              isLoading={isLoading}
-              className="font-mono-data text-xs"
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-              Refresh
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsCreateOpen(true)}
-              className="font-mono-data text-xs"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Report Incident
-            </Button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Apple Segmented Severity Triage Tabs */}
         <div className="flex items-center justify-between overflow-x-auto pb-1">

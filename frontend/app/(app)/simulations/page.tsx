@@ -12,6 +12,9 @@ import { SimulationItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonTable } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { AppleCard, AppleCardContent } from "@/components/ui/AppleCard";
+import { apiFetch } from "@/lib/api/http";
 
 export default function SimulationsPage() {
   const [simulations, setSimulations] = React.useState<SimulationItem[]>([]);
@@ -20,7 +23,7 @@ export default function SimulationsPage() {
   const fetchSimulations = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/v1/simulations");
+      const res = await apiFetch("/api/v1/simulations");
       if (res.ok) {
         const json = await res.json();
         const list = Array.isArray(json) ? json : (json?.data && Array.isArray(json.data)) ? json.data : [];
@@ -77,59 +80,55 @@ export default function SimulationsPage() {
     <AppShell>
       <div className="space-y-6 animate-in fade-in duration-500">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono-data text-nexus-on-surface-variant uppercase">
-              <span>Decision Simulation Engine</span>
-              <span>·</span>
-              <span>Pure Deterministic Branching</span>
+        <PageHeader
+          eyebrow="Decision Simulation Engine · Deterministic Branching"
+          title="Simulation Lab"
+          description="Evaluate operational variables and alternate routing policies across digital twins without live dispatch impact."
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={fetchSimulations}
+                isLoading={isLoading}
+                className="font-mono-data text-xs"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Refresh
+              </Button>
+              <Link href="/simulations/new">
+                <Button variant="simulation" size="sm" className="font-mono-data text-xs shadow-tactile">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  New Scenario Run
+                </Button>
+              </Link>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Simulation Lab
-            </h1>
-          </div>
+          }
+        />
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={fetchSimulations}
-              isLoading={isLoading}
-              className="font-mono-data text-xs"
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-              Refresh
-            </Button>
+        {/* Feature Explainer Banner with AppleCard */}
+        <AppleCard glass interactive={false} className="border-purple-500/20 bg-purple-500/[0.03]">
+          <AppleCardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-1.5">
+              <Badge variant="simulation" size="sm">
+                Safe Hypothesis Layer
+              </Badge>
+              <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 tracking-tight">
+                Test Operational Variables Without Live Dispatch Impact
+              </h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400 max-w-2xl leading-relaxed">
+                Every simulation executes in isolation on a deterministic mathematical model. Once a scenario
+                is evaluated and approved, apply the decision with ACID transactional integrity.
+              </p>
+            </div>
+
             <Link href="/simulations/new">
-              <Button variant="simulation" size="sm" className="font-mono-data text-xs shadow-tactile">
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                New Scenario Run
+              <Button variant="simulation" size="sm" className="font-mono-data text-xs shrink-0">
+                Build Scenario <ArrowRight className="h-3 w-3 ml-1" />
               </Button>
             </Link>
-          </div>
-        </div>
-
-        {/* Feature Explainer Banner */}
-        <div className="p-6 rounded-2xl simulation-layer border border-purple-500/30 bg-purple-500/[0.02] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-1">
-            <Badge variant="simulation" size="sm">
-              Safe Hypothesis Layer
-            </Badge>
-            <h3 className="text-base font-bold text-nexus-on-surface">
-              Test Operational Variables Without Live Dispatch Impact
-            </h3>
-            <p className="text-xs text-nexus-on-surface-variant max-w-2xl leading-relaxed">
-              Every simulation executes in isolation on a deterministic mathematical model. Once a scenario
-              is evaluated and approved, apply the decision with ACID transactional integrity.
-            </p>
-          </div>
-
-          <Link href="/simulations/new">
-            <Button variant="simulation" size="sm" className="font-mono-data text-xs shrink-0">
-              Build Scenario <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-        </div>
+          </AppleCardContent>
+        </AppleCard>
 
         {/* Simulations List with Loading State */}
         {isLoading ? (

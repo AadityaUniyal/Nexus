@@ -38,7 +38,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     const ws = localStorage.getItem("nexus_active_workspace_id");
     if (ws && !headers.has("X-Workspace-ID")) headers.set("X-Workspace-ID", ws);
   }
-  return fetch(path, { ...init, headers });
+  return fetch(path, { ...init, headers, credentials: 'include' });
 }
 
 export async function apiJson<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {

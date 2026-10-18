@@ -49,23 +49,15 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    if (process.env.VERCEL) {
-      return [
-        {
-          source: "/api/v1/:path*",
-          destination: "/api/index.py",
-        },
-        {
-          source: "/health/:path*",
-          destination: "/api/index.py",
-        },
-      ];
-    }
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8000";
     return [
       {
         source: "/api/v1/:path*",
         destination: `${backendUrl}/api/v1/:path*`,
+      },
+      {
+        source: "/health/:path*",
+        destination: `${backendUrl}/health/:path*`,
       },
     ];
   },

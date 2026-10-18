@@ -114,6 +114,20 @@
   --apple-border-light: rgba(0, 0, 0, 0.08);
   --apple-border-dark: rgba(255, 255, 255, 0.08);
   --apple-specular-glow: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), transparent 70%);
+
+  /* Motion spring presets (use in CSS transitions / JS spring config) */
+  --spring-snappy: cubic-bezier(0.25, 1, 0.5, 1);
+  --spring-gentle: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-stiff: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-instant: 100ms;
+  --duration-fast: 180ms;
+  --duration-base: 280ms;
+  --duration-slow: 450ms;
+  --duration-enter: 350ms;
+
+  /* Page scroll blur transition */
+  --navbar-blur-base: blur(0px);
+  --navbar-blur-scrolled: blur(20px) saturate(180%);
 }
 
 .dark {

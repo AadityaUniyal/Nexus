@@ -26,6 +26,7 @@ import {
 } from "@/lib/mock-data";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api/http";
 import { FadeIn, PulseLED } from "@/components/ui/motion-animations";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -72,9 +73,9 @@ export default function LiveWorldPage() {
     async function fetchLiveWorldData() {
       try {
         const [vRes, wRes, iRes] = await Promise.all([
-          fetch("/api/v1/operations/vehicles").catch(() => null),
-          fetch("/api/v1/operations/warehouses").catch(() => null),
-          fetch("/api/v1/incidents").catch(() => null),
+          apiFetch("/api/v1/operations/vehicles").catch(() => null),
+          apiFetch("/api/v1/operations/warehouses").catch(() => null),
+          apiFetch("/api/v1/incidents").catch(() => null),
         ]);
 
         if (vRes && vRes.ok) {

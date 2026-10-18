@@ -59,16 +59,16 @@ const NAVIGATION: NavSection[] = [
   {
     title: "Workspace",
     items: [
-      { name: "Company Command", href: "/admin/company", icon: Building2 },
-      { name: "Audit Trail", href: "/admin/audit", icon: Shield },
-      { name: "Status & Health", href: "/status", icon: LineChart },
       { name: "Notifications", href: "/notifications", icon: Bell },
-      { name: "Settings", href: "/settings", icon: Settings },
       { name: "Admin Console", href: "/admin/dashboard", icon: Shield },
-      { name: "Usage analytics", href: "/admin/analytics", icon: LineChart },
+      { name: "Audit Trail", href: "/admin/audit", icon: LineChart },
+      { name: "Settings", href: "/settings", icon: Settings },
+      { name: "Status & Health", href: "/status", icon: Building2 },
     ],
   },
 ];
+
+import { apiFetch } from "@/lib/api/http";
 
 type Health = "checking" | "ok" | "degraded";
 
@@ -80,7 +80,7 @@ function useApiHealth(): { state: Health; latency: number | null } {
     const ping = async () => {
       const t0 = performance.now();
       try {
-        const r = await fetch("/api/v1/health", { cache: "no-store" });
+        const r = await apiFetch("/api/v1/health", { cache: "no-store" });
         if (!alive) return;
         setLatency(Math.round(performance.now() - t0));
         setState(r.ok ? "ok" : "degraded");
