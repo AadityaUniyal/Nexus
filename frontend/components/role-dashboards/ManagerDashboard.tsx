@@ -26,6 +26,7 @@ import { IncidentItem, SimulationItem, WarehouseItem } from "@/lib/mock-data";
 import { realtimeClient, NexusPulseItem } from "@/lib/realtime-client";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
+import { TransporterIntelligenceCard } from "@/components/intelligence/TransporterIntelligenceCard";
 
 export interface ManagerDashboardProps {
   incidents: IncidentItem[];
@@ -247,6 +248,9 @@ export function ManagerDashboard({
           </Card>
         </div>
       </div>
+
+      {/* Ground-Level Transporter Intelligence & Yield Optimization */}
+      <TransporterIntelligenceCard />
 
       {/* Real-Time Operational Event Feed */}
       {livePulse.length > 0 && (
