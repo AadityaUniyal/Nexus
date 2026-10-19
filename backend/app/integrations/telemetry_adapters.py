@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from pydantic import ValidationError
 from app.services.telemetry_service import NormalizedTelemetryPacket
 
 class TelemetryAdapter:
@@ -7,17 +8,21 @@ class TelemetryAdapter:
         """
         Normalize Samsara telematics payload (GPS + Engine state).
         """
-        vehicle_id = str(payload.get("vehicleId") or payload.get("id") or "SAMSARA-UNKNOWN")
+        vehicle_id = payload.get("vehicleId") or payload.get("id")
+        if not vehicle_id:
+            raise ValueError("Samsara telemetry must include a vehicleId or id.")
         location = payload.get("location", {})
         coords = location.get("coords", {})
-        lat = coords.get("latitude") or payload.get("latitude") or 41.8781
-        lng = coords.get("longitude") or payload.get("longitude") or -87.6298
-        speed = payload.get("speedMilesPerHour", 0.0) * 1.60934  # convert mph to km/h
-        fuel = payload.get("fuelPercent") or payload.get("batteryLevelPct")
+        lat = coords.get("latitude", payload.get("latitude"))
+        lng = coords.get("longitude", payload.get("longitude"))
+        if lat is None or lng is None:
+            raise ValueError("Samsara telemetry must include GPS coordinates.")
+        speed = float(payload.get("speedMilesPerHour") or 0.0) * 1.60934
+        fuel = payload.get("fuelPercent", payload.get("batteryLevelPct"))
         
         return NormalizedTelemetryPacket(
             vehicle_identifier=vehicle_id,
-            timestamp=payload.get("time") or payload.get("timestamp") or "",
+            **({"timestamp": payload.get("time") or payload.get("timestamp")} if payload.get("time") or payload.get("timestamp") else {}),
             latitude=float(lat),
             longitude=float(lng),
             speed_kmh=round(speed, 1),
@@ -34,14 +39,18 @@ class TelemetryAdapter:
         Normalize Geotab LogRecord payload.
         """
         device = payload.get("device", {})
-        device_id = str(device.get("id") or payload.get("deviceId") or "GEOTAB-UNKNOWN")
-        lat = payload.get("latitude", 41.8781)
-        lng = payload.get("longitude", -87.6298)
+        device_id = device.get("id") or payload.get("deviceId")
+        if not device_id:
+            raise ValueError("Geotab telemetry must include a device id.")
+        lat = payload.get("latitude")
+        lng = payload.get("longitude")
+        if lat is None or lng is None:
+            raise ValueError("Geotab telemetry must include GPS coordinates.")
         speed = payload.get("speed", 0.0)
         
         return NormalizedTelemetryPacket(
             vehicle_identifier=device_id,
-            timestamp=payload.get("dateTime") or "",
+            **({"timestamp": payload.get("dateTime")} if payload.get("dateTime") else {}),
             latitude=float(lat),
             longitude=float(lng),
             speed_kmh=float(speed),
@@ -57,17 +66,25 @@ class TelemetryAdapter:
         """
         Normalize Azure IoT Hub device telemetry message.
         """
-        device_id = str(payload.get("deviceId") or payload.get("unitId") or "IOT-DEVICE")
+        device_id = payload.get("deviceId") or payload.get("unitId")
+        if not device_id:
+            raise ValueError("Azure IoT telemetry must include a device identity.")
         telemetry = payload.get("telemetry", payload)
+        lat = telemetry.get("lat", telemetry.get("latitude"))
+        lng = telemetry.get("lng", telemetry.get("longitude"))
+        if lat is None or lng is None:
+            raise ValueError("Azure IoT telemetry must include lat/lng coordinates.")
+        speed = telemetry.get("speed_kmh", telemetry.get("speed", 0.0))
+        battery = telemetry.get("battery_pct", telemetry.get("battery"))
         
         return NormalizedTelemetryPacket(
             vehicle_identifier=device_id,
-            timestamp=payload.get("enqueuedTime") or payload.get("timestamp") or "",
-            latitude=float(telemetry.get("lat") or telemetry.get("latitude") or 41.8781),
-            longitude=float(telemetry.get("lng") or telemetry.get("longitude") or -87.6298),
-            speed_kmh=float(telemetry.get("speed_kmh") or telemetry.get("speed") or 0.0),
+            **({"timestamp": payload.get("enqueuedTime") or payload.get("timestamp")} if payload.get("enqueuedTime") or payload.get("timestamp") else {}),
+            latitude=float(lat),
+            longitude=float(lng),
+            speed_kmh=float(speed or 0.0),
             heading=float(telemetry.get("heading") or 0.0),
-            battery_pct=int(telemetry.get("battery_pct") or telemetry.get("battery") or 100),
+            battery_pct=int(battery) if battery is not None else None,
             temperature_celsius=telemetry.get("temperature"),
             engine_state=str(telemetry.get("engine_state") or "RUNNING"),
             source_provider="AZURE_IOT",

@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from fastapi import APIRouter, Depends, status, Query
@@ -72,6 +73,10 @@ async def create_organization(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new tenant organization and its initial workspace."""
+    if principal.role != RoleEnum.ADMINISTRATOR:
+        raise ForbiddenException("Only the provisioned account administrator can create an organization")
+    if principal.organization_id:
+        raise ForbiddenException("Your account already belongs to an organization")
     slug = re.sub(r"[^a-z0-9]+", "-", req.name.lower()).strip("-") + f"-{uuid.uuid4().hex[:6]}"
     
     org = Organization(
@@ -161,24 +166,7 @@ async def get_my_organization(
 ):
     """Retrieve details for the current user's authenticated organization."""
     if not principal.organization_id:
-        # Fallback to org-nexus-demo
-        stmt = select(Organization).where(Organization.id == "org-nexus-demo")
-        res = await db.execute(stmt)
-        org = res.scalar_one_or_none()
-        if not org:
-            # Create demo org
-            org = Organization(
-                id="org-nexus-demo",
-                name="Nexus Enterprise Demo Organization",
-                slug="nexus-demo-org",
-                industry="GLOBAL_LOGISTICS",
-                country="United States",
-                plan="ENTERPRISE",
-            )
-            db.add(org)
-            await db.commit()
-            await db.refresh(org)
-        return org
+        raise EntityNotFoundException("Organization", "current user")
 
     stmt = select(Organization).where(Organization.id == principal.organization_id)
     result = await db.execute(stmt)
@@ -193,7 +181,9 @@ async def list_organization_workspaces(
     db: AsyncSession = Depends(get_db)
 ):
     """List workspaces available within the user's organization."""
-    org_id = principal.organization_id or "org-nexus-demo"
+    org_id = principal.organization_id
+    if not org_id:
+        raise ForbiddenException("Organization membership required")
     stmt = select(Workspace).where(Workspace.organization_id == org_id)
     result = await db.execute(stmt)
     return result.scalars().all()
@@ -201,11 +191,13 @@ async def list_organization_workspaces(
 @router.post("/workspaces", response_model=WorkspaceRead, status_code=status.HTTP_201_CREATED)
 async def create_workspace(
     req: WorkspaceCreate,
-    principal: RequestPrincipal = Depends(require_authenticated),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new workspace within the current organization."""
-    org_id = principal.organization_id or "org-nexus-demo"
+    org_id = principal.organization_id
+    if not org_id:
+        raise ForbiddenException("Organization membership required")
     slug = re.sub(r"[^a-z0-9]+", "-", req.name.lower()).strip("-") + f"-{uuid.uuid4().hex[:6]}"
     
     ws = Workspace(
@@ -234,19 +226,39 @@ async def create_workspace(
 @router.post("/invite", status_code=status.HTTP_200_OK)
 async def invite_member(
     req: MemberInvite,
-    principal: RequestPrincipal = Depends(require_authenticated),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Invite a new colleague to the organization/workspace."""
     ws_id = req.workspace_id or principal.workspace_id
+    if not principal.organization_id or not ws_id:
+        raise ForbiddenException("Organization and workspace membership are required")
+    if ws_id != principal.workspace_id:
+        raise ForbiddenException("Invitations must target the currently selected workspace")
+    ws_stmt = select(Workspace).where(
+        Workspace.id == ws_id,
+        Workspace.organization_id == principal.organization_id,
+    )
+    if not (await db.execute(ws_stmt)).scalar_one_or_none():
+        raise ForbiddenException("Workspace is outside your organization")
+    try:
+        invite_role = RoleEnum(req.role.upper())
+    except ValueError as exc:
+        raise NexusException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code="INVALID_INVITATION_ROLE",
+            message="The requested invitation role is not supported.",
+        ) from exc
+    if invite_role == RoleEnum.ADMINISTRATOR and not principal.has_permission(PermissionEnum.MANAGE_ROLES):
+        raise ForbiddenException("Only an administrator can invite another administrator")
     token = f"inv-{uuid.uuid4().hex}"
     
     inv = Invitation(
         workspace_id=ws_id,
         email=req.email,
-        role=req.role.upper(),
+        role=invite_role.value,
         token=token,
-        expires_at="2026-12-31T23:59:59Z",
+        expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
     )
     db.add(inv)
     await db.commit()
@@ -254,20 +266,22 @@ async def invite_member(
     return {
         "status": "INVITATION_SENT",
         "email": req.email,
-        "role": req.role.upper(),
+        "role": invite_role.value,
         "inviteToken": token,
         "inviteUrl": f"/signup?invite={token}",
     }
 
 @router.get("/members", response_model=List[MemberRead])
 async def list_members(
-    principal: RequestPrincipal = Depends(require_authenticated),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_USERS)),
     db: AsyncSession = Depends(get_db)
 ):
     """List members of current workspace and their role permissions."""
-    stmt = select(User).where(User.workspace_id == principal.workspace_id)
+    stmt = select(User, WorkspaceMembership.role).join(
+        WorkspaceMembership, WorkspaceMembership.user_id == User.id
+    ).where(WorkspaceMembership.workspace_id == principal.workspace_id)
     result = await db.execute(stmt)
-    users = result.scalars().all()
+    users = result.all()
     
     return [
         MemberRead(
@@ -275,8 +289,8 @@ async def list_members(
             user_id=u.id,
             name=u.name,
             email=u.email,
-            role=u.role,
+            role=membership_role,
             joined_at=str(u.created_at),
         )
-        for u in users
+        for u, membership_role in users
     ]

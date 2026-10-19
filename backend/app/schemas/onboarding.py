@@ -1,5 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel
+from app.auth.principal import RoleEnum
 
 class OnboardingStateRead(BaseModel):
     status: str
@@ -15,7 +16,7 @@ class WorkspaceCreateRequest(BaseModel):
     region: str = "US_CENTRAL"
     timezone: str = "America/Chicago"
     scale: str = "NATIONAL_NETWORK"
-    isDemo: bool = True
+    isDemo: bool = False
 
 class EnvironmentSetupRequest(BaseModel):
     telemetryRateHz: int = 1
@@ -23,7 +24,7 @@ class EnvironmentSetupRequest(BaseModel):
     cloudSyncMode: str = "HYBRID_LOCAL_MIRRORED"
 
 class RolePreferenceRequest(BaseModel):
-    preferredRole: str = "OPERATIONS_MANAGER"
+    preferredRole: RoleEnum = RoleEnum.OPERATIONS_MANAGER
     department: str = "Global Logistics"
 
 class NotificationsSetupRequest(BaseModel):

@@ -15,7 +15,7 @@
 
 <br />
 
-**[🚀 Live Production Web App](https://nexus-logistics-os.vercel.app)** · **[📋 Launch Readiness Ledger](docs/LAUNCH_READINESS.md)** · **[🔍 Technical Audit Matrix](docs/AUDIT_MATRIX.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)** · **[☁️ Azure Roadmap](docs/AZURE_ENTERPRISE_INTEGRATIONS_ROADMAP.md)** · **[🚀 Deployment Playbook](docs/DEPLOYMENT.md)**
+**[🚀 Live Production Web App](https://voyage-freight.vercel.app)** · **[📋 Launch Readiness Ledger](docs/LAUNCH_READINESS.md)** · **[🔍 Technical Audit Matrix](docs/AUDIT_MATRIX.md)** · **[⚡ API Docs (Swagger)](https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/docs)** · **[☁️ Azure Roadmap](docs/AZURE_ENTERPRISE_INTEGRATIONS_ROADMAP.md)** · **[🚀 Deployment Playbook](docs/DEPLOYMENT.md)**
 
 </div>
 

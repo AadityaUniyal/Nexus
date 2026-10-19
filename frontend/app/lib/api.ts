@@ -8,7 +8,7 @@ export async function apiFetch(
 ): Promise<Response> {
   // Ensure we always send credentials for same‑origin requests
   const defaultInit: RequestInit = {
-    credentials: "same-origin",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -23,17 +23,6 @@ export async function apiFetch(
       ...(init.headers as Record<string, string>),
     },
   };
-
-  // If a token exists in localStorage, include it as a Bearer header.
-  // This is optional because the backend also reads the session cookie.
-  try {
-    const token = typeof window !== "undefined" && localStorage.getItem("nexus_access_token");
-    if (token) {
-      (mergedInit.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-    }
-  } catch {
-    // ignore errors during SSR where window is undefined
-  }
 
   return fetch(input, mergedInit);
 }

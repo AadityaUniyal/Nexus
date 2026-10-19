@@ -1,6 +1,6 @@
 import logging
 from typing import Optional, Callable, List
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, Cookie, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from app.db.session import get_db
@@ -15,6 +15,7 @@ logger = logging.getLogger("nexus.auth")
 
 async def get_current_principal(
     authorization: Optional[str] = Header(None),
+    session_cookie: Optional[str] = Cookie(None, alias="nexus_session_token"),
     x_workspace_id: Optional[str] = Header(None, alias="X-Workspace-ID"),
     db: AsyncSession = Depends(get_db)
 ) -> RequestPrincipal:
@@ -22,47 +23,43 @@ async def get_current_principal(
     Extracts and verifies the JWT bearer token, builds the authoritative RequestPrincipal.
     Derives organization and workspace strictly from authenticated user memberships.
     """
-    if not authorization or not authorization.startswith("Bearer "):
-        raise UnauthenticatedException("Bearer token required to access operational resources")
-
-    token = authorization.split(" ")[1]
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1]
+    elif session_cookie:
+        token = session_cookie
+    else:
+        raise UnauthenticatedException("An authenticated session is required to access operational resources")
     claims = await verify_clerk_token(token)
     sub = claims.get("sub")
     if not sub:
         raise UnauthenticatedException("Invalid token payload: missing subject (sub)")
 
-    email = claims.get("email") or f"{sub}@nexus.internal"
-    display_name = claims.get("name") or "Operational User"
-
-    # Query local user
-    stmt = select(User).where(or_(User.email == email, User.id == sub, User.clerk_user_id == sub))
+    # The signed subject is the identity key. Email and display-name claims are
+    # profile metadata and must never select which local account is authenticated.
+    stmt = select(User).where(or_(User.id == sub, User.clerk_user_id == sub))
     result = await db.execute(stmt)
     user = result.scalars().first()
 
-    claim_role = claims.get("role")
     role: Optional[RoleEnum] = None
-    if claim_role:
-        try:
-            role = RoleEnum(claim_role.upper())
-        except Exception:
-            role = None
-
     organization_id: Optional[str] = None
     workspace_id: Optional[str] = None
     is_active = True
 
     if user:
-        if not role:
-            try:
-                role = RoleEnum(user.role)
-            except Exception:
-                role = RoleEnum.OPERATIONS_MANAGER
+        email = user.email
+        display_name = user.name
+        try:
+            role = RoleEnum(user.role.upper())
+        except Exception as exc:
+            logger.error("User %s has an unsupported role configured", user.id)
+            raise ForbiddenException("Your workspace role is not configured correctly") from exc
         nexus_user_id = user.id
         workspace_id = user.workspace_id
         organization_id = user.organization_id
         is_active = user.is_active
 
-        # If user has an explicit active workspace switch request in header, verify membership
+        # Workspace selection is a request, never an authority source. Resolve both the
+        # selected workspace and its role from the persisted membership row.
         if isinstance(x_workspace_id, str) and x_workspace_id.strip() and x_workspace_id != workspace_id:
             from app.models.user import WorkspaceMembership
             m_stmt = select(WorkspaceMembership).where(
@@ -70,8 +67,22 @@ async def get_current_principal(
                 WorkspaceMembership.workspace_id == x_workspace_id
             )
             m_res = await db.execute(m_stmt)
-            if m_res.scalar_one_or_none():
-                workspace_id = x_workspace_id
+            membership = m_res.scalar_one_or_none()
+            if not membership:
+                raise ForbiddenException("You are not a member of the requested workspace")
+            try:
+                role = RoleEnum(membership.role.upper())
+            except Exception as exc:
+                logger.error("User %s has an unsupported role for workspace %s", user.id, x_workspace_id)
+                raise ForbiddenException("Your workspace role is not configured correctly") from exc
+
+            ws_stmt = select(Workspace).where(Workspace.id == x_workspace_id)
+            ws_res = await db.execute(ws_stmt)
+            selected_workspace = ws_res.scalar_one_or_none()
+            if not selected_workspace or not selected_workspace.is_active:
+                raise ForbiddenException("The requested workspace is unavailable")
+            workspace_id = selected_workspace.id
+            organization_id = selected_workspace.organization_id
 
         # Resolve organization_id from workspace if not set directly on user
         if not organization_id and workspace_id:
@@ -82,13 +93,7 @@ async def get_current_principal(
                 organization_id = ws_obj.organization_id
 
     else:
-        # Default unregistered authenticated user
-        if not role:
-            role = RoleEnum.VIEWER
-        nexus_user_id = f"usr-{sub[:8]}"
-        workspace_id = claims.get("workspace_id") or "ws-continental-fleet-01"
-        organization_id = claims.get("organization_id") or "org-nexus-demo"
-        is_active = True
+        raise ForbiddenException("This account is authenticated but is not provisioned in a Nexus workspace")
 
     if not is_active:
         raise ForbiddenException("User account has been suspended by an administrator")
@@ -110,21 +115,19 @@ async def get_current_principal(
 
 async def get_optional_principal(
     authorization: Optional[str] = Header(None),
+    session_cookie: Optional[str] = Cookie(None, alias="nexus_session_token"),
     x_workspace_id: Optional[str] = Header(None, alias="X-Workspace-ID"),
     db: AsyncSession = Depends(get_db)
 ) -> Optional[RequestPrincipal]:
     """Optional authentication for endpoints that support public or anonymous access."""
-    if not authorization or not authorization.startswith("Bearer "):
+    if not authorization and not session_cookie:
         return None
-    try:
-        return await get_current_principal(
-            authorization=authorization,
-            x_workspace_id=x_workspace_id if isinstance(x_workspace_id, str) else None,
-            db=db
-        )
-    except Exception as e:
-        logger.warning(f"get_optional_principal authentication bypassed: {e}")
-        return None
+    return await get_current_principal(
+        authorization=authorization,
+        session_cookie=session_cookie,
+        x_workspace_id=x_workspace_id if isinstance(x_workspace_id, str) else None,
+        db=db
+    )
 
 def require_authenticated(principal: RequestPrincipal = Depends(get_current_principal)) -> RequestPrincipal:
     if not principal.nexus_user_id:

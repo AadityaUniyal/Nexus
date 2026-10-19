@@ -18,6 +18,9 @@ class Token(BaseModel):
     def tokenType(self) -> str:
         return self.token_type
 
+class AuthSessionResponse(BaseModel):
+    user: "UserRead"
+
 class TokenPayload(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
@@ -44,6 +47,7 @@ class UserCreate(UserBase):
 
     password: str
     workspace_id: Optional[str] = Field(None, alias="workspaceId")
+    workspace_name: Optional[str] = Field(None, alias="workspaceName")
 
 class UserUpdate(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -85,3 +89,4 @@ class AuthMessageResponse(BaseModel):
     message: str
 
 Token.model_rebuild()
+AuthSessionResponse.model_rebuild()

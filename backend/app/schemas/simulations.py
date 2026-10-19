@@ -4,21 +4,21 @@ from pydantic import BaseModel, Field, ConfigDict
 class SimulationVariables(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    vehicle_id: Optional[str] = Field("v-104", alias="vehicleId")
-    alternate_route_type: str = Field("I-70_SOUTH_DETOUR", alias="alternateRouteType")
-    speed_delta_pct: float = Field(10.0, alias="speedDeltaPct")
-    fuel_cost_per_km: float = Field(0.42, alias="fuelCostPerKm")
-    priority_reordering: bool = Field(True, alias="priorityReordering")
+    vehicle_id: Optional[str] = Field(None, alias="vehicleId")
+    alternate_route_type: Optional[str] = Field(None, alias="alternateRouteType")
+    speed_delta_pct: float = Field(..., ge=-50, le=50, alias="speedDeltaPct")
+    fuel_cost_per_km: float = Field(..., ge=0, alias="fuelCostPerKm")
+    priority_reordering: bool = Field(False, alias="priorityReordering")
 
 class BaseMetricsSnapshot(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
-    total_distance_km: float = Field(1620.0, alias="totalDistanceKm")
-    avg_duration_mins: int = Field(940, alias="avgDurationMins")
-    current_delay_mins: int = Field(180, alias="currentDelayMins")
-    orders_count: int = Field(14, alias="ordersCount")
-    total_order_value: float = Field(45000.0, alias="totalOrderValue")
-    base_cost_usd: float = Field(1450.0, alias="baseCostUsd")
+    total_distance_km: float = Field(..., gt=0, alias="totalDistanceKm")
+    avg_duration_mins: int = Field(..., gt=0, alias="avgDurationMins")
+    current_delay_mins: int = Field(0, ge=0, alias="currentDelayMins")
+    orders_count: int = Field(0, ge=0, alias="ordersCount")
+    total_order_value: float = Field(0, ge=0, alias="totalOrderValue")
+    base_cost_usd: float = Field(..., ge=0, alias="baseCostUsd")
 
 class SimulatedMetricsOutput(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -29,14 +29,14 @@ class SimulatedMetricsOutput(BaseModel):
     net_time_saved_mins: int = Field(..., alias="netTimeSavedMins")
     total_cost_usd: float = Field(..., alias="totalCostUsd")
     cost_delta_usd: float = Field(..., alias="costDeltaUsd")
-    sla_breach_risk_pct: float = Field(..., alias="slaBreachRiskPct")
-    orders_at_risk: int = Field(..., alias="ordersAtRisk")
-    recommendation_score: int = Field(..., alias="recommendationScore")
+    sla_breach_risk_pct: Optional[float] = Field(None, alias="slaBreachRiskPct")
+    orders_at_risk: Optional[int] = Field(None, alias="ordersAtRisk")
+    recommendation_score: Optional[int] = Field(None, alias="recommendationScore")
     verdict: str
     insights: List[str]
 
     @property
-    def recommendationScore(self) -> int:
+    def recommendationScore(self) -> Optional[int]:
         return self.recommendation_score
 
     @property
@@ -60,7 +60,7 @@ class SimulatedMetricsOutput(BaseModel):
         return self.total_distance_km
 
     @property
-    def slaBreachRiskPct(self) -> float:
+    def slaBreachRiskPct(self) -> Optional[float]:
         return self.sla_breach_risk_pct
 
     @property
@@ -68,7 +68,7 @@ class SimulatedMetricsOutput(BaseModel):
         return self.projected_delay_mins
 
     @property
-    def ordersAtRisk(self) -> int:
+    def ordersAtRisk(self) -> Optional[int]:
         return self.orders_at_risk
 
 class SimulationCreate(BaseModel):

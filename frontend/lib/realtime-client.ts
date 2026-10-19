@@ -1,6 +1,5 @@
 import { eventBus } from "./event-bus";
 import { useAvatarStore } from "./avatar-store";
-import { neonRealtime } from "./neon";
 
 export interface NexusPulseItem {
   id: string;
@@ -27,25 +26,10 @@ class RealtimeClient {
   private pulseListeners: Set<(item: NexusPulseItem) => void> = new Set();
   private pulseHistory: NexusPulseItem[] = [];
   private isConnected = false;
-  private unsubscribeNeon: (() => void) | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
       this.initConnection();
-      this.initNeonRealtime();
-    }
-  }
-
-  private initNeonRealtime() {
-    try {
-      this.unsubscribeNeon = neonRealtime.subscribe("*", (payload: any) => {
-        if (payload) {
-          this.handleIncomingEvent(payload);
-        }
-      });
-      console.log("[NEXUS Realtime] Neon Realtime WebSocket listener attached.");
-    } catch (e) {
-      console.warn("[NEXUS Realtime] Neon Realtime initialization notice:", e);
     }
   }
 
@@ -65,8 +49,7 @@ class RealtimeClient {
 
     this.disconnect();
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
-    const streamUrl = `${backendUrl}/api/v1/realtime/stream`;
+    const streamUrl = "/api/v1/realtime/stream";
 
     try {
       this.eventSource = new EventSource(streamUrl);
@@ -122,10 +105,6 @@ class RealtimeClient {
         this.eventSource.close();
       } catch {}
       this.eventSource = null;
-    }
-    if (this.unsubscribeNeon) {
-      this.unsubscribeNeon();
-      this.unsubscribeNeon = null;
     }
     this.isConnected = false;
   }
@@ -212,7 +191,7 @@ class RealtimeClient {
             previousState: "HOLDING_PASS_CLOSURE",
             currentState: "I-70_SOUTH_BYPASS",
             delta: `-${data?.netTimeSavedMins || 135} mins delay`,
-            cause: `Authorized by ${data?.actorName || "Sarah Chen"}`,
+            cause: data?.actorName ? `Authorized by ${data.actorName}` : "Authorized by workspace operator",
           },
         };
         break;

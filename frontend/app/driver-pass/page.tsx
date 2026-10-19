@@ -54,20 +54,27 @@ interface ManifestData {
 
 function DriverPassContent() {
   const searchParams = useSearchParams();
-  const vehicleCode = searchParams.get('v') || 'NX-804';
-  const routeCode = searchParams.get('r') || 'COR-DEL-DED-01';
+  const vehicleCode = searchParams.get('v') || '';
+  const routeCode = searchParams.get('r') || '';
+  const dispatchToken = searchParams.get('token') || '';
   const { toast } = useToast();
 
   const [manifest, setManifest] = React.useState<ManifestData | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [currentStatus, setCurrentStatus] = React.useState('EN_ROUTE');
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [currentStatus, setCurrentStatus] = React.useState('');
+  const [selectedOrder, setSelectedOrder] = React.useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = React.useState(false);
 
   // PoD State
   const [recipientName, setRecipientName] = React.useState('');
   const [podNotes, setPodNotes] = React.useState('');
+  const [biltiPhoto, setBiltiPhoto] = React.useState<string | null>(null);
   const [isSubmittingPod, setIsSubmittingPod] = React.useState(false);
   const [podResult, setPodResult] = React.useState<{ podId: string; timestamp: string } | null>(null);
+
+  // File input ref for camera capture
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Canvas signature pad ref
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -78,49 +85,23 @@ function DriverPassContent() {
   const fetchManifest = React.useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/v1/driver/manifest?vehicle_code=${encodeURIComponent(vehicleCode)}&route_code=${encodeURIComponent(routeCode)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setManifest(data);
-        setCurrentStatus(data.status || 'EN_ROUTE');
-      } else {
-        throw new Error('Failed to fetch manifest');
-      }
-    } catch {
-      // Local fallback for offline mode
-      setManifest({
-        manifest_id: `mnf-${vehicleCode.toLowerCase()}`,
-        vehicle_code: vehicleCode,
-        vehicle_name: `Volvo VNR Electric (${vehicleCode})`,
-        driver_name: 'Rajesh Sharma',
-        route_code: routeCode,
-        route_name: 'Delhi NCR - Dehradun Express Corridor',
-        origin: 'Delhi Hub 01 (Okhla)',
-        destination: 'Dehradun Logistics Park',
-        distance_km: 248.5,
-        estimated_duration_mins: 290,
-        status: 'EN_ROUTE',
-        battery_pct: 84,
-        cargo: [
-          {
-            tracking_number: 'TRK-9081',
-            customer_name: 'Apollo Health Supply',
-            description: 'Medical Coolers & Vaccines',
-            weight_kg: 4200,
-            destination: 'Dehradun Hub Dock 02',
-            status: 'IN_TRANSIT',
-          },
-        ],
-        stops: [
-          { sequence: 1, name: 'Delhi Okhla Terminal', type: 'DEPARTURE', status: 'COMPLETED' },
-          { sequence: 2, name: 'Meerut Bypass Waypoint', type: 'WAYPOINT', status: 'COMPLETED' },
-          { sequence: 3, name: 'Dehradun Logistics Park', type: 'DESTINATION', status: 'PENDING' },
-        ],
-      });
+      setLoadError(null);
+      if (!vehicleCode || !dispatchToken) throw new Error('This driver link is missing its vehicle or dispatch token. Ask dispatch for a new link.');
+      const query = new URLSearchParams({ vehicle_code: vehicleCode, token: dispatchToken });
+      if (routeCode) query.set('route_code', routeCode);
+      const res = await fetch(`/api/v1/driver/manifest?${query}`);
+      if (!res.ok) throw new Error(res.status === 401 ? 'This driver link is invalid or has expired. Ask dispatch for a new link.' : 'The dispatch manifest could not be loaded.');
+      const data = await res.json();
+      setManifest(data);
+      setCurrentStatus(data.status || '');
+      setSelectedOrder((current) => data.cargo.length === 1 ? (data.cargo[0].order_number || '') : data.cargo.some((item: ManifestData['cargo'][number]) => item.order_number === current) ? current : '');
+    } catch (error) {
+      setManifest(null);
+      setLoadError(error instanceof Error ? error.message : 'The dispatch manifest could not be loaded.');
     } finally {
       setLoading(false);
     }
-  }, [vehicleCode, routeCode]);
+  }, [vehicleCode, routeCode, dispatchToken]);
 
   React.useEffect(() => {
     fetchManifest();
@@ -137,6 +118,7 @@ function DriverPassContent() {
         body: JSON.stringify({
           vehicle_code: vehicleCode,
           status: newStatus,
+          token: dispatchToken,
         }),
       });
       if (res.ok) {
@@ -147,13 +129,12 @@ function DriverPassContent() {
           message: `Fleet telemetry updated to ${newStatus}`,
           type: 'success',
         });
-      }
+      } else throw new Error('Status update was rejected by dispatch.');
     } catch {
-      setCurrentStatus(newStatus);
       toast({
-        title: 'Status Saved (Offline)',
-        message: 'Status will synchronize once telemetry connects.',
-        type: 'info',
+        title: 'Status not updated',
+        message: 'Dispatch could not confirm this status. Check the connection and retry.',
+        type: 'critical',
       });
     } finally {
       setIsUpdatingStatus(false);
@@ -220,20 +201,28 @@ function DriverPassContent() {
       toast({ title: 'Signature Required', message: 'Please collect recipient signature on screen.', type: 'warning' });
       return;
     }
+    if (!selectedOrder) {
+      toast({ title: 'Order Required', message: 'Select the order being delivered.', type: 'warning' });
+      return;
+    }
 
     try {
       setIsSubmittingPod(true);
       tactileAudio.playClick();
       const canvas = canvasRef.current;
-      const signatureData = canvas ? canvas.toDataURL('image/png') : 'mock-signature-data';
+      if (!canvas) throw new Error('Signature capture is unavailable on this device.');
+      const signatureData = canvas.toDataURL('image/png');
 
       const res = await fetch('/api/v1/driver/pod', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           vehicle_code: vehicleCode,
+          order_number: selectedOrder,
+          token: dispatchToken,
           recipient_name: recipientName.trim(),
           signature_data: signatureData,
+          photo_url: biltiPhoto || undefined,
           notes: podNotes,
         }),
       });
@@ -255,17 +244,10 @@ function DriverPassContent() {
         throw new Error('PoD submission failed');
       }
     } catch {
-      // Offline fallback
-      setPodResult({
-        podId: `pod-${Math.random().toString(36).substring(2, 10)}`,
-        timestamp: new Date().toISOString(),
-      });
-      setCurrentStatus('DELIVERED');
-      tactileAudio.playSuccess();
       toast({
-        title: 'Delivery Confirmed (Offline)',
-        message: 'PoD queued for immediate dispatch synchronization.',
-        type: 'success',
+        title: 'Delivery not recorded',
+        message: 'Dispatch did not confirm proof of delivery. Check the connection and retry.',
+        type: 'critical',
       });
     } finally {
       setIsSubmittingPod(false);
@@ -296,7 +278,7 @@ function DriverPassContent() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 bg-zinc-800/80 px-2.5 py-1 rounded-full border border-zinc-700/60 text-xs font-mono text-zinc-300">
             <Battery className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{manifest?.battery_pct ?? 82}%</span>
+            <span>{manifest?.battery_pct == null ? '—' : `${manifest.battery_pct}%`}</span>
           </div>
           <button
             onClick={fetchManifest}
@@ -315,7 +297,7 @@ function DriverPassContent() {
         <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3 shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
-              {routeCode}
+              {routeCode || manifest?.route_code || 'Route unavailable'}
             </span>
             <span className={`text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded border ${
               currentStatus === 'DELIVERED'
@@ -324,7 +306,7 @@ function DriverPassContent() {
                 ? 'bg-blue-950 text-blue-300 border-blue-700'
                 : 'bg-amber-950 text-amber-300 border-amber-700'
             }`}>
-              {currentStatus.replace('_', ' ')}
+              {currentStatus ? currentStatus.replace('_', ' ') : 'Status unavailable'}
             </span>
           </div>
 
@@ -333,7 +315,7 @@ function DriverPassContent() {
               <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-zinc-400 font-mono">Origin Departure</p>
-                <p className="text-sm font-semibold text-zinc-100">{manifest?.origin ?? 'Delhi Okhla Terminal'}</p>
+                <p className="text-sm font-semibold text-zinc-100">{manifest?.origin ?? 'Not provided'}</p>
               </div>
             </div>
 
@@ -343,7 +325,7 @@ function DriverPassContent() {
               <Navigation className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-zinc-400 font-mono">Target Destination</p>
-                <p className="text-sm font-semibold text-zinc-100">{manifest?.destination ?? 'Dehradun Logistics Park'}</p>
+                <p className="text-sm font-semibold text-zinc-100">{manifest?.destination ?? 'Not provided'}</p>
               </div>
             </div>
           </div>
@@ -351,14 +333,21 @@ function DriverPassContent() {
           <div className="pt-2 border-t border-zinc-800 grid grid-cols-2 gap-2 text-center">
             <div className="bg-zinc-800/40 p-2 rounded-xl">
               <p className="text-[10px] text-zinc-400 font-mono">Total Distance</p>
-              <p className="text-sm font-bold font-mono text-zinc-200">{manifest?.distance_km ?? 248.5} km</p>
+              <p className="text-sm font-bold font-mono text-zinc-200">{manifest?.distance_km == null ? '—' : `${manifest.distance_km} km`}</p>
             </div>
             <div className="bg-zinc-800/40 p-2 rounded-xl">
               <p className="text-[10px] text-zinc-400 font-mono">Est. Transit Time</p>
-              <p className="text-sm font-bold font-mono text-zinc-200">{manifest?.estimated_duration_mins ?? 290} min</p>
+              <p className="text-sm font-bold font-mono text-zinc-200">{manifest?.estimated_duration_mins == null ? '—' : `${manifest.estimated_duration_mins} min`}</p>
             </div>
           </div>
         </section>
+
+        {loadError && (
+          <section role="alert" className="rounded-2xl border border-rose-800/60 bg-rose-950/30 p-4 text-sm text-rose-200">
+            <p>{loadError}</p>
+            <button onClick={fetchManifest} disabled={loading} className="mt-3 underline underline-offset-4">Retry manifest</button>
+          </section>
+        )}
 
         {/* Quick Driver Status Toggles */}
         <section className="space-y-2">
@@ -368,7 +357,7 @@ function DriverPassContent() {
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => handleUpdateStatus('EN_ROUTE')}
-              disabled={isUpdatingStatus}
+              disabled={isUpdatingStatus || !manifest}
               className={`p-2.5 rounded-xl text-xs font-bold font-mono border transition flex flex-col items-center gap-1 ${
                 currentStatus === 'EN_ROUTE'
                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
@@ -380,7 +369,7 @@ function DriverPassContent() {
             </button>
             <button
               onClick={() => handleUpdateStatus('ARRIVED')}
-              disabled={isUpdatingStatus}
+              disabled={isUpdatingStatus || !manifest}
               className={`p-2.5 rounded-xl text-xs font-bold font-mono border transition flex flex-col items-center gap-1 ${
                 currentStatus === 'ARRIVED'
                   ? 'bg-blue-600 text-white border-blue-500 shadow-md'
@@ -392,7 +381,7 @@ function DriverPassContent() {
             </button>
             <button
               onClick={() => handleUpdateStatus('DELAYED')}
-              disabled={isUpdatingStatus}
+              disabled={isUpdatingStatus || !manifest}
               className={`p-2.5 rounded-xl text-xs font-bold font-mono border transition flex flex-col items-center gap-1 ${
                 currentStatus === 'DELAYED'
                   ? 'bg-amber-600 text-white border-amber-500 shadow-md'
@@ -413,7 +402,7 @@ function DriverPassContent() {
               <h3 className="text-sm font-bold text-zinc-200">Cargo Consignment</h3>
             </div>
             <span className="text-[11px] font-mono text-zinc-400">
-              {manifest?.cargo.length ?? 1} Items
+              {manifest?.cargo.length ?? '—'} Items
             </span>
           </div>
 
@@ -423,7 +412,7 @@ function DriverPassContent() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-zinc-200">{item.customer_name}</span>
                   <span className="font-mono text-emerald-400 text-[11px]">
-                    {item.tracking_number || item.order_number || `CON-${idx + 1}`}
+                    {item.tracking_number || item.order_number || 'Reference unavailable'}
                   </span>
                 </div>
                 <p className="text-[11px] text-zinc-400">{item.description}</p>
@@ -473,6 +462,14 @@ function DriverPassContent() {
             </div>
           ) : (
             <form onSubmit={handleSubmitPod} className="space-y-3">
+              {!manifest && <p className="text-xs text-zinc-400">A valid dispatch manifest is required before delivery can be recorded.</p>}
+              {manifest && <div>
+                <label className="mb-1 block text-xs font-mono text-zinc-400">Order being delivered *</label>
+                <select required value={selectedOrder} onChange={(e) => setSelectedOrder(e.target.value)} disabled={!manifest.cargo.length} className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100">
+                  <option value="">{manifest.cargo.length ? 'Select an assigned order' : 'No assigned orders available'}</option>
+                  {manifest.cargo.filter((item) => item.order_number).map((item) => <option key={item.order_number} value={item.order_number}>{item.order_number} · {item.customer_name}</option>)}
+                </select>
+              </div>}
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-1">
                   Recipient / Bay Supervisor Name *
@@ -520,6 +517,59 @@ function DriverPassContent() {
                 </p>
               </div>
 
+              {/* Camera Photo of Physical Stamped Challan / Bilti */}
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 mb-1">
+                  Physical Stamped Bilti / Paper Challan Photo (Optional)
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setBiltiPhoto(reader.result as string);
+                        toast({ title: "Bilti Photo Attached", message: "Physical receipt image captured successfully.", type: "success" });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+
+                {biltiPhoto ? (
+                  <div className="relative rounded-xl border border-emerald-500/30 overflow-hidden bg-black p-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <img src={biltiPhoto} alt="Stamped Bilti Preview" className="w-12 h-12 object-cover rounded-lg border border-zinc-700" />
+                      <div>
+                        <span className="text-xs font-semibold text-emerald-400 block">✓ Paper Bilti Attached</span>
+                        <span className="text-[10px] text-zinc-400 font-mono">Ready to upload to Azure Vault</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBiltiPhoto(null)}
+                      className="text-xs font-mono text-rose-400 hover:text-rose-300 px-2 py-1"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-2.5 px-3 rounded-xl border border-dashed border-zinc-700 hover:border-emerald-500 bg-zinc-800/40 hover:bg-zinc-800 text-xs font-mono text-zinc-300 flex items-center justify-center gap-2 transition"
+                  >
+                    <Camera className="w-4 h-4 text-emerald-400" />
+                    <span>Take Photo of Stamped Challan (Bilti)</span>
+                  </button>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-mono text-zinc-400 mb-1">
                   Delivery Notes / Seal Verification (Optional)
@@ -535,7 +585,7 @@ function DriverPassContent() {
 
               <button
                 type="submit"
-                disabled={isSubmittingPod}
+                  disabled={isSubmittingPod || !manifest || !selectedOrder}
                 className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950 transition"
               >
                 {isSubmittingPod ? (

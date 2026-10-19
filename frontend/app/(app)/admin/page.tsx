@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Tabs } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -217,73 +218,18 @@ export default function AdminPage() {
 
         {/* 3. System & Server Health */}
         {activeTab === "health" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="max-w-2xl">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">PostgreSQL Connection Pool</CardTitle>
-                <Badge variant="healthy" size="sm">
-                  Active
-                </Badge>
+                <CardTitle className="text-sm">Point-in-time service checks</CardTitle>
+                <CardDescription>
+                  Historical uptime, AI provider latency, worker memory and connection-pool measurements are not available from this dashboard.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-xs font-mono-data">
-                <div className="flex justify-between">
-                  <span>Host:</span>
-                  <span className="truncate max-w-[160px]">aws.neon.tech</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Pool Size:</span>
-                  <span>10 Max Connections</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Query Latency:</span>
-                  <span className="font-bold text-emerald-700">8 ms</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Groq AI Inference Cluster</CardTitle>
-                <Badge variant="healthy" size="sm">
-                  Online
-                </Badge>
-              </CardHeader>
-              <CardContent className="space-y-2 text-xs font-mono-data">
-                <div className="flex justify-between">
-                  <span>Model:</span>
-                  <span>llama-3.3-70b-versatile</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Avg Latency:</span>
-                  <span className="font-bold text-purple-700">220 ms</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Status:</span>
-                  <span className="text-emerald-700">Active</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Next.js Edge Worker Engine</CardTitle>
-                <Badge variant="healthy" size="sm">
-                  Healthy
-                </Badge>
-              </CardHeader>
-              <CardContent className="space-y-2 text-xs font-mono-data">
-                <div className="flex justify-between">
-                  <span>Node Runtime:</span>
-                  <span>v22.16.0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Memory Usage:</span>
-                  <span>142 MB</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Uptime:</span>
-                  <span className="text-emerald-700">99.98%</span>
-                </div>
+              <CardContent>
+                <Link href="/admin/system-health">
+                  <Button variant="outline" size="sm">Open measured system checks</Button>
+                </Link>
               </CardContent>
             </Card>
           </div>

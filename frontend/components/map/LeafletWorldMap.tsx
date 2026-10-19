@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { ResolvedLocation, RouteResult } from '@/lib/api/endpoints/location';
 import { api } from '@/lib/api/client';
 import { tactileAudio } from '@/lib/sound-effects';
+import { createSafeMapMarkerElement } from './safe-map-dom';
 import { Plus, Minus, Compass, Navigation, Layers, ShieldAlert, Truck, Building2, AlertTriangle, Crosshair } from 'lucide-react';
 
 export interface MapVehicle {
@@ -47,33 +48,6 @@ export interface WeatherHazard {
   coordinates: number[][]; // Polygon ring [[lng, lat], ...]
 }
 
-export const DEMO_HAZARDS: WeatherHazard[] = [
-  {
-    id: 'hazard-i80-blizzard',
-    title: 'High Altitude Winter Blizzard Warning Zone',
-    severity: 'CRITICAL',
-    coordinates: [
-      [-96.5, 41.0],
-      [-95.0, 41.0],
-      [-95.0, 41.8],
-      [-96.5, 41.8],
-      [-96.5, 41.0],
-    ],
-  },
-  {
-    id: 'hazard-himalayan-pass',
-    title: 'Himalayan Foothills Heavy Fog & Low Visibility Zone',
-    severity: 'WARNING',
-    coordinates: [
-      [77.8, 30.1],
-      [78.4, 30.1],
-      [78.4, 30.6],
-      [77.8, 30.6],
-      [77.8, 30.1],
-    ],
-  },
-];
-
 interface LeafletWorldMapProps {
   centerLocation?: ResolvedLocation | null;
   vehicles?: MapVehicle[];
@@ -92,7 +66,7 @@ export function LeafletWorldMap({
   vehicles = [],
   warehouses = [],
   incidents = [],
-  hazards = DEMO_HAZARDS,
+  hazards = [],
   showHazards = true,
   routePreview,
   isSimulationMode = false,
@@ -112,14 +86,6 @@ export function LeafletWorldMap({
   const [tileLayerType, setTileLayerType] = useState<'CARTO_VOYAGER' | 'OSM' | 'CARTO_DARK'>('CARTO_VOYAGER');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VEHICLES' | 'WAREHOUSES' | 'INCIDENTS'>('ALL');
   const [showGrid, setShowGrid] = useState<boolean>(false);
-  const [packetCount, setPacketCount] = useState(1480);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPacketCount((p) => p + Math.floor(Math.random() * 3) + 1);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -138,24 +104,12 @@ export function LeafletWorldMap({
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
 
-      // Default Global Centering: India / Dehradun or Worldwide
-      let initCenter: [number, number] = [28.6139, 77.2090];
-      let initZoom = 4;
+      let initCenter: [number, number] = [20, 0];
+      let initZoom = 2;
 
       if (centerLocation && centerLocation.latitude && centerLocation.longitude) {
         initCenter = [centerLocation.latitude, centerLocation.longitude];
         initZoom = 8;
-      } else if (typeof window !== 'undefined') {
-        try {
-          const stored = localStorage.getItem('nexus_workspace_location');
-          if (stored) {
-            const p = JSON.parse(stored);
-            if (p.latitude && p.longitude) {
-              initCenter = [p.latitude, p.longitude];
-              initZoom = 9;
-            }
-          }
-        } catch {}
       }
 
       if (!isMounted || !containerRef.current) return;
@@ -290,12 +244,19 @@ export function LeafletWorldMap({
         fillOpacity: 0.18,
         dashArray: '4, 4',
       });
-      poly.bindPopup(`
-        <div style="font-family: monospace; font-size: 11px; padding: 2px;">
-          <div style="font-weight: bold; color: ${color};">[${hazard.severity}] HAZARD ZONE</div>
-          <div style="margin-top: 4px;">${hazard.title}</div>
-        </div>
-      `);
+      const popup = document.createElement('div');
+      popup.style.fontFamily = 'monospace';
+      popup.style.fontSize = '11px';
+      popup.style.padding = '2px';
+      const popupTitle = document.createElement('div');
+      popupTitle.style.fontWeight = 'bold';
+      popupTitle.style.color = color;
+      popupTitle.textContent = `[${hazard.severity}] HAZARD ZONE`;
+      const popupDescription = document.createElement('div');
+      popupDescription.style.marginTop = '4px';
+      popupDescription.textContent = hazard.title;
+      popup.append(popupTitle, popupDescription);
+      poly.bindPopup(popup);
       group.addLayer(poly);
     });
   }, [hazards, showHazards, mapReady]);
@@ -346,18 +307,9 @@ export function LeafletWorldMap({
     // 1. Warehouses (Emerald Hexagons)
     if (activeFilter === 'ALL' || activeFilter === 'WAREHOUSES') {
       warehouses.forEach((wh) => {
-        const iconHtml = `
-          <div class="cursor-pointer group flex items-center justify-center">
-            <div style="width: 32px; height: 32px; border-radius: 10px; background: #065F46; border: 2px solid #FFFFFF; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: white;">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-            </div>
-            <div style="position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); background: #111827; color: #FFFFFF; font-size: 10px; font-family: monospace; padding: 2px 6px; border-radius: 6px; white-space: nowrap; pointer-events: none; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 2px 6px rgba(0,0,0,0.4);">
-              ${wh.name} (${wh.code})
-            </div>
-          </div>
-        `;
+        const iconElement = createSafeMapMarkerElement(document, 'warehouse', `${wh.name} (${wh.code})`);
         const customIcon = L.divIcon({
-          html: iconHtml,
+          html: iconElement,
           className: 'nexus-warehouse-icon',
           iconSize: [32, 32],
           iconAnchor: [16, 16],
@@ -376,19 +328,10 @@ export function LeafletWorldMap({
     // 2. Vehicles (Cyan / Blue Navigation Arrows with Directional Heading)
     if (activeFilter === 'ALL' || activeFilter === 'VEHICLES') {
       vehicles.forEach((v) => {
-        const heading = v.heading || 0;
-        const iconHtml = `
-          <div class="cursor-pointer group flex items-center justify-center">
-            <div style="width: 30px; height: 30px; border-radius: 50%; background: #0284C7; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 10px rgba(2,132,199,0.5); display: flex; align-items: center; justify-content: center; color: white; transform: rotate(${heading}deg); transition: transform 0.3s ease;">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-            </div>
-            <div style="position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%); background: #0F172A; color: #38BDF8; font-size: 10px; font-family: monospace; font-weight: bold; padding: 2px 6px; border-radius: 6px; white-space: nowrap; pointer-events: none; border: 1px solid rgba(56,189,248,0.3); box-shadow: 0 2px 6px rgba(0,0,0,0.5);">
-              ${v.code} · ${v.speedKmh ? `${v.speedKmh} km/h` : 'Active'}
-            </div>
-          </div>
-        `;
+        const label = `${v.code} · ${v.speedKmh ? `${v.speedKmh} km/h` : 'Active'}`;
+        const iconElement = createSafeMapMarkerElement(document, 'vehicle', label, v.heading || 0);
         const customIcon = L.divIcon({
-          html: iconHtml,
+          html: iconElement,
           className: 'nexus-vehicle-icon',
           iconSize: [30, 30],
           iconAnchor: [15, 15],
@@ -407,18 +350,9 @@ export function LeafletWorldMap({
     // 3. Incidents (Pulsing Red Hazard Beacon)
     if (activeFilter === 'ALL' || activeFilter === 'INCIDENTS') {
       incidents.forEach((inc) => {
-        const iconHtml = `
-          <div class="cursor-pointer group flex items-center justify-center">
-            <div style="position: relative; width: 30px; height: 30px; border-radius: 50%; background: #DC2626; border: 2px solid #FFFFFF; box-shadow: 0 0 16px rgba(220,38,38,0.8); display: flex; align-items: center; justify-content: center; color: white;">
-              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            </div>
-            <div style="position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%); background: #450A0A; color: #FCA5A5; font-size: 10px; font-family: monospace; font-weight: bold; padding: 2px 6px; border-radius: 6px; white-space: nowrap; pointer-events: none; border: 1px solid rgba(239,68,68,0.4);">
-              [${inc.severity}] ${inc.title}
-            </div>
-          </div>
-        `;
+        const iconElement = createSafeMapMarkerElement(document, 'incident', `[${inc.severity}] ${inc.title}`);
         const customIcon = L.divIcon({
-          html: iconHtml,
+          html: iconElement,
           className: 'nexus-incident-icon',
           iconSize: [30, 30],
           iconAnchor: [15, 15],
@@ -655,11 +589,10 @@ export function LeafletWorldMap({
         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[11px] font-mono text-emerald-400">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-stone-400" />
           </span>
-          <span className="font-bold">LIVE TELEMETRY</span>
-          <span className="text-emerald-600">·</span>
-          <span>{packetCount} pkts</span>
+          <span className="font-bold">WORKSPACE RECORDS</span>
+          <span className="text-stone-400">·</span>
         </div>
       </div>
 
@@ -696,15 +629,15 @@ export function LeafletWorldMap({
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-200/60 dark:border-stone-800 text-xs font-mono">
               <div>
                 <span className="text-stone-400 text-[10px]">Speed:</span>
-                <p className="font-bold text-stone-800 dark:text-stone-200">{selectedEntity.data.speedKmh || 65} km/h</p>
+                <p className="font-bold text-stone-800 dark:text-stone-200">{selectedEntity.data.speedKmh == null ? "Not recorded" : `${selectedEntity.data.speedKmh} km/h`}</p>
               </div>
               <div>
                 <span className="text-stone-400 text-[10px]">Battery:</span>
-                <p className="font-bold text-emerald-600">{selectedEntity.data.batteryPct || 92}%</p>
+                <p className="font-bold text-emerald-600">{selectedEntity.data.batteryPct == null ? "Not recorded" : `${selectedEntity.data.batteryPct}%`}</p>
               </div>
               <div>
                 <span className="text-stone-400 text-[10px]">Status:</span>
-                <p className="font-bold text-sky-600">{selectedEntity.data.status || 'IN_TRANSIT'}</p>
+                <p className="font-bold text-sky-600">{selectedEntity.data.status || 'Not recorded'}</p>
               </div>
               <div>
                 <span className="text-stone-400 text-[10px]">Pilot:</span>

@@ -1,112 +1,29 @@
-'use client';
-
-import * as React from 'react';
-import Link from 'next/link';
-import { LogoMark } from '@/components/brand/Logo';
-import { useRouter } from 'next/navigation';
-import { Avatar3D } from '@/components/avatar/Avatar3D';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
-import { useToast } from '@/components/ui/toast';
+import Link from "next/link";
+import { ArrowLeft, CircleHelp } from "lucide-react";
+import { LogoMark } from "@/components/brand/Logo";
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [email, setEmail] = React.useState('');
-  const [sent, setSent] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-      const res = await fetch(`${baseUrl}/api/v1/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json().catch(() => ({}));
-      setIsLoading(false);
-      setSent(true);
-      toast({
-        title: 'Recovery Link Dispatched',
-        message: data.message || 'Check your enterprise email for reset credentials.',
-        type: 'info',
-      });
-    } catch {
-      setIsLoading(false);
-      setSent(true);
-      toast({
-        title: 'Recovery Link Dispatched',
-        message: 'Check your enterprise email for reset credentials.',
-        type: 'info',
-      });
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-nexus-surface flex flex-col items-center justify-center p-6 select-none">
-      <Link href="/" className="mb-6 flex items-center gap-2 group">
-        <LogoMark size={34} />
-        <span className="text-xl font-bold tracking-tight text-nexus-on-surface">Nexus</span>
-      </Link>
-
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex justify-center -mb-2">
-          <Avatar3D mood={sent ? 'SUCCESS' : 'WARNING'} size="lg" />
+    <div className="flex min-h-screen flex-col bg-[var(--surface)] text-[var(--on-surface)]">
+      <header className="border-b border-black/[0.07] dark:border-white/[0.09]">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Nexus home"><LogoMark size={25} /><span className="text-[15px] font-semibold tracking-[-0.035em]">nexus</span></Link>
+          <Link href="/login" className="text-[12px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]">Back to sign in</Link>
         </div>
-
-        <Card className="shadow-tactile-lg">
-          <CardHeader>
-            <CardTitle>{sent ? 'Recovery Dispatched' : 'Reset Access Key'}</CardTitle>
-            <CardDescription>
-              {sent
-                ? 'A time-limited cryptographic reset authorization has been generated.'
-                : 'Enter your registered operator email to receive a password reset token.'}
-            </CardDescription>
-          </CardHeader>
-
-          {sent ? (
-            <CardContent className="space-y-4 text-center">
-              <CheckCircle2 className="h-12 w-12 text-nexus-secondary mx-auto" />
-              <p className="text-xs text-nexus-on-surface-variant">
-                If an authorized profile exists for <span className="font-mono text-nexus-primary">{email}</span>, you will receive instructions within 60 seconds.
-              </p>
-              <Link href="/reset-password">
-                <Button variant="primary" className="w-full font-mono text-xs mt-2">
-                  Proceed with Reset Token
-                </Button>
-              </Link>
-            </CardContent>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
-                <Input
-                  label="Registered Email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="operator@nexus.ops"
-                />
-
-                <Button type="submit" variant="primary" className="w-full font-mono-data text-xs" isLoading={isLoading}>
-                  Dispatch Reset Authorization
-                </Button>
-              </CardContent>
-            </form>
-          )}
-
-          <CardFooter className="flex justify-center">
-            <Link href="/login" className="inline-flex items-center gap-1 text-xs text-nexus-on-surface-variant hover:text-nexus-primary">
-              <ArrowLeft className="h-3 w-3" /> Return to Login
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
+      </header>
+      <main id="main-content" className="flex flex-1 items-center justify-center px-5 py-12 sm:px-8">
+        <section className="w-full max-w-[420px]">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.08] bg-white/70 dark:border-white/[0.1] dark:bg-white/[0.035]"><CircleHelp size={17} className="text-emerald-800 dark:text-emerald-300" /></span>
+          <h1 className="mt-5 text-[30px] font-semibold tracking-[-0.055em]">Password recovery</h1>
+          <p className="mt-2 text-[14px] leading-6 text-[var(--on-surface-variant)]">Self-serve password reset is not available for this workspace yet.</p>
+          <div role="status" className="mt-6 rounded-2xl border border-amber-600/20 bg-amber-500/[0.06] p-5 text-[13px] leading-6">
+            <p className="font-medium">Contact your workspace administrator</p>
+            <p className="mt-1 text-[12px] text-[var(--on-surface-variant)]">They can help restore access. Nexus will add email-based recovery when a secure delivery service is configured.</p>
+          </div>
+          <Link href="/login" className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-[#163d35] px-5 text-[12px] font-semibold text-white transition-transform hover:scale-[1.01] active:scale-[0.99] dark:bg-[#cde5d9] dark:text-[#102a24]"><ArrowLeft size={14} /> Return to sign in</Link>
+        </section>
+      </main>
+      <footer className="border-t border-black/[0.07] px-5 py-5 text-center text-[10px] text-[var(--on-surface-variant)] dark:border-white/[0.09]">Nexus · Logistics operations workspace</footer>
     </div>
   );
 }

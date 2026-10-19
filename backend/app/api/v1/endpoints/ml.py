@@ -7,12 +7,17 @@ Pillar 3: /api/v1/ml/explainable-sla-risk (Calibrated Classifier + TreeSHAP Doll
 Pillar 4: /api/v1/ml/monte-carlo-pareto (10,000 Stochastic Physics Runs & Cryptographic Dispatch)
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from app.ml.engine import nexus_master_ml
+from app.auth.dependencies import require_onboarded, require_permission
+from app.auth.principal import PermissionEnum, RequestPrincipal
 
 router = APIRouter()
+
+def require_validated_workspace_model(principal: RequestPrincipal = Depends(require_onboarded)) -> None:
+    raise HTTPException(status_code=503, detail="Predictive models are unavailable until trained and validated on this workspace's real operational data.")
 
 # ----------------------------------------------------------------------------- Pillar 1 Schemas
 class PINNStateRequest(BaseModel):
@@ -71,17 +76,17 @@ class MonteCarloParetoRequest(BaseModel):
 # ============================================================================= Endpoints
 
 @router.get("/status")
-def get_ml_status() -> Dict[str, Any]:
+def get_ml_status(
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
+) -> Dict[str, Any]:
     """Returns technical architecture and hardware acceleration metadata."""
-    meta = nexus_master_ml.get_system_metadata()
     return {
-        "status": "READY",
-        "models_loaded": 4,
-        "target_hardware": "Intel Core i7 Optimized (AVX2 & SIMD)",
-        **meta
+        "status": "NOT_CONFIGURED",
+        "models_loaded": 0,
+        "detail": "No validated workspace-trained model is configured.",
     }
 
-@router.post("/pinn-state-evaluation")
+@router.post("/pinn-state-evaluation", dependencies=[Depends(require_validated_workspace_model)])
 def evaluate_pinn_state(req: PINNStateRequest) -> Dict[str, Any]:
     """Pillar 1: Evaluates vehicle physical state & thermodynamics via PyTorch PINN."""
     return nexus_master_ml.pinn.evaluate_state(
@@ -96,7 +101,7 @@ def evaluate_pinn_state(req: PINNStateRequest) -> Dict[str, Any]:
         fuel_or_energy_rate=req.fuel_or_energy_rate
     )
 
-@router.post("/conformal-delay-prediction")
+@router.post("/conformal-delay-prediction", dependencies=[Depends(require_validated_workspace_model)])
 def predict_conformal_delay(req: ConformalDelayRequest) -> Dict[str, Any]:
     """Pillar 2: Predicts delay with finite-sample conformal prediction bounds and radar inputs."""
     return nexus_master_ml.delay.predict_with_conformal_bounds(
@@ -112,7 +117,7 @@ def predict_conformal_delay(req: ConformalDelayRequest) -> Dict[str, Any]:
         coverage_level=req.coverage_level
     )
 
-@router.post("/explainable-sla-risk")
+@router.post("/explainable-sla-risk", dependencies=[Depends(require_validated_workspace_model)])
 def evaluate_explainable_sla(req: ExplainableSLARequest) -> Dict[str, Any]:
     """Pillar 3: Computes calibrated SLA breach probability and exact TreeSHAP dollar attributions."""
     return nexus_master_ml.sla.explain_breach_risk(
@@ -125,7 +130,7 @@ def evaluate_explainable_sla(req: ExplainableSLARequest) -> Dict[str, Any]:
         driver_fatigue_hours=req.driver_fatigue_hours
     )
 
-@router.post("/monte-carlo-pareto")
+@router.post("/monte-carlo-pareto", dependencies=[Depends(require_validated_workspace_model)])
 def run_monte_carlo_pareto(req: MonteCarloParetoRequest) -> Dict[str, Any]:
     """Pillar 4: Runs 10,000 stochastic physics simulations and solves Pareto dispatch policy."""
     sim_stats = nexus_master_ml.monte_carlo.run_stochastic_monte_carlo(
@@ -179,7 +184,7 @@ class LegacySLARequest(BaseModel):
 class LegacyOptimizeRequest(BaseModel):
     candidates: List[Dict[str, Any]]
 
-@router.post("/predict-delay")
+@router.post("/predict-delay", dependencies=[Depends(require_validated_workspace_model)])
 def legacy_predict_delay(req: LegacyDelayRequest) -> Dict[str, Any]:
     data = DelayPredictionInput(
         distance_km=req.distance_km,
@@ -191,7 +196,7 @@ def legacy_predict_delay(req: LegacyDelayRequest) -> Dict[str, Any]:
     )
     return ml_engine.predict_delay(data)
 
-@router.post("/detect-anomalies")
+@router.post("/detect-anomalies", dependencies=[Depends(require_validated_workspace_model)])
 def legacy_detect_anomalies(req: LegacyAnomalyRequest) -> Dict[str, Any]:
     data = AnomalyDetectionInput(
         vehicle_id=req.vehicle_id,
@@ -204,7 +209,7 @@ def legacy_detect_anomalies(req: LegacyAnomalyRequest) -> Dict[str, Any]:
     )
     return ml_engine.detect_telemetry_anomalies(data)
 
-@router.post("/sla-risk")
+@router.post("/sla-risk", dependencies=[Depends(require_validated_workspace_model)])
 def legacy_evaluate_sla_risk(req: LegacySLARequest) -> Dict[str, Any]:
     data = SLARiskInput(
         predicted_delay_mins=req.predicted_delay_mins,
@@ -215,7 +220,7 @@ def legacy_evaluate_sla_risk(req: LegacySLARequest) -> Dict[str, Any]:
     )
     return ml_engine.evaluate_sla_risk(data)
 
-@router.get("/depot-forecast")
+@router.get("/depot-forecast", dependencies=[Depends(require_validated_workspace_model)])
 def legacy_forecast_depot(
     hour: float = Query(14.0, ge=0, le=24),
     day_of_week: int = Query(2, ge=0, le=6),
@@ -231,6 +236,6 @@ def legacy_forecast_depot(
         weather_severity=weather_severity
     )
 
-@router.post("/optimize-routes")
+@router.post("/optimize-routes", dependencies=[Depends(require_validated_workspace_model)])
 def legacy_optimize_routes(req: LegacyOptimizeRequest) -> Dict[str, Any]:
     return ml_engine.optimize_pareto_routes(req.candidates)

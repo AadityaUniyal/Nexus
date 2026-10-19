@@ -229,7 +229,7 @@ GET / HTTP/1.1
 Host: br-lucky-wildflower-a5249olo-neonrealtimesocket.compute.c-1.us-east-2.aws.neon.tech
 Upgrade: websocket
 Connection: Upgrade
-Sec-WebSocket-Protocol: neon-realtime, auth-nrt_live_1CAkLPdW1svFrHe1twL5IOU15hF7bue1tXwAjR3LpPSY
+Sec-WebSocket-Protocol: neon-realtime, auth-<short-lived-session-token>
 ```
 
 ### Subscription Frame:

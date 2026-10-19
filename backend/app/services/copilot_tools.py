@@ -54,8 +54,8 @@ class CopilotToolRegistry:
             "critical_incidents": sum(1 for i in incidents if i.severity == "CRITICAL"),
             "total_orders": len(orders),
             "delayed_orders": delayed_ord,
-            "fleet_utilization_pct": round((active_v / max(1, len(vehicles))) * 100, 1),
-            "sla_compliance_pct": round(((len(orders) - delayed_ord) / max(1, len(orders))) * 100, 1)
+            "fleet_utilization_pct": round((active_v / len(vehicles)) * 100, 1) if vehicles else None,
+            "sla_compliance_pct": round(((len(orders) - delayed_ord) / len(orders)) * 100, 1) if orders else None,
         }
 
     @staticmethod

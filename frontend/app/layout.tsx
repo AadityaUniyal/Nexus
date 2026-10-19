@@ -21,21 +21,21 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Nexus · Logistics analytics for operations teams",
-    template: "%s · Nexus",
+    default: "VOYAGE · The Freight Operating System",
+    template: "%s · VOYAGE",
   },
   description:
-    "Nexus turns fleet, warehouse and order data into clear analytics, forecasts and decisions for logistics teams.",
-  applicationName: "Nexus",
+    "Preempt freight delays, coordinate drivers with zero-install WhatsApp passes, and verify deliveries instantly with camera Proof-of-Delivery.",
+  applicationName: "VOYAGE",
   openGraph: {
-    title: "Nexus · Logistics analytics",
-    description: "Forecasts, anomaly detection and what-if planning for logistics operations.",
+    title: "VOYAGE · The Freight Operating System",
+    description: "Real-time freight exception preemption, zero-install driver dispatch, and instant proof of delivery.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nexus · Logistics analytics",
-    description: "Forecasts, anomaly detection and what-if planning for logistics operations.",
+    title: "VOYAGE · The Freight Operating System",
+    description: "Real-time freight exception preemption, zero-install driver dispatch, and instant proof of delivery.",
   },
 };
 

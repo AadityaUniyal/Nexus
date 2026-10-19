@@ -210,16 +210,16 @@ export default function IncidentCenterPage() {
         {isLoading ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>Scanning live telemetry streams for corridor anomalies...</span>
+              <span className="h-2 w-2 rounded-full bg-stone-400" />
+              <span>Loading exceptions from this workspace…</span>
             </div>
             <SkeletonTable rows={4} />
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={CheckCircle2}
-            title="All network corridors clear"
-            description="No active disruptions, weather hazards, or fleet anomalies flagged for this filter."
+            title="No exceptions match this filter"
+            description="No exception records were returned for the current view. This does not verify that every connected source is current."
             action={
               <Button
                 variant="outline"

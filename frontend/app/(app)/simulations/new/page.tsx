@@ -10,10 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Sparkles, ArrowLeft, CheckCircle2 } from "lucide-react";
-import { MatrixScenarioVisualizer, VehicleCandidate } from "@/components/simulation/MatrixScenarioVisualizer";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { dataProvider } from "@/lib/data-provider";
+import { apiFetch } from "@/lib/api/http";
 
 export interface SimulationVariables {
   vehicleId?: string;
@@ -40,29 +40,12 @@ export interface SimulationResultMetrics {
   netTimeSavedMins: number;
   totalCostUsd: number;
   costDeltaUsd: number;
-  slaBreachRiskPct: number;
-  ordersAtRisk: number;
-  recommendationScore: number;
+  slaBreachRiskPct: number | null;
+  ordersAtRisk: number | null;
+  recommendationScore: number | null;
   verdict: string;
   insights: string[];
 }
-
-const DEFAULT_METRICS: SimulationResultMetrics = {
-  totalDistanceKm: 1705.0,
-  totalDurationMins: 985,
-  projectedDelayMins: 45,
-  netTimeSavedMins: 135,
-  totalCostUsd: 1530.70,
-  costDeltaUsd: 80.70,
-  slaBreachRiskPct: 12.0,
-  ordersAtRisk: 1,
-  recommendationScore: 94,
-  verdict: "HIGHLY_RECOMMENDED",
-  insights: [
-    "Dynamic corridor diversion restores +135 minutes of transit margin.",
-    "Dynamic SLA Priority preserves on-time delivery for high-value consignments.",
-  ],
-};
 
 function SimulationBuilderContent() {
   const router = useRouter();
@@ -70,84 +53,79 @@ function SimulationBuilderContent() {
   const { toast } = useToast();
 
   const incidentIdParam = searchParams.get("incidentId") || undefined;
-  const vehicleIdParam = searchParams.get("vehicleId") || "v-104";
-
-  const [candidates, setCandidates] = React.useState<VehicleCandidate[]>([]);
-  const [targetDestination, setTargetDestination] = React.useState<{ id: string; name: string; lat: number; lng: number }>({
-    id: "loc-hub-target",
-    name: "Regional Fulfillment Terminal",
-    lat: 30.3165,
-    lng: 78.0322,
-  });
+  const requestedVehicleId = searchParams.get("vehicleId") || "";
+  const [vehicleId, setVehicleId] = React.useState(requestedVehicleId);
+  const [vehicles, setVehicles] = React.useState<any[]>([]);
+  const [routes, setRoutes] = React.useState<any[]>([]);
+  const [incidents, setIncidents] = React.useState<any[]>([]);
+  const [orders, setOrders] = React.useState<any[]>([]);
+  const [loadingInputs, setLoadingInputs] = React.useState(true);
+  const [inputError, setInputError] = React.useState("");
 
   React.useEffect(() => {
-    Promise.all([dataProvider.getVehicles(), dataProvider.getWarehouses()]).then(([vList, wList]) => {
-      if (vList && vList.length > 0) {
-        setCandidates(
-          vList.map((v) => ({
-            id: v.id,
-            code: v.code,
-            name: v.name,
-            lat: v.lat,
-            lng: v.lng,
-            batteryPct: v.batteryPct,
-            driverName: v.driverName,
-            capacityKg: v.capacityKg,
-          }))
-        );
-      }
-      if (wList && wList.length > 0) {
-        setTargetDestination({
-          id: wList[0].id,
-          name: `${wList[0].name} (${wList[0].city})`,
-          lat: wList[0].lat,
-          lng: wList[0].lng,
-        });
-      }
-    });
+    Promise.all([dataProvider.getVehicles(), dataProvider.getRoutes(), dataProvider.getIncidents(), dataProvider.getOrders()])
+      .then(([vehicleRows, routeRows, incidentRows, orderRows]) => {
+        setVehicles(vehicleRows);
+        setRoutes(routeRows);
+        setIncidents(incidentRows);
+        setOrders(orderRows);
+        if (!requestedVehicleId) setVehicleId(vehicleRows.find((v) => v.currentRouteId)?.id || "");
+      })
+      .catch((error) => setInputError(error instanceof Error ? error.message : "Could not load workspace data."))
+      .finally(() => setLoadingInputs(false));
   }, []);
 
   // Scenario parameters
-  const [title, setTitle] = React.useState("I-70 South Highway Bypass Simulation");
-  const [description, setDescription] = React.useState("Evaluate active detour around Interstate 80 Cheyenne blizzard closure.");
-  const [alternateRouteType, setAlternateRouteType] = React.useState("I-70_SOUTH_DETOUR");
-  const [speedDeltaPct, setSpeedDeltaPct] = React.useState<number>(10);
-  const [fuelCostPerKm, setFuelCostPerKm] = React.useState<number>(0.42);
-  const [priorityReordering, setPriorityReordering] = React.useState<boolean>(true);
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [speedDeltaPct, setSpeedDeltaPct] = React.useState<number>(0);
+  const [fuelCostPerKm, setFuelCostPerKm] = React.useState<number | null>(null);
   const [isExecuting, setIsExecuting] = React.useState<boolean>(false);
-  const [computedResult, setComputedResult] = React.useState<SimulationResultMetrics>(DEFAULT_METRICS);
+  const [computedResult, setComputedResult] = React.useState<SimulationResultMetrics | null>(null);
+  const [isEvaluating, setIsEvaluating] = React.useState(false);
+  const [evaluationError, setEvaluationError] = React.useState("");
 
-  // Baseline data snapshot
-  const baseSnapshot: BaseMetricsSnapshot = React.useMemo(() => ({
-    totalDistanceKm: 1620.0,
-    avgDurationMins: 940,
-    currentDelayMins: 180,
-    ordersCount: 14,
-    totalOrderValue: 45000,
-    baseCostUsd: 1450.0,
-  }), []);
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+  const selectedRoute = routes.find((r) => r.id === selectedVehicle?.currentRouteId);
+  const [selectedIncidentId, setSelectedIncidentId] = React.useState(incidentIdParam || "");
+  const selectedIncident = incidents.find((i) => i.id === selectedIncidentId);
+  const assignedOrders = orders.filter((o) => o.vehicleId === vehicleId);
+  const baseSnapshot: BaseMetricsSnapshot | null = selectedRoute && fuelCostPerKm !== null ? {
+    totalDistanceKm: selectedRoute.distanceKm,
+    avgDurationMins: selectedRoute.avgDurationMins,
+    currentDelayMins: selectedIncident?.delayMinutes ?? 0,
+    ordersCount: assignedOrders.length,
+    totalOrderValue: assignedOrders.reduce((sum, order) => sum + (order.totalCost || 0), 0),
+    baseCostUsd: selectedRoute.distanceKm * fuelCostPerKm,
+  } : null;
 
   // Query authoritative backend physics engine on parameter change
   React.useEffect(() => {
     let active = true;
     const evaluateOnBackend = async () => {
+      if (!baseSnapshot) {
+        setComputedResult(null);
+        return;
+      }
+      setIsEvaluating(true);
+      setEvaluationError("");
       try {
-        const res = await fetch("/api/v1/simulations/evaluate", {
+        const res = await apiFetch("/api/v1/simulations/evaluate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             baseSnapshot,
             variables: {
-              vehicleId: vehicleIdParam,
-              alternateRouteType,
+              vehicleId,
               speedDeltaPct,
               fuelCostPerKm,
-              priorityReordering,
             },
           }),
         });
-        if (res.ok && active) {
-          const data = await res.json();
+        if (!res.ok) throw new Error(`Estimate request failed (${res.status}).`);
+        if (active) {
+          const payload = await res.json();
+          const data = payload.data ?? payload;
           setComputedResult({
             totalDistanceKm: data.totalDistanceKm ?? data.total_distance_km,
             totalDurationMins: data.totalDurationMins ?? data.total_duration_mins,
@@ -155,25 +133,33 @@ function SimulationBuilderContent() {
             netTimeSavedMins: data.netTimeSavedMins ?? data.net_time_saved_mins,
             totalCostUsd: data.totalCostUsd ?? data.total_cost_usd,
             costDeltaUsd: data.costDeltaUsd ?? data.cost_delta_usd,
-            slaBreachRiskPct: data.slaBreachRiskPct ?? data.sla_breach_risk_pct,
-            ordersAtRisk: data.ordersAtRisk ?? data.orders_at_risk,
-            recommendationScore: data.recommendationScore ?? data.recommendation_score,
+            slaBreachRiskPct: data.slaBreachRiskPct ?? data.sla_breach_risk_pct ?? null,
+            ordersAtRisk: data.ordersAtRisk ?? data.orders_at_risk ?? null,
+            recommendationScore: data.recommendationScore ?? data.recommendation_score ?? null,
             verdict: data.verdict,
             insights: data.insights || [],
           });
         }
-      } catch {
-        // Keep current evaluated state on transient network error
+      } catch (error) {
+        if (active) {
+          setComputedResult(null);
+          setEvaluationError(error instanceof Error ? error.message : "Estimate service unavailable.");
+        }
+      } finally {
+        if (active) setIsEvaluating(false);
       }
     };
     evaluateOnBackend();
     return () => { active = false; };
-  }, [baseSnapshot, vehicleIdParam, alternateRouteType, speedDeltaPct, fuelCostPerKm, priorityReordering]);
+  }, [baseSnapshot?.totalDistanceKm, baseSnapshot?.avgDurationMins, baseSnapshot?.currentDelayMins, baseSnapshot?.baseCostUsd, baseSnapshot?.ordersCount, baseSnapshot?.totalOrderValue, vehicleId, speedDeltaPct, fuelCostPerKm]);
 
   const handleRunScenario = async () => {
     setIsExecuting(true);
     try {
-      const res = await fetch("/api/v1/simulations", {
+      if (!baseSnapshot || !vehicleId || !title.trim() || fuelCostPerKm === null) {
+        throw new Error("Select an assigned vehicle, enter a title and cost rate, then review the estimate.");
+      }
+      const res = await apiFetch("/api/v1/simulations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,11 +167,9 @@ function SimulationBuilderContent() {
           description,
           incidentId: incidentIdParam,
           variables: {
-            vehicleId: vehicleIdParam,
-            alternateRouteType,
+            vehicleId,
             speedDeltaPct,
             fuelCostPerKm,
-            priorityReordering,
           },
         }),
       });
@@ -245,6 +229,7 @@ function SimulationBuilderContent() {
           variant="simulation"
           size="sm"
           onClick={handleRunScenario}
+          disabled={!computedResult || !title.trim() || isEvaluating}
           isLoading={isExecuting}
           className="font-mono-data text-xs shadow-tactile"
         >
@@ -253,13 +238,19 @@ function SimulationBuilderContent() {
         </Button>
       </div>
 
-      {/* Builder Grid: Parameters on Left vs Real-Time Results on Right */}
+      {inputError && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">Workspace data could not be loaded: {inputError}</p>}
+      {loadingInputs && <p className="text-sm text-nexus-on-surface-variant">Loading vehicles, routes, orders, and incidents from this workspace…</p>}
+      {!loadingInputs && !inputError && vehicles.filter((v) => v.currentRouteId && routes.some((r) => r.id === v.currentRouteId)).length === 0 && (
+        <p className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">Add a vehicle and assign it to a workspace route before creating a planning estimate.</p>
+      )}
+
+      {/* Planning inputs use saved workspace records and operator-provided cost assumptions. */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left: Input Variables Form */}
         <Card className="space-y-4">
           <CardHeader>
-            <CardTitle className="text-sm">Hypothetical Dispatch Variables</CardTitle>
-            <CardDescription>Adjust routing and fleet parameters to test recovery</CardDescription>
+            <CardTitle className="text-sm">Planning inputs</CardTitle>
+            <CardDescription>Uses the selected vehicle’s assigned route. This estimate does not predict traffic, weather, or SLA outcomes.</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -267,29 +258,20 @@ function SimulationBuilderContent() {
               label="Scenario Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Scenario Name..."
+              placeholder="e.g. Compare higher cruising speed"
             />
-
-            <Select
-              label="Corridor / Diversion Strategy"
-              value={alternateRouteType}
-              onChange={(e) => setAlternateRouteType(e.target.value)}
-              options={[
-                { label: "I-70 South Bypass (+85 km / Fast Freeway)", value: "I-70_SOUTH_DETOUR" },
-                { label: "US-40 North Secondary Arterial (+140 km)", value: "US-40_NORTH_DETOUR" },
-                { label: "Transfer High-Priority Cargo to Relay Vehicle", value: "TRANSFER_TO_RELAY" },
-                { label: "Holding Pattern at Cheyenne Rest Depot", value: "WAIT_AND_HOLD" },
-              ]}
-            />
+            <Select label="Vehicle and assigned route" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} options={vehicles.filter((v) => v.currentRouteId && routes.some((r) => r.id === v.currentRouteId)).map((v) => ({ label: `${v.code} · ${v.name} · ${routes.find((r) => r.id === v.currentRouteId)?.name}`, value: v.id }))} />
+            <p className="text-xs text-nexus-on-surface-variant">Route baseline: {selectedRoute ? `${selectedRoute.name} · ${selectedRoute.distanceKm} km · ${selectedRoute.avgDurationMins} min` : "No assigned route"}</p>
+            <Select label="Incident context (optional)" value={selectedIncidentId} onChange={(e) => setSelectedIncidentId(e.target.value)} options={[{ label: "No incident context", value: "" }, ...incidents.map((incident) => ({ label: `${incident.code} · ${incident.title}`, value: incident.id }))]} />
 
             {/* Speed Adjustment Slider */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-mono-data">
                 <label className="font-semibold text-nexus-on-surface uppercase">
-                  Fleet Speed Target ({speedDeltaPct >= 0 ? `+${speedDeltaPct}%` : `${speedDeltaPct}%`})
+                  Speed adjustment assumption ({speedDeltaPct >= 0 ? `+${speedDeltaPct}%` : `${speedDeltaPct}%`})
                 </label>
                 <span className="text-nexus-secondary font-bold">
-                  {Math.round(65 * (1 + speedDeltaPct / 100))} km/h avg
+                  Applied to the saved route duration
                 </span>
               </div>
               <input
@@ -303,39 +285,9 @@ function SimulationBuilderContent() {
               />
             </div>
 
-            {/* Fuel Cost per KM Slider */}
             <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-mono-data">
-                <label className="font-semibold text-nexus-on-surface uppercase">
-                  Fuel & Power Cost / KM (${fuelCostPerKm.toFixed(2)})
-                </label>
-                <span className="text-nexus-on-surface-variant font-mono-data">Class-8 Commercial</span>
-              </div>
-              <input
-                type="range"
-                min="0.30"
-                max="0.80"
-                step="0.02"
-                value={fuelCostPerKm}
-                onChange={(e) => setFuelCostPerKm(Number(e.target.value))}
-                className="w-full cursor-pointer accent-purple-600"
-              />
-            </div>
-
-            {/* Priority Reordering Checkbox */}
-            <div className="p-3.5 rounded-xl bg-nexus-surface-container/60 border border-nexus-outline-variant/30 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-nexus-on-surface">Dynamic SLA Priority Re-sequencing</p>
-                <p className="text-[11px] text-nexus-on-surface-variant">
-                  Prioritize critical consignments (AeroTech Avionics) at interchange hubs.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={priorityReordering}
-                onChange={(e) => setPriorityReordering(e.target.checked)}
-                className="h-4 w-4 rounded accent-nexus-secondary cursor-pointer"
-              />
+              <label className="text-xs font-semibold text-nexus-on-surface" htmlFor="fuel-cost">Your fuel or energy cost per km</label>
+              <input id="fuel-cost" type="number" min="0" step="0.01" value={fuelCostPerKm ?? ""} onChange={(e) => setFuelCostPerKm(e.target.value === "" ? null : Number(e.target.value))} className="w-full rounded-xl border border-nexus-outline-variant bg-white px-3 py-2 text-sm" placeholder="Enter from your cost data" />
             </div>
           </CardContent>
         </Card>
@@ -346,32 +298,27 @@ function SimulationBuilderContent() {
             <CardHeader>
               <div>
                 <Badge variant="simulation" size="sm">
-                  Calculated Live Output
+                  {isEvaluating ? "Calculating estimate…" : "Planning estimate"}
                 </Badge>
-                <CardTitle className="text-sm mt-1">Mathematical Outcome Matrix</CardTitle>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-mono-data text-nexus-on-surface-variant">
-                  CONFIDENCE
-                </span>
-                <p className="text-lg font-bold text-purple-700 dark:text-purple-400 font-mono-data">
-                  {computedResult.recommendationScore} / 100
-                </p>
+                <CardTitle className="text-sm mt-1">Route duration and cost estimate</CardTitle>
               </div>
             </CardHeader>
 
             <CardContent className="space-y-4">
+              {evaluationError && <p role="alert" className="text-sm text-red-700">Could not calculate: {evaluationError}</p>}
+              {!computedResult && !evaluationError && <p className="text-sm text-nexus-on-surface-variant">Select a vehicle with an assigned route and enter your actual cost rate to calculate an estimate.</p>}
+              {computedResult && <>
               {/* Metric Summary Grid */}
               <div className="grid grid-cols-2 gap-3 font-mono-data">
                 <div className="p-3.5 rounded-xl bg-nexus-surface-lowest shadow-tactile border border-nexus-outline-variant/30">
                   <span className="text-[10px] text-nexus-on-surface-variant block uppercase">
-                    Net Delay Mitigation
+                    Modelled duration change
                   </span>
                   <span className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-1 block">
-                    +{computedResult.netTimeSavedMins} mins
+                    {computedResult.netTimeSavedMins > 0 ? "−" : "+"}{Math.abs(computedResult.netTimeSavedMins)} mins
                   </span>
                   <span className="text-[10px] text-nexus-on-surface-variant">
-                    was +{baseSnapshot.currentDelayMins}m hold
+                    compared with the saved route duration
                   </span>
                 </div>
 
@@ -380,7 +327,7 @@ function SimulationBuilderContent() {
                     Estimated Cost Delta
                   </span>
                   <span className="text-xl font-bold text-nexus-on-surface mt-1 block">
-                    +${computedResult.costDeltaUsd}
+                    {formatCurrency(computedResult.costDeltaUsd)}
                   </span>
                   <span className="text-[10px] text-nexus-on-surface-variant">
                     Total: {formatCurrency(computedResult.totalCostUsd)}
@@ -389,25 +336,25 @@ function SimulationBuilderContent() {
 
                 <div className="p-3.5 rounded-xl bg-nexus-surface-lowest shadow-tactile border border-nexus-outline-variant/30">
                   <span className="text-[10px] text-nexus-on-surface-variant block uppercase">
-                    SLA Breach Risk
+                    Incident delay baseline
                   </span>
                   <span className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-1 block">
-                    {computedResult.slaBreachRiskPct.toFixed(1)}%
+                    {computedResult.projectedDelayMins} mins
                   </span>
                   <span className="text-[10px] text-nexus-on-surface-variant">
-                    was 88.0% baseline
+                    unchanged by this estimate
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-nexus-surface-lowest shadow-tactile border border-nexus-outline-variant/30">
                   <span className="text-[10px] text-nexus-on-surface-variant block uppercase">
-                    Recommendation
+                    Estimate scope
                   </span>
                   <span className="text-xs font-bold text-purple-700 dark:text-purple-300 mt-1 block truncate">
-                    {computedResult.verdict}
+                    Arithmetic only
                   </span>
                   <span className="text-[10px] text-nexus-on-surface-variant">
-                    {computedResult.ordersAtRisk} orders at risk
+                    {baseSnapshot?.ordersCount ?? 0} assigned orders in baseline
                   </span>
                 </div>
               </div>
@@ -415,7 +362,7 @@ function SimulationBuilderContent() {
               {/* Analytical Insights List */}
               <div className="space-y-2 pt-2 border-t border-purple-500/20">
                 <span className="text-[11px] font-bold text-nexus-on-surface font-mono-data uppercase">
-                  Deterministic Engine Notes:
+                  What this estimate includes:
                 </span>
                 {computedResult.insights.map((ins, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-nexus-on-surface">
@@ -424,6 +371,7 @@ function SimulationBuilderContent() {
                   </div>
                 ))}
               </div>
+              </>}
             </CardContent>
 
             <CardFooter className="pt-3">
@@ -442,13 +390,6 @@ function SimulationBuilderContent() {
         </div>
       </div>
 
-      {/* Multi-Vehicle Route Matrix Dispatch Optimization */}
-      {candidates.length > 0 && (
-        <MatrixScenarioVisualizer
-          candidates={candidates}
-          targetLocation={targetDestination}
-        />
-      )}
     </div>
   );
 }

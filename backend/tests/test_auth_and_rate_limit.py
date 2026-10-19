@@ -55,14 +55,14 @@ async def test_signup_privileged_role_forbidden(async_client: AsyncClient):
     assert "PRIVILEGED_ROLE_FORBIDDEN" in str(data)
 
 @pytest.mark.asyncio
-async def test_forgot_password_logger_execution(async_client: AsyncClient):
-    """Test that forgot-password executes cleanly without logger NameError."""
+async def test_forgot_password_reports_unconfigured_delivery(async_client: AsyncClient):
+    """Password recovery must not report success until reset links can be delivered."""
     response = await async_client.post(
         "/api/v1/auth/forgot-password",
         json={"email": "nonexistent@nexus.ops"}
     )
-    assert response.status_code == 200
-    assert response.json()["status"] == "SUCCESS"
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "PASSWORD_RECOVERY_UNAVAILABLE"
 
 @pytest.mark.asyncio
 async def test_hs256_token_verification():

@@ -15,10 +15,11 @@ def verify_clerk_webhook(headers: Dict[str, str], payload_bytes: bytes) -> bool:
       - svix-signature
     """
     if not settings.CLERK_WEBHOOK_SECRET:
-        if settings.APP_ENV == "production":
-            raise UnauthenticatedException("CLERK_WEBHOOK_SECRET must be configured in production!")
-        # Development mode bypass
-        return True
+        # Keep the bypass strictly local/test. Staging must exercise the same
+        # signature verification as production so a missing secret fails closed.
+        if settings.APP_ENV.lower() in {"development", "dev", "local", "test"}:
+            return True
+        raise UnauthenticatedException("CLERK_WEBHOOK_SECRET must be configured for this environment")
 
     svix_id = headers.get("svix-id") or headers.get("webhook-id")
     svix_timestamp = headers.get("svix-timestamp") or headers.get("webhook-timestamp")

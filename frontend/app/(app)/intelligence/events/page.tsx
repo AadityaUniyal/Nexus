@@ -56,7 +56,7 @@ export default function EventsStreamPage() {
               <span>Event Stream</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Operational Telemetry Event Stream
+              Operational event history
             </h1>
           </div>
 
@@ -66,7 +66,7 @@ export default function EventsStreamPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span>SSE STREAM ACTIVE</span>
+              <span>Workspace records</span>
             </div>
           </div>
         </div>

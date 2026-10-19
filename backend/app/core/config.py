@@ -85,6 +85,12 @@ class Settings(BaseSettings):
 
     AZURE_IOT_HUB_CONNECTION_STRING: str = ""
 
+    AZURE_IOT_HUB_EVENTHUB_CONNECTION_STRING: str = ""
+
+    AZURE_IOT_HUB_CONSUMER_GROUP: str = "$Default"
+
+    AZURE_IOT_HUB_CHECKPOINT_CONTAINER: str = "nexus-iot-checkpoints"
+
     AZURE_IOT_HUB_HOSTNAME: str = ""
 
     AZURE_SUBSCRIPTION_ID: str = ""
@@ -169,7 +175,7 @@ class Settings(BaseSettings):
 
     EMAIL_VERIFICATION_ENABLED: bool = os.getenv("EMAIL_VERIFICATION_ENABLED", "false").lower() == "true"
 
-    ENABLE_DEMO_AUTH: bool = os.getenv("ENABLE_DEMO_AUTH", "true" if os.getenv("APP_ENV", "development").lower() != "production" else "false").lower() == "true"
+    ENABLE_DEMO_AUTH: bool = os.getenv("ENABLE_DEMO_AUTH", "false").lower() == "true"
 
     # Weather Cache Configuration (Redis / Memory)
 
@@ -177,22 +183,16 @@ class Settings(BaseSettings):
 
     # CORS
 
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://nexus-logistics-os.vercel.app")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://voyage-freight.vercel.app")
 
     CORS_ORIGINS: Union[List[str], str] = [
-
         "http://localhost:3000",
-
         "http://127.0.0.1:3000",
-
         "http://localhost:8000",
-
         "http://127.0.0.1:8000",
-
+        "https://voyage-freight.vercel.app",
         "https://nexus-logistics-os.vercel.app",
-
         "https://nexus-autonomous-logistics.vercel.app",
-
     ]
 
     @field_validator("DATABASE_URL", mode="before")

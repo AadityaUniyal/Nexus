@@ -8,7 +8,6 @@ except ImportError:
     AsyncGroq = None
 from app.core.config import settings
 from app.voice.schemas import VoiceCommandRequest, VoiceCommandResponse, VoiceToolCall
-from app.voice.tools import VOICE_TOOLS_SPEC, execute_voice_tool
 
 logger = logging.getLogger("nexus.voice")
 
@@ -68,10 +67,9 @@ class VoiceAgentService:
             )
 
         system_prompt = (
-            "You are the NEXUS Tactical Dispatch Voice Copilot. You assist logistics operations managers "
-            "with fleet command, spatial navigation, What-If simulation modeling, and incident triage. "
-            "Always call appropriate tools when the user requests a map movement, simulation run, or fleet query. "
-            "Keep your verbal responses concise, crisp, and tactical (1-2 sentences maximum)."
+            "You are the NEXUS voice assistant. You cannot read live workspace data or execute operational changes. "
+            "Never claim to have checked fleet status, moved a map, run a simulation, or changed dispatch. "
+            "Explain this limitation clearly when asked for those actions. Keep responses concise."
         )
 
         candidate_models = [self.groq_model, "llama-3.3-70b-versatile"] if self.groq_model != "llama-3.3-70b-versatile" else ["llama-3.3-70b-versatile"]
@@ -86,29 +84,11 @@ class VoiceAgentService:
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": req.transcript},
                         ],
-                        tools=VOICE_TOOLS_SPEC,
-                        tool_choice="auto",
                         temperature=0.2,
                         max_tokens=250,
                     )
 
                     msg = response.choices[0].message
-
-                    # If tool calls were made by Groq
-                    if msg.tool_calls and len(msg.tool_calls) > 0:
-                        t_call = msg.tool_calls[0]
-                        tool_name = t_call.function.name
-                        tool_args = json.loads(t_call.function.arguments or "{}")
-                        
-                        tool_result = await execute_voice_tool(tool_name, tool_args)
-                        
-                        return VoiceCommandResponse(
-                            speech_response=tool_result.get("speech", "Action executed."),
-                            action_type=tool_result.get("action", "TOOL_EXECUTED"),
-                            action_payload=tool_result,
-                            tool_calls=[VoiceToolCall(name=tool_name, arguments=tool_args)],
-                            confidence=0.99,
-                        )
 
                     # Direct conversation response without tools
                     content = msg.content.strip() if msg.content else fallback_speech
@@ -131,27 +111,9 @@ class VoiceAgentService:
                 confidence=0.90,
             )
 
-        # 3. Deterministic regex / intent fallback
-        t_low = req.transcript.lower()
-        if "fly" in t_low or "map" in t_low or "chicago" in t_low or "dehradun" in t_low or "denver" in t_low:
-            loc = "Dehradun" if "dehradun" in t_low else "Denver" if "denver" in t_low else "Chicago"
-            res = await execute_voice_tool("map_fly_to", {"location_name": loc})
-            return VoiceCommandResponse(
-                speech_response=res["speech"],
-                action_type=res["action"],
-                action_payload=res,
-            )
-        elif "simulat" in t_low or "detour" in t_low:
-            res = await execute_voice_tool("run_whatif_simulation", {"vehicle_code": "NX-104", "detour_route": "I-70_SOUTH_DETOUR"})
-            return VoiceCommandResponse(
-                speech_response=res["speech"],
-                action_type=res["action"],
-                action_payload=res,
-            )
-
         return VoiceCommandResponse(
-            speech_response=f"Tactical dispatch received: '{req.transcript}'. Standing by for operational confirmation.",
-            action_type="ACKNOWLEDGED",
+            speech_response="Voice actions are unavailable until workspace-scoped command execution is configured. No operational change was made.",
+            action_type="UNAVAILABLE",
         )
 
 voice_agent_service = VoiceAgentService()

@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export type RoleType =
   | "OPERATIONS_MANAGER"
@@ -43,6 +44,7 @@ export type RoleType =
 
 export function AppleSettingsView() {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Active Category Navigation
   const [activeTab, setActiveTab] = React.useState<
@@ -50,9 +52,8 @@ export function AppleSettingsView() {
   >("account");
 
   // Account & Workspace
-  const [workspaceName, setWorkspaceName] = React.useState("Continental Logistics Global");
-  const [hubCity, setHubCity] = React.useState("Dehradun");
-  const [activeRole, setActiveRole] = React.useState<RoleType>("OPERATIONS_MANAGER");
+  const [workspaceName, setWorkspaceName] = React.useState("");
+  const activeRole = (user?.role || "VIEWER") as RoleType;
 
   // Appearance & Audio
   const [soundEffects, setSoundEffects] = React.useState(true);
@@ -60,12 +61,9 @@ export function AppleSettingsView() {
   const [themeMode, setThemeMode] = React.useState<"dark" | "light" | "system">("dark");
 
   // Notifications (iOS Style)
-  const [notifyCritical, setNotifyCritical] = React.useState(true);
-  const [notifyWarnings, setNotifyWarnings] = React.useState(true);
-  const [emailDigest, setEmailDigest] = React.useState<"instant" | "daily" | "weekly">("daily");
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   // Operational Mode (Zero-State vs Sandbox)
-  const [operationalMode, setOperationalMode] = React.useState<"PRODUCTION" | "SANDBOX">("SANDBOX");
 
   // Role-Specific Configurations
   // Manager
@@ -89,96 +87,53 @@ export function AppleSettingsView() {
   const [digestTime, setDigestTime] = React.useState("08:00 AM EST");
 
   const [saving, setSaving] = React.useState(false);
+  const [settingsError, setSettingsError] = React.useState<string | null>(null);
 
-  // Load initial settings
+  React.useEffect(() => { setWorkspaceName(user?.workspace_name || ""); }, [user?.workspace_name]);
+
   React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedCompany = localStorage.getItem("nexus_company_name");
-        if (savedCompany) setWorkspaceName(savedCompany);
-
-        const savedRole = localStorage.getItem("nexus_user_role") as RoleType;
-        if (savedRole) setActiveRole(savedRole);
-
-        const savedMode = localStorage.getItem("nexus_operational_mode") as any;
-        if (savedMode) setOperationalMode(savedMode);
-      } catch {}
-    }
+    let active = true;
+    fetch("/api/v1/settings", { credentials: "include", cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Workspace preferences could not be loaded.");
+        return response.json();
+      })
+      .then((settings) => {
+        if (!active) return;
+        if (settings.theme === "dark" || settings.theme === "light" || settings.theme === "system") setThemeMode(settings.theme);
+        setNotificationsEnabled(Boolean(settings.notifications));
+        if (Number.isFinite(settings.telemetryRefreshSec)) setHudRefreshSec(settings.telemetryRefreshSec);
+        setSettingsError(null);
+      })
+      .catch((error) => { if (active) setSettingsError(error instanceof Error ? error.message : "Workspace preferences could not be loaded."); });
+    return () => { active = false; };
   }, []);
 
   const handleSaveSettings = async () => {
     setSaving(true);
     tactileAudio.playClick();
 
-    const payload = {
-      workspaceName,
-      activeRole,
-      operationalMode,
-      autoRerouteThreshold,
-      maxBudgetCap,
-      hudRefreshSec,
-      nightModeHud,
-      monteCarloRuns,
-      defaultExportFormat,
-      passkeyEnforced,
-      sessionTimeoutMins,
-      currencySymbol,
-    };
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_company_name", workspaceName);
-      localStorage.setItem("nexus_user_role", activeRole);
-      localStorage.setItem("nexus_operational_mode", operationalMode);
-      localStorage.setItem("nexus_role_config", JSON.stringify(payload));
-    }
-
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-      const token = typeof window !== "undefined" ? localStorage.getItem("nexus_access_token") : null;
-      await fetch(`${apiBase}/api/v1/settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
+      const response = await fetch("/api/v1/settings", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: themeMode, notifications: notificationsEnabled, telemetryRefreshSec: hudRefreshSec }),
       });
-    } catch {}
-
-    setSaving(false);
-    tactileAudio.playSuccess();
-    toast({
-      title: "Preferences Saved",
-      message: "Synchronized with PostgreSQL role settings and local session checkpoint.",
-      type: "success",
-    });
-  };
-
-  const handleResetWorkspaceToZero = () => {
-    tactileAudio.playCriticalAlert();
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("nexus_custom_vehicles");
-      localStorage.removeItem("nexus_custom_warehouses");
-      localStorage.removeItem("nexus_custom_routes");
-      localStorage.removeItem("nexus_custom_incidents");
-      localStorage.removeItem("nexus_custom_simulations");
-      localStorage.setItem("nexus_operational_mode", "PRODUCTION");
-      setOperationalMode("PRODUCTION");
+      if (!response.ok) throw new Error("Settings service is unavailable.");
+      tactileAudio.playSuccess();
+      toast({ title: "Preferences saved", message: "The supported workspace settings were saved.", type: "success" });
+    } catch (error) {
+      toast({ title: "Could not save preferences", message: error instanceof Error ? error.message : "Settings service is unavailable.", type: "critical" });
+    } finally {
+      setSaving(false);
     }
-    toast({
-      title: "Workspace Reset to Zero",
-      message: "All operational records cleared. Workspace is now in clean zero-state.",
-      type: "warning",
-    });
   };
 
   const SECTIONS = [
     { id: "account", label: "Account & Tenancy", icon: User, badgeColor: "bg-blue-500" },
     { id: "appearance", label: "Appearance & Haptics", icon: Sliders, badgeColor: "bg-purple-500" },
     { id: "notifications", label: "Push Notifications", icon: Bell, badgeColor: "bg-rose-500" },
-    { id: "role", label: "Role Preferences", icon: SlidersHorizontal, badgeColor: "bg-emerald-500" },
-    { id: "security", label: "Security & Passkeys", icon: ShieldCheck, badgeColor: "bg-amber-500" },
-    { id: "storage", label: "Data, Zero-State & Cache", icon: HardDrive, badgeColor: "bg-zinc-500" },
   ];
 
   return (
@@ -189,10 +144,10 @@ export function AppleSettingsView() {
           <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
             <span>iOS System Preferences</span>
             <span>·</span>
-            <span className="text-nexus-secondary font-bold">Apple HIG Grade</span>
+            <span className="text-nexus-secondary font-bold">Workspace preferences</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-            System & Role Settings
+            Settings
           </h1>
         </div>
 
@@ -209,6 +164,8 @@ export function AppleSettingsView() {
           </Button>
         </div>
       </div>
+
+      {settingsError && <div role="alert" className="rounded-xl border border-amber-500/25 bg-amber-500/[0.05] p-3 text-xs">{settingsError} You can retry saving once the service is reachable.</div>}
 
       {/* Main iOS Grouped Layout Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -277,7 +234,7 @@ export function AppleSettingsView() {
                     <input
                       type="text"
                       value={workspaceName}
-                      onChange={(e) => setWorkspaceName(e.target.value)}
+                      readOnly
                       className="w-full p-2.5 rounded-xl bg-nexus-surface border border-nexus-outline/30 text-nexus-on-surface focus:outline-none focus:border-nexus-secondary"
                     />
                   </div>
@@ -288,14 +245,10 @@ export function AppleSettingsView() {
                     </label>
                     <select
                       value={activeRole}
-                      onChange={(e) => setActiveRole(e.target.value as any)}
+                      disabled
                       className="w-full p-2.5 rounded-xl bg-nexus-surface border border-nexus-outline/30 text-nexus-on-surface focus:outline-none focus:border-nexus-secondary"
                     >
-                      <option value="OPERATIONS_MANAGER">OPERATIONS_MANAGER (Tactical Incident Commander)</option>
-                      <option value="OPERATOR">OPERATOR (Field Dispatcher & Driver HUD)</option>
-                      <option value="ANALYST">ANALYST (Predictive Scenario Lab)</option>
-                      <option value="ADMINISTRATOR">ADMINISTRATOR (Aegis Governance & Security)</option>
-                      <option value="VIEWER">VIEWER (Executive Boardroom & ESG)</option>
+                      <option value={activeRole}>{activeRole.replaceAll("_", " ")}</option>
                     </select>
                   </div>
 
@@ -305,8 +258,8 @@ export function AppleSettingsView() {
                     </label>
                     <input
                       type="text"
-                      value={hubCity}
-                      onChange={(e) => setHubCity(e.target.value)}
+                      value="Not configured"
+                      readOnly
                       className="w-full p-2.5 rounded-xl bg-nexus-surface border border-nexus-outline/30 text-nexus-on-surface focus:outline-none focus:border-nexus-secondary"
                     />
                   </div>
@@ -382,45 +335,28 @@ export function AppleSettingsView() {
               <Card className="border-nexus-outline/30 shadow-tactile">
                 <CardHeader className="pb-3 border-b border-nexus-outline/20">
                   <CardTitle className="text-sm font-mono font-bold">
-                    Grouped Notification Rules
+                    Workspace notifications
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Granular channels for critical SLA alerts and synthesis digests
+                    This preference controls whether workspace notifications are enabled.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 space-y-3 font-mono text-xs">
                   <div className="flex items-center justify-between p-3 rounded-xl bg-nexus-surface border border-nexus-outline/20">
                     <div>
-                      <div className="font-bold text-rose-600 dark:text-rose-400">Critical Incident Siren</div>
+                      <div className="font-bold text-nexus-on-surface">Enable workspace notifications</div>
                       <div className="text-[10px] text-nexus-on-surface-variant">
-                        High-priority popups and audio chimes on Level-3 blizzard alerts
+                        Notification delivery channels are controlled by workspace configuration.
                       </div>
                     </div>
                     <input
                       type="checkbox"
-                      checked={notifyCritical}
-                      onChange={(e) => setNotifyCritical(e.target.checked)}
+                      checked={notificationsEnabled}
+                      onChange={(e) => setNotificationsEnabled(e.target.checked)}
                       className="w-5 h-5 accent-rose-500 rounded cursor-pointer"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-nexus-surface border border-nexus-outline/20">
-                    <div>
-                      <div className="font-bold text-nexus-on-surface">Daily Executive Email Digest</div>
-                      <div className="text-[10px] text-nexus-on-surface-variant">
-                        Automated 8:00 AM summary of fleet efficiency and cost savings
-                      </div>
-                    </div>
-                    <select
-                      value={emailDigest}
-                      onChange={(e) => setEmailDigest(e.target.value as any)}
-                      className="p-1.5 rounded-lg bg-nexus-surface-container border border-nexus-outline/30 text-nexus-on-surface text-xs"
-                    >
-                      <option value="instant">Instant Realtime</option>
-                      <option value="daily">Daily at 08:00 AM</option>
-                      <option value="weekly">Weekly Rollup</option>
-                    </select>
-                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -629,64 +565,14 @@ export function AppleSettingsView() {
               <Card className="border-nexus-outline/30 shadow-tactile">
                 <CardHeader className="pb-3 border-b border-nexus-outline/20">
                   <CardTitle className="text-sm font-mono font-bold">
-                    Data Environment & Zero-State Engine
+                    Operational data
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Toggle between clean zero production data and interactive simulation sandbox
+                    Workspace records are stored on the server. Connect an approved data source or add records from Operations.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4 font-mono text-xs">
-                  {/* Operational Mode Toggle */}
-                  <div className="p-4 rounded-xl bg-nexus-surface border border-nexus-outline/30 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-nexus-on-surface">Workspace Operational Mode</div>
-                        <div className="text-[11px] text-nexus-on-surface-variant">
-                          {operationalMode === "PRODUCTION"
-                            ? "Clean Production: Shows only genuine user data (starts at 0)."
-                            : "Demo Sandbox: Loads simulated Class-8 EV fleet & I-80 emergency."}
-                        </div>
-                      </div>
-                      <select
-                        value={operationalMode}
-                        onChange={(e) => {
-                          const newMode = e.target.value as any;
-                          setOperationalMode(newMode);
-                          if (typeof window !== "undefined") {
-                            localStorage.setItem("nexus_operational_mode", newMode);
-                          }
-                          tactileAudio.playSuccess();
-                          toast({
-                            title: `Switched to ${newMode} Mode`,
-                            message: newMode === "PRODUCTION" ? "Active workspace reset to clean zero." : "Loaded interactive scenario sandbox.",
-                            type: "info",
-                          });
-                        }}
-                        className="p-2 rounded-lg bg-nexus-surface-container border border-nexus-outline/40 text-nexus-on-surface font-bold text-xs"
-                      >
-                        <option value="PRODUCTION">Clean Production (Default Zero)</option>
-                        <option value="SANDBOX">Interactive Sandbox (Demo Fleet)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Reset Workspace Button */}
-                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-rose-500/5 border border-rose-500/20">
-                    <div>
-                      <div className="font-bold text-rose-600 dark:text-rose-400">Reset Workspace to Zero</div>
-                      <div className="text-[10px] text-nexus-on-surface-variant">
-                        Wipes all custom local storage records and returns to pristine clean state
-                      </div>
-                    </div>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={handleResetWorkspaceToZero}
-                      className="font-mono text-xs"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Reset to 0
-                    </Button>
-                  </div>
+                  <p className="text-xs leading-5 text-nexus-on-surface-variant">Operational records are workspace data. Use the import workflow to add a real file; this page does not fabricate or locally reset records.</p>
                 </CardContent>
               </Card>
             </motion.div>

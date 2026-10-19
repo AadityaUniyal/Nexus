@@ -32,6 +32,7 @@ from app.api.v1.endpoints import (
     settings,
     simulations,
     telemetry,
+    trips,
     voice,
     weather,
     webhooks,
@@ -63,6 +64,7 @@ api_router.include_router(location.router, prefix="/location", tags=["location"]
 api_router.include_router(voice.router)
 api_router.include_router(weather.router)
 api_router.include_router(operations.router)
+api_router.include_router(trips.router)
 api_router.include_router(driver.router)
 api_router.include_router(incidents.router)
 api_router.include_router(simulations.router)

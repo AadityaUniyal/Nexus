@@ -11,12 +11,12 @@ class WarehouseBase(BaseModel):
     state: str
     lat: float
     lng: float
-    capacity_units: int = Field(10000, alias="capacityUnits")
-    current_units: int = Field(0, alias="currentUnits")
-    dock_count: int = Field(8, alias="dockCount")
-    active_docks: int = Field(4, alias="activeDocks")
-    efficiency_pct: float = Field(95.0, alias="efficiencyPct")
-    status: str = "OPERATIONAL"
+    capacity_units: int = Field(..., ge=1, alias="capacityUnits")
+    current_units: int = Field(..., ge=0, alias="currentUnits")
+    dock_count: int = Field(..., ge=0, alias="dockCount")
+    active_docks: int = Field(..., ge=0, alias="activeDocks")
+    efficiency_pct: float = Field(..., ge=0, le=100, alias="efficiencyPct")
+    status: str
 
 class WarehouseCreate(WarehouseBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -53,12 +53,12 @@ class VehicleBase(BaseModel):
     name: str
     model: str
     driver_name: str = Field(..., alias="driverName")
-    status: str = "IN_TRANSIT"
+    status: str
     current_lat: float = Field(..., alias="currentLat")
     current_lng: float = Field(..., alias="currentLng")
-    speed_kmh: float = Field(0.0, alias="speedKmh")
-    battery_pct: int = Field(100, alias="batteryPct")
-    health_score: int = Field(95, alias="healthScore")
+    speed_kmh: float = Field(..., ge=0, alias="speedKmh")
+    battery_pct: int = Field(..., ge=0, le=100, alias="batteryPct")
+    health_score: int = Field(..., ge=0, le=100, alias="healthScore")
     current_route_id: Optional[str] = Field(None, alias="currentRouteId")
     current_route_name: Optional[str] = Field(None, alias="currentRouteName")
 
@@ -111,7 +111,7 @@ class RouteBase(BaseModel):
     dest_warehouse_name: str = Field(..., alias="destWarehouseName")
     distance_km: float = Field(..., alias="distanceKm")
     avg_duration_mins: int = Field(..., alias="avgDurationMins")
-    traffic_condition: str = Field("NORMAL", alias="trafficCondition")
+    traffic_condition: Optional[str] = Field(None, alias="trafficCondition")
     waypoints: List[Any] = []
 
 class RouteCreate(RouteBase):
@@ -147,8 +147,10 @@ class OrderBase(BaseModel):
     customer_name: str = Field(..., alias="customerName")
     destination: str
     priority: str = "STANDARD"
-    status: str = "IN_TRANSIT"
-    total_cost: float = Field(0.0, alias="totalCost")
+    status: str = "PENDING"
+    total_cost: float = Field(..., ge=0, alias="totalCost")
+    warehouse_id: Optional[str] = Field(None, alias="warehouseId")
+    route_id: Optional[str] = Field(None, alias="routeId")
     deadline: str
     vehicle_id: Optional[str] = Field(None, alias="vehicleId")
     vehicle_code: Optional[str] = Field(None, alias="vehicleCode")

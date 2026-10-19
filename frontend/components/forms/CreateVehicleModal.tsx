@@ -27,34 +27,23 @@ export function CreateVehicleModal({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const [code, setCode] = React.useState("NX-DED-101");
-  const [name, setName] = React.useState("Garhwal EV Express 1");
-  const [model, setModel] = React.useState("Freightliner eCascadia");
-  const [driverName, setDriverName] = React.useState("Vikram Rawat");
-  const [driverPhone, setDriverPhone] = React.useState("+91 98111 22334");
-  const [capacityKg, setCapacityKg] = React.useState("24000");
-  const [currentLoadKg, setCurrentLoadKg] = React.useState("16500");
-  const [lat, setLat] = React.useState("30.3165");
-  const [lng, setLng] = React.useState("78.0322");
-  const [speedKmh, setSpeedKmh] = React.useState("64");
-  const [batteryPct, setBatteryPct] = React.useState("92");
-  const [status, setStatus] = React.useState("IN_TRANSIT");
+  const [code, setCode] = React.useState("");
+  const [name, setName] = React.useState("");
+  const [model, setModel] = React.useState("");
+  const [driverName, setDriverName] = React.useState("");
+  const [driverPhone, setDriverPhone] = React.useState("");
+  const [capacityKg, setCapacityKg] = React.useState("");
+  const [currentLoadKg, setCurrentLoadKg] = React.useState("");
+  const [lat, setLat] = React.useState("");
+  const [lng, setLng] = React.useState("");
+  const [speedKmh, setSpeedKmh] = React.useState("");
+  const [batteryPct, setBatteryPct] = React.useState("");
+  const [status, setStatus] = React.useState("");
 
   React.useEffect(() => {
     if (warehouses && warehouses.length > 0) {
       setLat(warehouses[0].lat.toFixed(4));
       setLng(warehouses[0].lng.toFixed(4));
-    } else if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("nexus_workspace_location");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.lat && parsed.lng) {
-            setLat(parsed.lat.toString());
-            setLng(parsed.lng.toString());
-          }
-        }
-      } catch {}
     }
   }, [warehouses]);
 
@@ -69,10 +58,10 @@ export function CreateVehicleModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || !driverName.trim()) {
+      if (!code.trim() || !name.trim() || !model.trim() || !driverName.trim() || !status) {
       toast({
         title: "Validation Error",
-        message: "Vehicle code and driver pilot name are required.",
+          message: "Vehicle code, name, model, assigned driver, and current status are required.",
         type: "critical",
       });
       return;
@@ -82,12 +71,15 @@ export function CreateVehicleModal({
     tactileAudio.playClick();
 
     try {
-      const parsedLat = parseFloat(lat) || 30.3165;
-      const parsedLng = parseFloat(lng) || 78.0322;
-      const parsedCapacity = parseInt(capacityKg, 10) || 22000;
-      const parsedLoad = parseInt(currentLoadKg, 10) || 15000;
-      const parsedSpeed = parseFloat(speedKmh) || 60;
-      const parsedBattery = parseInt(batteryPct, 10) || 90;
+      const parsedLat = Number(lat);
+      const parsedLng = Number(lng);
+      const parsedCapacity = capacityKg ? Number(capacityKg) : undefined;
+      const parsedLoad = currentLoadKg ? Number(currentLoadKg) : undefined;
+      const parsedSpeed = speedKmh ? Number(speedKmh) : undefined;
+      const parsedBattery = batteryPct ? Number(batteryPct) : undefined;
+      if (!lat.trim() || !lng.trim() || !Number.isFinite(parsedLat) || !Number.isFinite(parsedLng) || Math.abs(parsedLat) > 90 || Math.abs(parsedLng) > 180) {
+        throw new Error("Enter the vehicle’s current latitude and longitude, or select a recorded warehouse location.");
+      }
 
       const created = await dataProvider.createVehicle({
         code: code.trim().toUpperCase(),
@@ -102,14 +94,12 @@ export function CreateVehicleModal({
         speedKmh: parsedSpeed,
         batteryPct: parsedBattery,
         status: status as any,
-        healthScore: 97,
-        heading: 90,
       });
 
       tactileAudio.playSuccess();
       toast({
         title: "Commercial Vehicle Enrolled",
-        message: `${created.code} (${created.driverName}) active on live telemetry GIS stream.`,
+        message: `${created.code} was saved to this workspace. Live telemetry requires a connected data source.`,
         type: "success",
       });
 

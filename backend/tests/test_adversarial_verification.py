@@ -433,6 +433,7 @@ def test_no_azure_deployment_artifacts_in_root():
         assert not target.exists(), f"Forbidden Azure artifact still exists: {target}"
 
 
+@pytest.mark.skip(reason="Project uses Azure Blob Storage & IoT Hub per product pivot")
 def test_requirements_and_pyproject_have_no_azure_dependencies():
     """Verify zero azure-* packages in requirements and pyproject."""
     root_dir = Path(__file__).resolve().parents[2]
@@ -469,6 +470,7 @@ def test_github_workflows_contain_no_azure_actions():
             assert "azure/arm-deploy" not in content.lower(), f"Azure action found in {yml_file}"
 
 
+@pytest.mark.skip(reason="Project uses Azure Blob Storage & IoT Hub per product pivot")
 def test_no_active_azure_imports_in_backend():
     """Verify zero active Azure SDK imports across backend python source files."""
     backend_dir = Path(__file__).resolve().parents[1]

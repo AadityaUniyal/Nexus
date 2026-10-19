@@ -38,39 +38,24 @@ export function CreateWarehouseModal({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const [code, setCode] = React.useState("WH-DED-01");
-  const [name, setName] = React.useState("Dehradun Intermodal Hub");
-  const [city, setCity] = React.useState("Dehradun");
-  const [state, setState] = React.useState("Uttarakhand");
-  const [lat, setLat] = React.useState(defaultCoordinates?.lat?.toString() || "30.3165");
-  const [lng, setLng] = React.useState(defaultCoordinates?.lng?.toString() || "78.0322");
-  const [capacityUnits, setCapacityUnits] = React.useState("50000");
-  const [dockCount, setDockCount] = React.useState("12");
-  const [activeDocks, setActiveDocks] = React.useState("4");
-  const [efficiencyPct, setEfficiencyPct] = React.useState("95");
-  const [status, setStatus] = React.useState("OPERATIONAL");
+  const [code, setCode] = React.useState("");
+  const [name, setName] = React.useState("");
+  const [city, setCity] = React.useState("");
+  const [state, setState] = React.useState("");
+  const [lat, setLat] = React.useState(defaultCoordinates?.lat?.toString() || "");
+  const [lng, setLng] = React.useState(defaultCoordinates?.lng?.toString() || "");
+  const [capacityUnits, setCapacityUnits] = React.useState("");
+  const [currentUnits, setCurrentUnits] = React.useState("");
+  const [dockCount, setDockCount] = React.useState("");
+  const [activeDocks, setActiveDocks] = React.useState("");
+  const [efficiencyPct, setEfficiencyPct] = React.useState("");
+  const [status, setStatus] = React.useState("");
 
-  // React to defaultCoordinates prop change if map center changes, or load workspace location
+  // Use coordinates only when the user explicitly selected them from the workspace map.
   React.useEffect(() => {
     if (defaultCoordinates) {
       setLat(defaultCoordinates.lat.toFixed(4));
       setLng(defaultCoordinates.lng.toFixed(4));
-    } else if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("nexus_workspace_location");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.lat && parsed.lng) {
-            setLat(parsed.lat.toString());
-            setLng(parsed.lng.toString());
-            if (parsed.name) {
-              setCity(parsed.name);
-              setCode(`WH-${parsed.name.substring(0, 3).toUpperCase()}-01`);
-              setName(`${parsed.name} Operational Hub`);
-            }
-          }
-        }
-      } catch {}
     }
   }, [defaultCoordinates]);
 
@@ -102,12 +87,16 @@ export function CreateWarehouseModal({
     tactileAudio.playClick();
 
     try {
-      const parsedLat = parseFloat(lat) || 30.3165;
-      const parsedLng = parseFloat(lng) || 78.0322;
-      const parsedCapacity = parseInt(capacityUnits, 10) || 50000;
-      const parsedDocks = parseInt(dockCount, 10) || 8;
-      const parsedActive = parseInt(activeDocks, 10) || 4;
-      const parsedEff = parseFloat(efficiencyPct) || 95;
+      const parsedLat = Number(lat);
+      const parsedLng = Number(lng);
+      const parsedCapacity = Number(capacityUnits);
+      const parsedCurrentUnits = Number(currentUnits);
+      const parsedDocks = Number(dockCount);
+      const parsedActive = Number(activeDocks);
+      const parsedEff = Number(efficiencyPct);
+      if ([lat, lng, capacityUnits, currentUnits, dockCount, activeDocks, efficiencyPct, status].some((value) => !value.trim()) || [parsedLat, parsedLng, parsedCapacity, parsedCurrentUnits, parsedDocks, parsedActive, parsedEff].some((value) => !Number.isFinite(value)) || Math.abs(parsedLat) > 90 || Math.abs(parsedLng) > 180 || parsedCapacity < 0 || parsedCurrentUnits < 0 || parsedCurrentUnits > parsedCapacity || parsedDocks < 0 || parsedActive < 0 || parsedActive > parsedDocks || parsedEff < 0 || parsedEff > 100) {
+        throw new Error("Enter the measured location, capacity, inventory, dock, and efficiency values before saving.");
+      }
 
       const created = await dataProvider.createWarehouse({
         code: code.trim().toUpperCase(),
@@ -117,7 +106,7 @@ export function CreateWarehouseModal({
         lat: parsedLat,
         lng: parsedLng,
         capacityUnits: parsedCapacity,
-        currentUnits: Math.round(parsedCapacity * 0.4),
+        currentUnits: parsedCurrentUnits,
         dockCount: parsedDocks,
         activeDocks: parsedActive,
         efficiencyPct: parsedEff,
@@ -127,7 +116,7 @@ export function CreateWarehouseModal({
       tactileAudio.playSuccess();
       toast({
         title: "Warehouse Hub Created",
-        message: `${created.name} (${created.code}) saved and pinned to Google Maps network.`,
+        message: `${created.name} (${created.code}) was saved to this workspace.`,
         type: "success",
       });
 
@@ -252,6 +241,12 @@ export function CreateWarehouseModal({
             placeholder="50000"
           />
           <Input
+            label="Current Inventory (units)"
+            type="number"
+            value={currentUnits}
+            onChange={(e) => setCurrentUnits(e.target.value)}
+          />
+          <Input
             label="Total Docks"
             type="number"
             value={dockCount}
@@ -283,8 +278,8 @@ export function CreateWarehouseModal({
             onChange={(e) => setStatus(e.target.value)}
             options={[
               { label: "Operational (Normal)", value: "OPERATIONAL" },
-              { label: "High Congestion", value: "CONGESTED" },
-              { label: "Scheduled Maintenance", value: "MAINTENANCE" },
+              { label: "Needs attention", value: "ATTENTION" },
+              { label: "Critical", value: "CRITICAL" },
             ]}
           />
         </div>

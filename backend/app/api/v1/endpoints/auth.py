@@ -1,16 +1,15 @@
 import uuid
-import logging
-from datetime import timedelta
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
-from app.models.user import User, Workspace
+from app.models.user import User, Workspace, WorkspaceMembership
+from app.models.organization import Organization, OrganizationMembership, SubscriptionPlan
 from app.schemas.user import (
     UserCreate,
     UserRead,
     LoginRequest,
-    Token,
+    AuthSessionResponse,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     VerifyEmailRequest,
@@ -20,23 +19,26 @@ from app.core.security import create_access_token, decode_token, get_password_ha
 from app.core.errors import NexusException, UnauthorizedException
 from app.core.config import settings
 
-logger = logging.getLogger("nexus.auth")
-
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@router.post("/login", response_model=Token)
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    response.delete_cookie(
+        key="nexus_session_token", path="/", httponly=True,
+        secure=settings.APP_ENV.lower() == "production", samesite="lax",
+    )
+    return response
+
+@router.post("/login", response_model=AuthSessionResponse)
+async def login(req: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     """Authenticate user with email and password strictly from database."""
     stmt = select(User).where(User.email == req.email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
-    is_demo_pass = settings.ENABLE_DEMO_AUTH and req.password in ["nexus-demo-password", "Password123!"]
     password_valid = False
     if user and user.hashed_password:
         password_valid = verify_password(req.password, user.hashed_password)
-    if is_demo_pass and user:
-        password_valid = True
 
     if not user or not password_valid:
         raise UnauthorizedException("Invalid email or password.")
@@ -57,16 +59,23 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
             "workspace_id": user.workspace_id,
         }
     )
-    return Token(access_token=token, token_type="bearer", user=UserRead.model_validate(user))
+    response.set_cookie(
+        key="nexus_session_token", value=token, httponly=True,
+        secure=settings.APP_ENV.lower() == "production", samesite="lax",
+        max_age=86400, path="/",
+    )
+    return AuthSessionResponse(user=UserRead.model_validate(user))
 
-@router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
+@router.post("/signup", response_model=AuthSessionResponse, status_code=status.HTTP_201_CREATED)
+async def signup(req: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
     """Register a new user in the designated workspace and issue access token."""
-    if req.role and req.role.strip().upper() == "ADMINISTRATOR":
+    # The first account created for a new workspace is promoted by this server-side
+    # bootstrap flow. A caller must not request an elevated role in the payload.
+    if "role" in req.model_fields_set and req.role.upper() != "OPERATOR":
         raise NexusException(
             status_code=status.HTTP_403_FORBIDDEN,
             code="PRIVILEGED_ROLE_FORBIDDEN",
-            message="Self-assignment of the ADMINISTRATOR role is prohibited during public registration.",
+            message="Workspace roles are assigned by the server or a workspace administrator.",
         )
 
     stmt = select(User).where(User.email == req.email)
@@ -78,32 +87,34 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
             message=f"User with email '{req.email}' already exists.",
         )
 
-    workspace_id = req.workspace_id
-    if not workspace_id:
-        # Generate an isolated workspace for the new user based on department, email domain, or user name
-        clean_name = req.department.replace(" Operations", "").strip() if req.department else f"{req.name.split()[0]}'s Fleet"
-        slug_prefix = "".join(c.lower() for c in clean_name if c.isalnum() or c in ("-", "_"))[:16] or "fleet"
-        workspace_id = f"ws-{slug_prefix}-{uuid.uuid4().hex[:6]}"
-        new_ws = Workspace(
-            id=workspace_id,
-            name=clean_name,
-            slug=f"{slug_prefix}-{uuid.uuid4().hex[:6]}",
-        )
-        db.add(new_ws)
-        await db.flush()
-    else:
-        # Check if requested workspace exists; if not, create it dynamically for the new organization
-        ws_chk = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
-        ws_existing = ws_chk.scalar_one_or_none()
-        if not ws_existing:
-            clean_name = req.department.replace(" Operations", "").strip() if req.department else "Enterprise Fleet"
-            new_ws = Workspace(
-                id=workspace_id,
-                name=clean_name,
-                slug=f"{workspace_id}-{uuid.uuid4().hex[:6]}",
-            )
-            db.add(new_ws)
-            await db.flush()
+    workspace_name = (req.workspace_name or "").strip()
+    if len(workspace_name) < 2:
+        raise NexusException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, code="WORKSPACE_NAME_REQUIRED", message="Enter a workspace name with at least two characters.")
+    slug_prefix = "".join(c.lower() for c in workspace_name if c.isalnum() or c in ("-", "_"))[:32] or "workspace"
+    workspace_id = f"ws-{slug_prefix}-{uuid.uuid4().hex[:8]}"
+    organization_slug = f"{slug_prefix}-{uuid.uuid4().hex[:8]}"
+    organization = Organization(
+        name=workspace_name,
+        slug=organization_slug,
+        plan="PROFESSIONAL",
+    )
+    db.add(organization)
+    await db.flush()
+
+    new_ws = Workspace(
+        id=workspace_id,
+        name=f"{workspace_name} Setup",
+        slug=f"{slug_prefix}-setup-{uuid.uuid4().hex[:8]}",
+        organization_id=organization.id,
+        is_demo=False,
+    )
+    db.add(new_ws)
+    await db.flush()
+
+    db.add(SubscriptionPlan(
+        organization_id=organization.id,
+        plan_tier="PROFESSIONAL",
+    ))
 
     new_user = User(
         id=f"usr-{uuid.uuid4().hex[:8]}",
@@ -111,12 +122,24 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
         email=req.email,
         name=req.name,
         hashed_password=get_password_hash(req.password),
-        role=req.role,
-        department=req.department or "Autonomous Logistics Network",
+        role="ADMINISTRATOR",
+        department=req.department or "Operations",
+        organization_id=organization.id,
         workspace_id=workspace_id,
         is_active=True,
     )
     db.add(new_user)
+    db.add(OrganizationMembership(
+        organization_id=organization.id,
+        user_id=new_user.id,
+        role="ADMINISTRATOR",
+        is_default=True,
+    ))
+    db.add(WorkspaceMembership(
+        workspace_id=workspace_id,
+        user_id=new_user.id,
+        role="ADMINISTRATOR",
+    ))
     await db.commit()
     await db.refresh(new_user)
 
@@ -129,31 +152,20 @@ async def signup(req: UserCreate, db: AsyncSession = Depends(get_db)):
             "workspace_id": new_user.workspace_id,
         }
     )
-    return Token(access_token=token, token_type="bearer", user=UserRead.model_validate(new_user))
+    response.set_cookie(
+        key="nexus_session_token", value=token, httponly=True,
+        secure=settings.APP_ENV.lower() == "production", samesite="lax",
+        max_age=86400, path="/",
+    )
+    return AuthSessionResponse(user=UserRead.model_validate(new_user))
 
 @router.post("/forgot-password", response_model=AuthMessageResponse)
-async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
-    """Initiate password recovery flow and generate reset token."""
-    stmt = select(User).where(User.email == req.email)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-
-    if not user:
-        return AuthMessageResponse(
-            status="SUCCESS",
-            message="If an account exists with that email, a password reset link has been dispatched.",
-        )
-
-    # Create temporary reset token (15 mins TTL)
-    reset_token = create_access_token(
-        subject=user.id,
-        expires_delta=timedelta(minutes=15),
-        extra_claims={"type": "password_reset", "email": user.email},
-    )
-    logger.info(f"Password reset token generated for user id {user.id}")
-    return AuthMessageResponse(
-        status="SUCCESS",
-        message="If an account exists with that email, a password reset link has been dispatched.",
+async def forgot_password(_req: ForgotPasswordRequest):
+    """Fail clearly until a configured delivery channel can send reset links."""
+    raise NexusException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        code="PASSWORD_RECOVERY_UNAVAILABLE",
+        message="Password recovery is not configured for this workspace. Contact your workspace administrator.",
     )
 
 @router.post("/reset-password", response_model=AuthMessageResponse)

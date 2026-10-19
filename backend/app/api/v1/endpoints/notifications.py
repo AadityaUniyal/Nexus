@@ -1,11 +1,11 @@
 import uuid
 from typing import List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
-from app.auth.dependencies import get_optional_principal
+from app.auth.dependencies import require_workspace
 from app.auth.principal import RequestPrincipal
 from app.models.system import Notification
 from app.schemas.system import NotificationRead
@@ -13,71 +13,23 @@ from app.core.errors import EntityNotFoundException
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
-def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
-    """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
-    if principal and principal.workspace_id:
-        return principal.workspace_id
-    return fallback or "ws-continental-fleet-01"
-
-INITIAL_NOTIFICATIONS = [
-    {
-        "id": "notif-1",
-        "workspace_id": "ws-continental-fleet-01",
-        "type": "CRITICAL",
-        "title": "Severe Blizzard Alert on I-80 Pass",
-        "message": "Route RT-CHI-DEN-01 blocked. 14 orders affected including AeroTech critical shipment.",
-        "deep_link": "/incidents/inc-8041",
-        "read": False,
-    },
-    {
-        "id": "notif-2",
-        "workspace_id": "ws-continental-fleet-01",
-        "type": "ATTENTION",
-        "title": "Thermal Unit Drift on NX-TRK-109",
-        "message": "Auxiliary condenser temperature deviation (+3.2°C) detected on Volvo VNR Electric.",
-        "deep_link": "/incidents/inc-8042",
-        "read": False,
-    },
-    {
-        "id": "notif-3",
-        "workspace_id": "ws-continental-fleet-01",
-        "type": "SIMULATION",
-        "title": "Simulation Ready: I-70 Detour Analysis",
-        "message": "Scenario SIM-SCENARIO-901 shows 135 mins net time recovery with 94% recommendation score.",
-        "deep_link": "/simulations/sim-901",
-        "read": True,
-    },
-]
+def get_tenant_workspace(principal: RequestPrincipal) -> str:
+    if not principal.workspace_id:
+        raise EntityNotFoundException("Workspace", "active")
+    return principal.workspace_id
 
 @router.get("", response_model=List[NotificationRead])
 async def list_notifications(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
-    workspace_id: Optional[str] = Query(default=None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve operational notifications from PostgreSQL with pagination."""
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     stmt = select(Notification).where(Notification.workspace_id == ws).order_by(Notification.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(stmt)
     notifs = result.scalars().all()
-
-    if not notifs:
-        for n_data in INITIAL_NOTIFICATIONS:
-            n = Notification(
-                id=f"notif-{uuid.uuid4().hex[:8]}",
-                workspace_id=ws,
-                type=n_data["type"],
-                title=n_data["title"],
-                message=n_data["message"],
-                deep_link=n_data["deep_link"],
-                read=n_data["read"],
-            )
-            db.add(n)
-        await db.commit()
-        result = await db.execute(select(Notification).where(Notification.workspace_id == ws).order_by(Notification.created_at.desc()))
-        notifs = result.scalars().all()
 
     return [
         NotificationRead(
@@ -94,12 +46,11 @@ async def list_notifications(
 
 @router.post("/read-all")
 async def mark_all_notifications_read(
-    workspace_id: Optional[str] = Query(default=None),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Mark all operational notifications as read in PostgreSQL."""
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     stmt = select(Notification).where(Notification.read == False, Notification.workspace_id == ws)
     result = await db.execute(stmt)
     notifs = result.scalars().all()
@@ -112,7 +63,7 @@ async def mark_all_notifications_read(
 @router.post("/{notification_id}/read", response_model=NotificationRead)
 async def mark_notification_read(
     notification_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Mark a notification as read in PostgreSQL."""
@@ -121,11 +72,7 @@ async def mark_notification_read(
     result = await db.execute(stmt)
     notif = result.scalars().first()
     if not notif:
-        # Fallback query if workspace was default
-        stmt_fallback = select(Notification).where(Notification.id == notification_id)
-        notif = (await db.execute(stmt_fallback)).scalars().first()
-        if not notif:
-            raise EntityNotFoundException("Notification", notification_id)
+        raise EntityNotFoundException("Notification", notification_id)
 
     notif.read = True
     await db.commit()
@@ -143,51 +90,14 @@ async def mark_notification_read(
     )
 
 
-DEFAULT_NOTIFICATION_RULES = [
-    {
-        "id": "rule-1",
-        "event": "incident.critical_detected",
-        "target": "OPERATIONS_MANAGERS",
-        "channels": ["SSE_TOAST", "PERSISTENT_NOTIFICATION", "SMS_FALLBACK"],
-        "enabled": True,
-    },
-    {
-        "id": "rule-2",
-        "event": "simulation.decision_ready",
-        "target": "ACTOR_AND_MANAGERS",
-        "channels": ["SSE_TOAST", "NOTIFICATION_CENTER"],
-        "enabled": True,
-    },
-    {
-        "id": "rule-3",
-        "event": "pipeline.latency_warning",
-        "target": "ADMINISTRATORS",
-        "channels": ["NOTIFICATION_CENTER", "EMAIL_DIGEST"],
-        "enabled": True,
-    },
-    {
-        "id": "rule-4",
-        "event": "driver.proof_of_delivery_received",
-        "target": "DISPATCH_OPERATORS",
-        "channels": ["SSE_TOAST", "AUDIT_FEED"],
-        "enabled": True,
-    },
-]
 
 
 @router.get("/rules")
-async def get_notification_rules() -> List[dict]:
-    """Retrieve all configurable notification dispatch and routing rules."""
-    return DEFAULT_NOTIFICATION_RULES
+async def get_notification_rules(principal: RequestPrincipal = Depends(require_workspace)) -> List[dict]:
+    """Notification routing rules are not persisted/configurable in this deployment."""
+    raise HTTPException(status_code=503, detail="Notification routing configuration is not available for this workspace yet.")
 
 
 @router.patch("/rules/{rule_id}/toggle")
-async def toggle_notification_rule(rule_id: str) -> dict:
-    """Toggle enable/disable status for an automated alert routing rule."""
-    for r in DEFAULT_NOTIFICATION_RULES:
-        if r["id"] == rule_id:
-            r["enabled"] = not r["enabled"]
-            return {"success": True, "rule": r}
-    raise EntityNotFoundException("NotificationRule", rule_id)
-
-
+async def toggle_notification_rule(rule_id: str, principal: RequestPrincipal = Depends(require_workspace)) -> dict:
+    raise HTTPException(status_code=503, detail="Notification routing configuration is not available for this workspace yet.")

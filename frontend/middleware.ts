@@ -41,18 +41,11 @@ export function middleware(req: NextRequest) {
 
   // Check for active session token
   const sessionToken = req.cookies.get('nexus_session_token')?.value || req.cookies.get('__session')?.value;
-  const demoCookie = req.cookies.get('nexus_demo_session')?.value;
 
   let hasValidSession = false;
 
   // 1. Valid verified session token (JWT structure check)
   if (sessionToken && sessionToken.length > 20 && sessionToken.split('.').length >= 2) {
-    hasValidSession = true;
-  }
-
-  // 2. Local development demo persona cookie (strictly forbidden in production)
-  const isProd = process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
-  if (!isProd && demoCookie && demoCookie.trim().length > 0) {
     hasValidSession = true;
   }
 

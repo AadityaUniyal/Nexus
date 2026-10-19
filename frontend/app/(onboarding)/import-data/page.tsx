@@ -15,12 +15,13 @@ import {
   Users,
   Building,
   Package,
+  Warehouse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { authFetch } from "@/lib/api/auth-fetch";
 
-type EntityType = "VEHICLES" | "DRIVERS" | "CUSTOMERS" | "ORDERS";
+type EntityType = "VEHICLES" | "DRIVERS" | "CUSTOMERS" | "ORDERS" | "WAREHOUSES";
 
 interface ValidationResult {
   total_rows: number;
@@ -33,35 +34,19 @@ interface ValidationResult {
 }
 
 const TEMPLATES: Record<EntityType, { filename: string; content: string }> = {
-  VEHICLES: {
-    filename: "nexus_vehicles_template.csv",
-    content:
-      "code,name,model,driver_name,status,lat,lng,speed_kmh,battery_pct\n" +
-      "NX-101,Freightliner eCascadia,Electric Heavy Truck,Sarah Connor,IN_TRANSIT,41.8781,-87.6298,68.4,85\n" +
-      "NX-102,Volvo VNR Electric,Regional Day Cab,Marcus Vance,IDLE,39.7392,-104.9903,0.0,94\n" +
-      "NX-103,Tesla Semi,Long-Haul Transcontinental,Elena Rostova,IN_TRANSIT,32.7767,-96.7970,72.1,78\n",
-  },
-  DRIVERS: {
-    filename: "nexus_drivers_template.csv",
-    content:
-      "code,name,license_number,phone,email,duty_status\n" +
-      "DRV-01,Sarah Connor,CDL-IL-98124,+1-312-555-0142,sarah.connor@nexus.ops,ON_DUTY\n" +
-      "DRV-02,Marcus Vance,CDL-CO-44192,+1-303-555-0199,marcus.vance@nexus.ops,RESTING\n",
-  },
-  CUSTOMERS: {
-    filename: "nexus_customers_template.csv",
-    content:
-      "code,name,email,contact_name,phone,sla_tier\n" +
-      "CUST-01,AeroTech Avionics,logistics@aerotech.io,Devon Sterling,+1-206-555-0100,PLATINUM\n" +
-      "CUST-02,Vanguard Biopharma,supply@vanguardbio.com,Dr. Lisa Ray,+1-404-555-0188,CRITICAL\n",
-  },
-  ORDERS: {
-    filename: "nexus_orders_template.csv",
-    content:
-      "order_number,customer_name,destination,deadline,priority,total_cost\n" +
-      "ORD-9041,AeroTech Avionics,Denver Regional Depot,2026-10-02T18:00:00Z,CRITICAL,4200.00\n" +
-      "ORD-9042,Vanguard Biopharma,Atlanta Biopharma Hub,2026-10-01T12:00:00Z,HIGH,8900.00\n",
-  },
+  VEHICLES: { filename: "voyage_vehicles_template.csv", content: "code,name,model,driver_name,status,lat,lng,speed_kmh,heading,battery_pct,health_score\n" },
+  DRIVERS: { filename: "voyage_drivers_template.csv", content: "code,name,license_number,phone,email,license_class,duty_status,total_hours_today\n" },
+  CUSTOMERS: { filename: "voyage_customers_template.csv", content: "code,name,email,contact_name,phone,sla_tier\n" },
+  ORDERS: { filename: "voyage_orders_template.csv", content: "order_number,customer_name,destination,deadline,priority,status,total_cost,vehicle_code\n" },
+  WAREHOUSES: { filename: "voyage_warehouses_template.csv", content: "code,name,city,state,lat,lng,capacity_units,dock_count\n" },
+};
+
+const IMPORT_FIELDS: Record<EntityType, string[]> = {
+  VEHICLES: ["code", "name", "model", "driver_name", "status", "lat", "lng", "speed_kmh", "heading", "battery_pct", "health_score"],
+  DRIVERS: ["code", "name", "license_number", "phone", "email", "license_class", "duty_status", "total_hours_today"],
+  CUSTOMERS: ["code", "name", "email", "contact_name", "phone", "sla_tier"],
+  ORDERS: ["order_number", "customer_name", "destination", "deadline", "priority", "status", "total_cost", "vehicle_code"],
+  WAREHOUSES: ["code", "name", "city", "state", "lat", "lng", "capacity_units", "dock_count"],
 };
 
 export default function ImportDataPage() {
@@ -74,6 +59,7 @@ export default function ImportDataPage() {
   const [importing, setImporting] = React.useState(false);
   const [previewResult, setPreviewResult] = React.useState<ValidationResult | null>(null);
   const [columnMapping, setColumnMapping] = React.useState<Record<string, string>>({});
+  const [mappingDirty, setMappingDirty] = React.useState(false);
   const [importedStats, setImportedStats] = React.useState<{ count: number; entity: string }>({
     count: 0,
     entity: "VEHICLES",
@@ -94,6 +80,16 @@ export default function ImportDataPage() {
   };
 
   const processFile = async (selectedFile: File) => {
+    const lowerName = selectedFile.name.toLowerCase();
+    if (!lowerName.endsWith(".csv") && !lowerName.endsWith(".json")) {
+      setErrorMessage("Choose a CSV or JSON file.");
+      return;
+    }
+    if (selectedFile.size > 10_000_000) {
+      setErrorMessage("Files must be 10 MB or smaller.");
+      return;
+    }
+
     setFile(selectedFile);
     setErrorMessage(null);
     setValidating(true);
@@ -113,28 +109,35 @@ export default function ImportDataPage() {
 
       setPreviewResult(preview);
       setColumnMapping(preview.suggested_mapping || {});
+      setMappingDirty(false);
       setStep("mapping");
     } catch (err: any) {
       console.error("Preview failed:", err);
-      // Fallback local preview if offline
-      const lines = (await selectedFile.text()).trim().split("\n");
-      const headers = lines[0]?.split(",").map((h) => h.trim()) || [];
-      const mapping: Record<string, string> = {};
-      headers.forEach((h) => {
-        mapping[h] = h.toLowerCase().replace(/[^a-z0-9_]/g, "");
-      });
+      setPreviewResult(null);
+      setErrorMessage(err?.message || "The import service could not validate this file. Retry when the service is available.");
+    } finally {
+      setValidating(false);
+    }
+  };
 
-      setPreviewResult({
-        total_rows: Math.max(1, lines.length - 1),
-        valid_rows_count: Math.max(1, lines.length - 1),
-        error_rows_count: 0,
-        errors: [],
-        preview: [],
-        detected_columns: headers,
-        suggested_mapping: mapping,
+  const revalidateMapping = async () => {
+    if (!file || !fileContent) return;
+    setValidating(true);
+    setErrorMessage(null);
+    try {
+      const preview = await authFetch<ValidationResult>("/api/v1/import/preview", {
+        method: "POST",
+        body: JSON.stringify({
+          file_content: fileContent,
+          filename: file.name,
+          entity_type: entityType,
+          custom_mapping: columnMapping,
+        }),
       });
-      setColumnMapping(mapping);
-      setStep("mapping");
+      setPreviewResult(preview);
+      setMappingDirty(false);
+    } catch (err: any) {
+      setErrorMessage(err?.message || "The mapping could not be checked.");
     } finally {
       setValidating(false);
     }
@@ -232,9 +235,10 @@ export default function ImportDataPage() {
 
         {/* Entity Type Selector */}
         {step === "upload" && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
             {[
               { id: "VEHICLES" as EntityType, label: "Vehicles / Fleet", icon: Truck },
+              { id: "WAREHOUSES" as EntityType, label: "Hubs & Docks", icon: Warehouse },
               { id: "DRIVERS" as EntityType, label: "Drivers / CDL", icon: Users },
               { id: "CUSTOMERS" as EntityType, label: "Customers", icon: Building },
               { id: "ORDERS" as EntityType, label: "Freight Orders", icon: Package },
@@ -374,7 +378,7 @@ export default function ImportDataPage() {
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
-                  <p className="text-xs text-amber-700 dark:text-amber-400">Schema Warnings</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400">Rows to fix</p>
                   <p className="text-xl font-bold font-mono text-amber-700 dark:text-amber-400">
                     {previewResult.error_rows_count}
                   </p>
@@ -385,9 +389,9 @@ export default function ImportDataPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-nexus-on-surface">
-                    Column Mapping (Auto-detected & Verified)
+                    Review column mapping
                   </h4>
-                  <Badge variant="healthy" size="sm">
+                  <Badge variant={mappingDirty ? "attention" : "healthy"} size="sm">
                     {Object.keys(columnMapping).length} Mapped
                   </Badge>
                 </div>
@@ -395,16 +399,27 @@ export default function ImportDataPage() {
                   {Object.entries(columnMapping).map(([sourceCol, targetField], i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-2.5 rounded-lg bg-nexus-surface-container text-xs"
+                      className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-nexus-surface-container text-xs"
                     >
-                      <span className="font-mono text-nexus-on-surface-variant font-medium">
+                      <span className="min-w-28 flex-1 font-mono text-nexus-on-surface-variant font-medium">
                         {sourceCol}
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 text-nexus-on-surface-variant shrink-0" />
-                      <span className="font-mono text-nexus-secondary font-bold">
-                        {targetField}
-                      </span>
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <label className="flex min-w-44 flex-1 items-center gap-2">
+                        <span className="sr-only">Map {sourceCol} to a field</span>
+                        <select
+                          value={targetField}
+                          onChange={(event) => {
+                            setColumnMapping((current) => ({ ...current, [sourceCol]: event.target.value }));
+                            setMappingDirty(true);
+                          }}
+                          className="min-h-10 w-full rounded-md border border-nexus-outline-variant bg-nexus-surface-lowest px-2 text-sm text-nexus-on-surface"
+                        >
+                          <option value="">Ignore this column</option>
+                          {IMPORT_FIELDS[entityType].map((field) => <option key={field} value={field}>{field}</option>)}
+                        </select>
+                      </label>
+                      {targetField && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" aria-hidden />}
                     </div>
                   ))}
                 </div>
@@ -422,10 +437,16 @@ export default function ImportDataPage() {
                 >
                   Cancel
                 </Button>
+                {mappingDirty && (
+                  <Button variant="outline" onClick={() => void revalidateMapping()} isLoading={validating}>
+                    Recheck mapping
+                  </Button>
+                )}
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  isLoading={importing}
+                  isLoading={importing || validating}
+                  disabled={mappingDirty || previewResult.error_rows_count > 0 || previewResult.valid_rows_count === 0 || validating}
                   className="font-mono-data"
                 >
                   Commit {previewResult.valid_rows_count} {entityType} to Database

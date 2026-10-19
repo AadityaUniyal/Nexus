@@ -35,10 +35,7 @@ async def get_command_briefing(
     delayed_orders = sum(1 for o in orders if o.status == "DELAYED")
 
     # SLA rate
-    sla_rate = (
-        round(((total_orders - delayed_orders) / max(1, total_orders)) * 100, 1)
-        if total_orders > 0 else 98.4
-    )
+    sla_rate = round(((total_orders - delayed_orders) / total_orders) * 100, 1) if total_orders else None
 
     # Warehouses
     w_stmt = select(Warehouse).where(Warehouse.workspace_id == ws_id)
@@ -64,12 +61,8 @@ async def get_command_briefing(
             }
             for inc in active_incidents
         ],
-        "briefingNotes": [
-            "Continental North-South corridor running with nominal 4ms telemetry latency.",
-            "Weather warning active on I-80 Nebraska segment; auxiliary routing recommended for Class-8 units.",
-            "Dallas Hub dock utilization at 79%, ready to absorb inbound overflow from Houston."
-        ],
-        "dataFreshness": "FRESH"
+        "briefingNotes": [],
+        "dataFreshness": "UNVERIFIED"
     }
     return state_summary
 

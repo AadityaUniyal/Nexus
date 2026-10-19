@@ -72,6 +72,7 @@ ROLE_PERMISSIONS_MAP = {
         PermissionEnum.RUN_SIMULATION,
         PermissionEnum.VIEW_REPORTS,
         PermissionEnum.EXECUTE_ACTIONS,
+        PermissionEnum.IMPORT_DATA,
     ],
     RoleEnum.ANALYST: [
         PermissionEnum.VIEW_OPERATIONS,

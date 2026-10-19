@@ -41,11 +41,17 @@ async def ingest_telemetry(
     if isinstance(packet, TelemetryBatchRequest):
         results = []
         for p in packet.packets:
-            res = await ingest_telemetry_packet(db, p, principal.workspace_id)
+            try:
+                res = await ingest_telemetry_packet(db, p, principal.workspace_id)
+            except LookupError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
             results.append(res)
         return {"status": "BATCH_PROCESSED", "count": len(results), "results": results}
     else:
-        res = await ingest_telemetry_packet(db, packet, principal.workspace_id)
+        try:
+            res = await ingest_telemetry_packet(db, packet, principal.workspace_id)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         return res
 
 @router.get("/live", status_code=status.HTTP_200_OK)
@@ -108,33 +114,37 @@ async def receive_provider_webhook(
         ws_id = webhook_endpoint.workspace_id
         webhook_endpoint.events_received += 1
     else:
-        # If no endpoint registered and demo auth is disabled, reject unverified webhooks
-        from app.core.config import settings
-        if not settings.ENABLE_DEMO_AUTH:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"No active webhook configuration found for provider '{provider}'"
-            )
-        ws_id = x_workspace_id or "ws-continental-fleet-01"
-
-    # Normalize packet through provider adapter
-    if prov_upper == "SAMSARA":
-        packet = TelemetryAdapter.from_samsara(payload)
-    elif prov_upper == "GEOTAB":
-        packet = TelemetryAdapter.from_geotab(payload)
-    elif prov_upper in ["AZURE_IOT", "IOT_HUB"]:
-        packet = TelemetryAdapter.from_azure_iot(payload)
-    else:
-        # Generic payload fallback
-        packet = NormalizedTelemetryPacket(
-            vehicle_identifier=str(payload.get("vehicle_id") or payload.get("id") or "GENERIC-01"),
-            latitude=float(payload.get("lat") or payload.get("latitude") or 41.8781),
-            longitude=float(payload.get("lng") or payload.get("longitude") or -87.6298),
-            speed_kmh=float(payload.get("speed_kmh") or payload.get("speed") or 0.0),
-            battery_pct=payload.get("battery_pct"),
-            source_provider=f"WEBHOOK_{prov_upper}",
-            raw_payload=payload
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"No active webhook configuration found for provider '{provider}'"
         )
 
-    res = await ingest_telemetry_packet(db, packet, ws_id)
+    # Normalize packet through provider adapter
+    try:
+        if prov_upper == "SAMSARA":
+            packet = TelemetryAdapter.from_samsara(payload)
+        elif prov_upper == "GEOTAB":
+            packet = TelemetryAdapter.from_geotab(payload)
+        elif prov_upper in ["AZURE_IOT", "IOT_HUB"]:
+            packet = TelemetryAdapter.from_azure_iot(payload)
+        else:
+            vehicle_identifier = payload.get("vehicle_id") or payload.get("id")
+            latitude = payload.get("lat", payload.get("latitude"))
+            longitude = payload.get("lng", payload.get("longitude"))
+            if not vehicle_identifier or latitude is None or longitude is None:
+                raise ValueError("Generic telemetry requires vehicle_id, latitude, and longitude.")
+            packet = NormalizedTelemetryPacket(
+                vehicle_identifier=str(vehicle_identifier),
+                latitude=float(latitude),
+                longitude=float(longitude),
+                speed_kmh=float(payload.get("speed_kmh") or payload.get("speed") or 0.0),
+                battery_pct=payload.get("battery_pct"),
+                source_provider=f"WEBHOOK_{prov_upper}",
+                raw_payload=payload
+            )
+        res = await ingest_telemetry_packet(db, packet, ws_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"status": "WEBHOOK_PROCESSED", "provider": prov_upper, "result": res}

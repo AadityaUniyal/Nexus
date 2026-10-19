@@ -13,6 +13,9 @@ from app.api.v1.endpoints import webhooks
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("nexus")
+from app.integrations.azure_monitor import configure_monitoring
+configure_monitoring()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,8 +38,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Task queue initialization warning: {e}")
 
-    logger.info("NEXUS zero-Azure unified engine active.")
+    try:
+        from app.integrations.azure_iot_consumer import azure_iot_consumer
+        await azure_iot_consumer.start()
+        app.state.azure_iot_consumer = azure_iot_consumer
+        logger.info("Azure IoT consumer status: %s", azure_iot_consumer.status)
+    except Exception:
+        logger.exception("Azure IoT consumer startup failed")
+
+    logger.info("NEXUS API startup complete.")
     yield
+    try:
+        from app.integrations.azure_iot_consumer import azure_iot_consumer
+        await azure_iot_consumer.stop()
+    except Exception:
+        logger.exception("Azure IoT consumer shutdown failed")
     try:
         from app.core.task_queue import task_queue
         await task_queue.stop()
@@ -208,40 +224,19 @@ async def root():
 
 @app.get("/health/azure")
 async def azure_health():
-    """Reports health status and platform service telemetry."""
+    from app.integrations.azure_iot_consumer import azure_iot_consumer
+    from app.integrations.azure_blob_storage import azure_blob_storage_client
+    from app.integrations.azure_monitor import _configured
     return {
         "status": "ok",
-        "platform": "Azure Free Tier",
-        "monthlyCost": "$0.00 (Free Tier)",
         "services": {
-            "applicationInsights": {
-                "status": "LOCAL_FALLBACK",
-                "freeTierLimit": "5 GB ingestion per month ($0.00)",
-            },
-            "blobStorage": {
-                "status": "LOCAL_FALLBACK",
-                "medallionContainers": ["telemetry-bronze", "telemetry-silver", "analytics-gold"],
-                "freeTierLimit": "5 GB LRS storage per month",
-            },
-            "keyVault": {
-                "status": "ENV_FALLBACK",
-                "freeTierLimit": "Standard Tier operations included",
-            },
-            "aiProviders": {"status": "ACTIVE"},
-            "functions": {
-                "status": "ACTIVE",
-                "scheduledTasks": [
-                    {"name": "daily_analytics_summary", "schedule": "0 0 * * *"},
-                    {"name": "telemetry_cleanup", "schedule": "0 2 * * *"},
-                    {"name": "incident_auto_escalation", "schedule": "*/5 * * * *"},
-                    {"name": "conformal_model_retrain", "schedule": "0 3 * * 0"},
-                    {"name": "cold_chain_anomaly_scan", "schedule": "*/1 * * * *"},
-                ],
-            },
+            "applicationInsights": "CONFIGURED" if _configured else "NOT_CONFIGURED",
+            "blobStorage": "CONNECTED" if azure_blob_storage_client.enabled and azure_blob_storage_client.blob_service_client else "NOT_CONFIGURED",
+            "iotHub": azure_iot_consumer.status,
+            "fabric": "NOT_CONFIGURED",
         },
         "timestamp": time.time(),
     }
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

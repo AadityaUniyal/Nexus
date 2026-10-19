@@ -13,19 +13,14 @@
       ]
     }
   ],
-  "functions": {
-    "api/**/*.py": {
-      "includeFiles": "backend/**"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/api/v1/:path*"
     },
     {
       "source": "/health/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://nexus-api-prod-adfjh5fvabd6cpgv.austriaeast-01.azurewebsites.net/health/:path*"
     }
   ]
 }

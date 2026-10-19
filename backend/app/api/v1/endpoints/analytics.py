@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.auth.dependencies import require_workspace
@@ -8,12 +8,10 @@ from app.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & BI Engine"])
 
-def get_tenant_workspace(principal: RequestPrincipal, fallback: Optional[str] = None) -> str:
+def get_tenant_workspace(principal: RequestPrincipal) -> str:
     """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
     if principal and principal.workspace_id:
         return principal.workspace_id
-    if fallback and fallback != "ws-continental-fleet-01":
-        return fallback
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No authorized workspace found")
 
 @router.get("/overview")
@@ -28,7 +26,7 @@ async def get_analytics_overview(
     Retrieve live operational KPI trends, SLA compliance, hub throughput,
     and fleet performance aggregated dynamically from the PostgreSQL database.
     """
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     return await AnalyticsService.get_overview(
         db=db,
         workspace_id=ws,
@@ -47,7 +45,7 @@ async def export_analytics(
     """
     Export raw operational analytics and order performance report as CSV or JSON file.
     """
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     if format.lower() == "csv":
         csv_data = await AnalyticsService.export_csv_report(db, workspace_id=ws)
         return Response(
@@ -70,7 +68,7 @@ async def get_hubs_throughput(
     """
     Retrieve real-time capacity vs volume for all registered regional warehouses/hubs.
     """
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     overview = await AnalyticsService.get_overview(db, workspace_id=ws)
     return {
         "success": True,
@@ -90,7 +88,7 @@ async def get_analytics_forecast(
     Predictive Time-Series Forecasting with P10/P50/P90 confidence bounds
     aligned with Microsoft Fabric ML / Azure Foundry standards.
     """
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     return await AnalyticsService.get_forecast(
         db=db,
         metric=metric,
@@ -108,7 +106,7 @@ async def get_analytics_anomalies(
     Unsupervised ML Telemetry Anomaly Detection powered by Scikit-Learn IsolationForest.
     Scans multi-variate speed, battery, and powertrain telemetry.
     """
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     return await AnalyticsService.detect_anomalies(
         db=db,
         workspace_id=ws
@@ -123,7 +121,7 @@ async def get_analytics_risk_scores(
     """
     Composite Multi-Factor Logistics Risk Scoring across active orders and corridors.
     """
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     return await AnalyticsService.get_risk_scores(
         db=db,
         workspace_id=ws
@@ -138,7 +136,7 @@ async def get_medallion_pipeline_summary(
     """
     Medallion Architecture (Bronze -> Silver -> Gold) Lakehouse Health & Azure Fabric OneLake Mapping.
     """
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     return await AnalyticsService.get_medallion_summary(
         db=db,
         workspace_id=ws

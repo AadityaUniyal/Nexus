@@ -2,23 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { motion, useScroll, useTransform } from "motion/react";
 import {
   Bell,
   Search,
   GitBranch,
   Menu,
-  MapPin,
-  Globe2,
   LifeBuoy,
 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/brand/Logo";
-import { StatusLed } from "@/components/ui/status-led";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { formatDateTime } from "@/lib/utils";
-import { TelemetryStreamController } from "./TelemetryStreamController";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { User, LogOut, Shield, Settings as SettingsIcon } from "lucide-react";
 
@@ -37,51 +30,29 @@ export function Navbar({
   onOpenMobileMenu,
   onOpenSupport,
 }: NavbarProps) {
-  const pathname = usePathname();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [currentTime, setCurrentTime] = React.useState<string>("");
-  const [companyName, setCompanyName] = React.useState("Continental Fleet Ops");
-  const [hubName, setHubName] = React.useState("Dehradun Hub");
-
-  React.useEffect(() => {
-    setCurrentTime(formatDateTime(new Date()));
-    const timer = setInterval(() => {
-      setCurrentTime(formatDateTime(new Date()));
-    }, 1000);
-
-    if (typeof window !== "undefined") {
-      try {
-        const savedCompany = localStorage.getItem("nexus_company_name");
-        if (savedCompany) setCompanyName(savedCompany);
-
-        const savedLoc = localStorage.getItem("nexus_workspace_location");
-        if (savedLoc) {
-          const parsed = JSON.parse(savedLoc);
-          if (parsed?.name) setHubName(`${parsed.name} Hub`);
-        }
-      } catch {
-        // fallback
-      }
-    }
-
-    return () => clearInterval(timer);
-  }, [user]);
 
   // Role Badge Color & Label
   const getRoleBadge = (role?: string) => {
     switch (role) {
       case "ADMINISTRATOR":
-        return { label: "Solo Admin", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" };
+        return { label: "Administrator", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" };
       case "SUPERVISOR_L1":
-      case "OPERATIONS_MANAGER":
         return { label: "Regional L1", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" };
       case "SUPERVISOR_L2":
-      case "OPERATOR":
         return { label: "Dispatch L2", color: "bg-amber-500/20 text-amber-300 border-amber-500/30" };
       case "SUPERVISOR_L3":
-      case "FIELD_OPERATOR":
         return { label: "Safety L3", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" };
+      case "OPERATIONS_MANAGER":
+        return { label: "Operations Manager", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" };
+      case "ANALYST":
+        return { label: "Analyst", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" };
+      case "VIEWER":
+        return { label: "Viewer", color: "bg-stone-500/20 text-stone-300 border-stone-500/30" };
+      case "OPERATOR":
+      case "FIELD_OPERATOR":
+        return { label: "Operator", color: "bg-amber-500/20 text-amber-300 border-amber-500/30" };
       default:
         return { label: "Operator", color: "bg-stone-500/20 text-stone-300 border-stone-500/30" };
     }
@@ -106,17 +77,11 @@ export function Navbar({
 
         {/* Dynamic Workspace & Hub Pill */}
         <div className="hidden md:flex items-center gap-2 pl-4 ml-1 border-l border-stone-200/70 dark:border-stone-800 text-sm text-stone-900 dark:text-stone-100">
-          <StatusLed status="HEALTHY" size="sm" />
-          <span className="font-semibold text-xs tracking-tight">{companyName}</span>
-          <span className="text-stone-400 dark:text-stone-600">·</span>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-            <MapPin className="w-2.5 h-2.5" />
-            <span>{hubName}</span>
-          </div>
+          <span className="font-semibold text-xs tracking-tight">{user?.workspace_name || "Workspace"}</span>
         </div>
       </div>
 
-      {/* Middle: Apple Spotlight Command Bar */}
+      {/* Workspace search and command launcher */}
       <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
         <button
           type="button"
@@ -136,11 +101,6 @@ export function Navbar({
 
       {/* Right: Telemetry Stream Controller, Notifications & Profile */}
       <div className="flex items-center gap-3">
-        {/* Live Telemetry Stream Controller */}
-        <div className="hidden sm:block">
-          <TelemetryStreamController />
-        </div>
-
         {/* Quick Simulation Lab Button */}
         <ButtonLink href="/simulations/new" variant="secondary" size="sm" className="hidden sm:inline-flex" data-track="nav_new_scenario">
           <GitBranch className="h-3.5 w-3.5" aria-hidden />
@@ -163,8 +123,8 @@ export function Navbar({
         <button
           onClick={onOpenSupport}
           className="p-2 rounded-lg text-nexus-on-surface-variant hover:text-sky-500 hover:bg-nexus-surface-container transition-colors"
-          aria-label="Dispatch Assistance Hotline"
-          title="Dispatch Assistance & Support Tickets"
+          aria-label="Support availability"
+          title="Support ticketing availability"
         >
           <LifeBuoy className="h-4 w-4" />
         </button>
@@ -179,12 +139,12 @@ export function Navbar({
             className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-nexus-surface-container/60 transition-colors"
           >
             <div className="h-8 w-8 rounded-lg bg-nexus-primary/20 text-nexus-primary border border-nexus-primary/30 flex items-center justify-center font-bold text-xs shadow-tactile">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : "AR"}
+              {user?.name ? user.name.slice(0, 2).toUpperCase() : <User className="h-4 w-4" aria-hidden />}
             </div>
             {user && (
               <div className="hidden md:block text-left text-xs">
                 <p className="font-semibold text-nexus-on-surface leading-tight">
-                  {user.name || "Alex Rivera"}
+                  {user.name || user.email}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono border ${roleInfo.color}`}>
@@ -198,12 +158,8 @@ export function Navbar({
           {menuOpen && (
             <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-nexus-surface-lowest border border-nexus-outline-variant/40 shadow-tactile-lg p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div className="p-2 border-b border-nexus-outline-variant/30 mb-1">
-                <p className="text-xs font-bold text-nexus-on-surface">{user?.name || "Alex Rivera"}</p>
-                <p className="text-[11px] text-nexus-on-surface-variant font-mono-data truncate">{user?.email || "alex.rivera@continental-logistics.com"}</p>
-                <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-stone-400">
-                  <MapPin className="w-3 h-3 text-emerald-400" />
-                  <span>{hubName}</span>
-                </div>
+                <p className="text-xs font-bold text-nexus-on-surface">{user?.name || user?.email || "Account"}</p>
+                {user?.name && <p className="text-[11px] text-nexus-on-surface-variant font-mono-data truncate">{user.email}</p>}
               </div>
 
               <Link

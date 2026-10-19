@@ -28,6 +28,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api/http";
+import { dataProvider } from "@/lib/data-provider";
 import { FadeIn, PulseLED } from "@/components/ui/motion-animations";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -40,132 +41,24 @@ export default function LiveWorldPage() {
   const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
 
   const [selectedLocation, setSelectedLocation] = React.useState<ResolvedLocation | null>(null);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
-  // Load custom location and live backend telemetry on mount
+  // Load only records belonging to the signed-in workspace.
   React.useEffect(() => {
-    try {
-      const savedLoc = localStorage.getItem("nexus_workspace_location");
-      if (savedLoc) {
-        const parsed = JSON.parse(savedLoc);
-        setSelectedLocation({
-          id: `loc-saved-${Date.now()}`,
-          display_name: `${parsed.name || "Primary Operational Base"}, ${parsed.country || "Hub"}`,
-          latitude: parsed.lat || 30.3165,
-          longitude: parsed.lng || 78.0322,
-          type: "city",
-          confidence: 1.0,
-          provider: "geoapify",
-        });
-      } else {
-        setSelectedLocation({
-          id: "loc-default-hub",
-          display_name: "Dehradun Hub, India",
-          latitude: 30.3165,
-          longitude: 78.0322,
-          type: "city",
-          confidence: 1.0,
-          provider: "geoapify",
-        });
-      }
-    } catch {
-      // Fallback
-    }
-
-    async function fetchLiveWorldData() {
-      try {
-        const [vRes, wRes, iRes] = await Promise.all([
-          apiFetch("/api/v1/operations/vehicles").catch(() => null),
-          apiFetch("/api/v1/operations/warehouses").catch(() => null),
-          apiFetch("/api/v1/incidents").catch(() => null),
-        ]);
-
-        if (vRes && vRes.ok) {
-          const vRaw = await vRes.json();
-          const vData = Array.isArray(vRaw) ? vRaw : (vRaw?.data && Array.isArray(vRaw.data)) ? vRaw.data : [];
-          if (vData.length > 0) {
-            setVehicles(
-              vData.map((v: any) => ({
-                id: v.id,
-                code: v.code,
-                name: v.name,
-                model: v.model || "Class-8 EV Hauler",
-                driverName: v.driver_name || v.driverName || "Fleet Pilot",
-                driverPhone: v.driver_phone || v.driverPhone || "+1 (555) 019-2834",
-                capacityKg: v.capacity_kg || v.capacityKg || 22000,
-                currentLoadKg: v.current_load_kg || v.currentLoadKg || 17800,
-                status: (v.status || "IN_TRANSIT") as any,
-                lat: v.current_lat || v.lat || 41.1400,
-                lng: v.current_lng || v.lng || -104.8202,
-                heading: v.heading || 90,
-                speedKmh: v.speed_kmh || v.speedKmh || 68.5,
-                batteryPct: v.battery_pct || v.batteryPct || 78,
-                healthScore: v.health_score || v.healthScore || 94,
-                currentRouteId: v.current_route_id || v.currentRouteId || null,
-                currentRouteName: v.current_route_name || v.currentRouteName || "Active Corridor",
-              }))
-            );
-          }
-        }
-
-        if (wRes && wRes.ok) {
-          const wRaw = await wRes.json();
-          const wData = Array.isArray(wRaw) ? wRaw : (wRaw?.data && Array.isArray(wRaw.data)) ? wRaw.data : [];
-          if (wData.length > 0) {
-            setWarehouses(
-              wData.map((w: any) => ({
-                id: w.id,
-                code: w.code,
-                name: w.name,
-                city: w.city,
-                state: w.state,
-                lat: w.lat,
-                lng: w.lng,
-                capacityUnits: w.capacity_units || w.capacityUnits || 15000,
-                currentUnits: w.current_units || w.currentUnits || 12000,
-                dockCount: w.dock_count || w.dockCount || 12,
-                activeDocks: w.active_docks || w.activeDocks || 8,
-                efficiencyPct: w.efficiency_pct || w.efficiencyPct || 95.0,
-                status: (w.status || "OPERATIONAL") as any,
-                createdAt: w.created_at || w.createdAt || new Date().toISOString(),
-              }))
-            );
-          }
-        }
-
-        if (iRes && iRes.ok) {
-          const iRaw = await iRes.json();
-          const iData = Array.isArray(iRaw) ? iRaw : (iRaw?.data && Array.isArray(iRaw.data)) ? iRaw.data : [];
-          if (iData.length > 0) {
-            setIncidents(
-              iData.map((i: any) => ({
-                id: i.id,
-                code: i.code,
-                title: i.title,
-                severity: (i.severity || "HIGH") as any,
-                status: (i.status || "DETECTED") as any,
-                category: i.category || "WEATHER",
-                summary: i.summary || i.title,
-                affectedEntityType: (i.affected_entity_type || i.affectedEntityType || "VEHICLE") as any,
-                affectedEntityId: i.affected_entity_id || i.affectedEntityId || "v-104",
-                affectedEntityName: i.affected_entity_name || i.affectedEntityName || "Vehicle NX-TRK-104",
-                rootCause: i.root_cause || i.rootCause || "Severe atmospheric blizzard obstacle",
-                aiAnalysis: i.ai_analysis || i.aiAnalysis || "Deterministic detour calculation recommended.",
-                potentialImpact: i.potential_impact || i.potentialImpact || "SLA breach risk +180 mins",
-                costEstimate: i.cost_estimate || i.costEstimate || 2500,
-                ordersAffected: i.orders_affected || i.affected_orders_count || 14,
-                delayMinutes: i.delay_minutes || i.delayMinutes || 180,
-                createdAt: i.created_at || i.createdAt || new Date().toISOString(),
-                timeline: i.timeline || [],
-              }))
-            );
-          }
-        }
-      } catch {
-        // Fallback
-      }
-    }
-
-    fetchLiveWorldData();
+    let active = true;
+    Promise.all([dataProvider.getVehicles(), dataProvider.getWarehouses(), dataProvider.getIncidents()])
+      .then(([vehicleRows, warehouseRows, incidentRows]) => {
+        if (!active) return;
+        setVehicles(vehicleRows);
+        setWarehouses(warehouseRows);
+        setIncidents(incidentRows);
+        setLoadError(null);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setLoadError(error instanceof Error ? error.message : "Workspace records could not be loaded.");
+      });
+    return () => { active = false; };
   }, []);
 
   const [selectedEntity, setSelectedEntity] = React.useState<{
@@ -189,18 +82,18 @@ export default function LiveWorldPage() {
       : null;
 
   // Convert dynamic entities for NexusMap
-  const mapVehicles = vehicles.map((v) => ({
+  const mapVehicles = vehicles.filter((v) => Number.isFinite(v.lat) && Number.isFinite(v.lng)).map((v) => ({
     id: v.id,
     code: v.code,
     name: v.name,
-    lat: v.lat || 41.14,
-    lng: v.lng || -104.82,
+    lat: v.lat,
+    lng: v.lng,
     speedKmh: v.speedKmh,
-    heading: v.heading || 90,
+    heading: v.heading,
     status: v.status,
   }));
 
-  const mapWarehouses = warehouses.map((w) => ({
+  const mapWarehouses = warehouses.filter((w) => Number.isFinite(w.lat) && Number.isFinite(w.lng)).map((w) => ({
     id: w.id,
     code: w.code,
     name: w.name,
@@ -211,23 +104,16 @@ export default function LiveWorldPage() {
     currentUnits: w.currentUnits,
   }));
 
-  const mapIncidents = incidents.map((inc) => ({
-    id: inc.id,
-    code: inc.code,
-    title: inc.title,
-    severity: inc.severity,
-    lat: 41.2565,
-    lng: -95.9345,
-  }));
+  const mapIncidents: Array<{ id: string; code: string; title: string; severity: string; lat: number; lng: number }> = [];
 
   return (
     <AppShell>
       <FadeIn className="space-y-6">
         {/* Header with Dual Mode Toggle & Location Search */}
         <PageHeader
-          eyebrow="Spatial Operations · Live Geographic Viewport"
-          title="Live Operations Map"
-          description="Inspect geographic distribution of fleet vehicles, fulfillment hubs, active transit corridors, and reported route exceptions."
+          eyebrow="Workspace operations · Geographic view"
+          title="Operations map"
+          description="Explore workspace vehicles and facilities with recorded coordinates. Telemetry freshness depends on your connected data source."
           actions={
             <div className="flex flex-wrap items-center gap-3">
               <Button
@@ -242,6 +128,8 @@ export default function LiveWorldPage() {
             </div>
           }
         />
+
+        {loadError && <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{loadError}</div>}
 
         {/* Natural Location Search Bar */}
         <div className="max-w-xl">
@@ -342,15 +230,15 @@ export default function LiveWorldPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-stone-400">Velocity:</span>
-                          <span className="font-semibold text-emerald-600">{selectedVehicle.speedKmh} km/h</span>
+                        <span className="font-semibold text-emerald-600">{selectedVehicle.speedKmh == null ? "Not recorded" : `${selectedVehicle.speedKmh} km/h`}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-stone-400">Battery SoC:</span>
-                          <span className="font-semibold">{selectedVehicle.batteryPct}%</span>
+                          <span className="font-semibold">{selectedVehicle.batteryPct == null ? "Not recorded" : `${selectedVehicle.batteryPct}%`}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-stone-400">Driver:</span>
-                          <span className="font-semibold">{selectedVehicle.driverName}</span>
+                          <span className="font-semibold">{selectedVehicle.driverName || "Not assigned"}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-stone-400">Status:</span>
@@ -386,7 +274,7 @@ export default function LiveWorldPage() {
                         <div className="flex justify-between">
                           <span className="text-stone-400">Inventory Units:</span>
                           <span className="font-semibold">
-                            {selectedWarehouse.currentUnits} / {selectedWarehouse.capacityUnits}
+                            {selectedWarehouse.currentUnits == null || selectedWarehouse.capacityUnits == null ? "Not recorded" : `${selectedWarehouse.currentUnits} / ${selectedWarehouse.capacityUnits}`}
                           </span>
                         </div>
                         <div className="flex justify-between">

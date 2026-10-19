@@ -8,19 +8,20 @@ export interface UserContextType {
   name: string;
   role: string;
   workspace_id: string;
+  workspace_name?: string;
   publicMetadata?: { role?: string; workspace_id?: string };
   unsafeMetadata?: { role?: string };
 }
 
 export interface AuthContextType {
   user: UserContextType | null;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  logout: () => {},
+  logout: async () => {},
   isLoading: true,
 });
 
@@ -39,11 +40,11 @@ export function useUser() {
 
 export function usePermissions() {
   const { user } = useAuth();
-  const role = user?.role || 'ADMINISTRATOR';
+  const role = user?.role || 'VIEWER';
 
   const canDecommission = ['ADMINISTRATOR', 'OPERATIONS_MANAGER', 'SUPERVISOR_L1'].includes(role);
   const canManageSettings = ['ADMINISTRATOR'].includes(role);
-  const canRunSimulations = ['ADMINISTRATOR', 'OPERATIONS_MANAGER', 'SUPERVISOR_L1', 'SUPERVISOR_L2', 'ANALYST'].includes(role);
+  const canRunSimulations = ['ADMINISTRATOR', 'OPERATIONS_MANAGER', 'DISPATCHER', 'ANALYST'].includes(role);
   const isReadOnly = role === 'VIEWER';
 
   return {
@@ -60,43 +61,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('nexus_demo_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
+    let active = true;
+    fetch('/api/v1/me/bootstrap', { credentials: 'include', cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Session unavailable');
+        return response.json();
+      })
+      .then((session) => {
+        if (!active) return;
+        const profile = session.user;
         setUser({
-          ...parsed,
-          publicMetadata: { role: parsed.role, workspace_id: parsed.workspace_id },
+          id: profile.id,
+          email: profile.email,
+          name: profile.name,
+          role: session.role || profile.role,
+          workspace_id: session.workspace?.id || '',
+          workspace_name: session.workspace?.name || '',
+          publicMetadata: { role: session.role || profile.role, workspace_id: session.workspace?.id },
         });
-      } else {
-        // If no user in localStorage, check if cookie exists
-        if (typeof document !== 'undefined') {
-          const hasSession = document.cookie.includes('nexus_demo_session=') || document.cookie.includes('nexus_session_token=');
-          if (!hasSession) {
-            setUser(null);
-          }
-        }
-      }
-    } catch {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
+      })
+      .catch(() => { if (active) setUser(null); })
+      .finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const logout = () => {
+  const logout = async () => {
     try {
-      localStorage.removeItem('nexus_demo_user');
-      localStorage.removeItem('nexus_access_token');
       localStorage.removeItem('nexus_active_workspace_id');
-      localStorage.removeItem('nexus_company_profile');
-      if (typeof document !== 'undefined') {
-        document.cookie = 'nexus_demo_session=; path=/; max-age=0;';
-        document.cookie = 'nexus_session_token=; path=/; max-age=0;';
-      }
-    } catch {
-      // ignore
-    }
+    } catch {}
+    try { await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
     setUser(null);
     if (typeof window !== 'undefined') {
       window.location.href = '/login';

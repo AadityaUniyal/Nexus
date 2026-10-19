@@ -1,68 +1,29 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { LeafletWorldMap, MapWarehouse, MapVehicle, MapIncident } from "@/components/map/LeafletWorldMap";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import {
-  Truck,
-  Building2,
-  ShieldAlert,
-  Sparkles,
-  RefreshCw,
-  ArrowRight,
-  TrendingUp,
-  AlertTriangle,
-  Activity,
-  Layers,
-  CheckCircle2,
-  Clock,
-  Globe2,
-  Upload,
-  Radio,
-  SlidersHorizontal,
-  Map as MapIcon,
-  Box,
-  PlusCircle,
-  Package,
-} from "lucide-react";
+import { Truck, Building2, AlertTriangle, Package } from "lucide-react";
 import {
   VehicleItem,
   WarehouseItem,
   IncidentItem,
-  OperationalEventItem,
-  RouteItem,
   SimulationItem,
-  OrderItem,
 } from "@/lib/mock-data";
-import { formatRelativeTime, cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/toast";
 import { tactileAudio } from "@/lib/sound-effects";
 import {
   FadeIn,
-  StaggerContainer,
-  StaggerItem,
-  PulseLED,
-  TactileCard,
 } from "@/components/ui/motion-animations";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { dataProvider } from "@/lib/data-provider";
+import { realtimeClient } from "@/lib/realtime-client";
 import { SkeletonMetricTile, SkeletonCard } from "@/components/ui/skeleton";
+import { useAuth, usePermissions } from "@/components/providers/AuthProvider";
 
 // Innovations & Role Cockpits
-import { RoleCockpitSwitcher, RoleType, normalizeRole } from "@/components/role-dashboards/RoleCockpitSwitcher";
 import { ManagerDashboard } from "@/components/role-dashboards/ManagerDashboard";
-import { OperatorDashboard } from "@/components/role-dashboards/OperatorDashboard";
-import { AnalystDashboard } from "@/components/role-dashboards/AnalystDashboard";
-import { AdminDashboard } from "@/components/role-dashboards/AdminDashboard";
-import { ViewerDashboard } from "@/components/role-dashboards/ViewerDashboard";
-import { TimeTravelScrubber } from "@/components/innovations/TimeTravelScrubber";
-import { MultiplayerPresence } from "@/components/innovations/MultiplayerPresence";
-import { GeofenceHazardPainter } from "@/components/innovations/GeofenceHazardPainter";
 
 // Real Role-Driven Input Modals
 import { CreateWarehouseModal } from "@/components/forms/CreateWarehouseModal";
@@ -72,20 +33,16 @@ import { CreateIncidentModal } from "@/components/forms/CreateIncidentModal";
 import { ResolvedLocation } from "@/lib/api/endpoints/location";
 
 export default function OverviewPage() {
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const { canRunSimulations } = usePermissions();
+  const canEditOperations = ["ADMINISTRATOR", "OPERATIONS_MANAGER", "DISPATCHER"].includes(user?.role || "");
   const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
   const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
-  const [routes, setRoutes] = React.useState<RouteItem[]>([]);
-  const [orders, setOrders] = React.useState<OrderItem[]>([]);
   const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
   const [simulations, setSimulations] = React.useState<SimulationItem[]>([]);
   
   const [isLoading, setIsLoading] = React.useState(true);
-  const [worldView, setWorldView] = React.useState<"GIS" | "3D">("GIS");
-  
-  const [operationalMode, setOperationalMode] = React.useState<"PRODUCTION" | "SANDBOX">("PRODUCTION");
-  const [activeRole, setActiveRole] = React.useState<RoleType>("OPERATIONS_MANAGER");
-  const [timelineOffset, setTimelineOffset] = React.useState<number>(0);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   // Modals state
   const [isWarehouseModalOpen, setIsWarehouseModalOpen] = React.useState(false);
@@ -94,36 +51,23 @@ export default function OverviewPage() {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
   const [clickedMapPoint, setClickedMapPoint] = React.useState<{ lat: number; lng: number } | null>(null);
 
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedMode = localStorage.getItem("nexus_operational_mode") as any;
-      if (savedMode) setOperationalMode(savedMode);
-      const savedRole = localStorage.getItem("nexus_user_role");
-      if (savedRole) setActiveRole(normalizeRole(savedRole));
-    }
-  }, []);
-
   // Fetch live state directly from authoritative dataProvider
   const loadLiveTelemetry = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const [vData, wData, iData, rData, sData, oData] = await Promise.all([
+      const [vData, wData, iData, sData] = await Promise.all([
         dataProvider.getVehicles(),
         dataProvider.getWarehouses(),
         dataProvider.getIncidents(),
-        dataProvider.getRoutes(),
         dataProvider.getSimulations(),
-        dataProvider.getOrders(),
       ]);
 
       setVehicles(vData || []);
       setWarehouses(wData || []);
       setIncidents(iData || []);
-      setRoutes(rData || []);
       setSimulations(sData || []);
-      setOrders(oData || []);
     } catch (err) {
-      console.warn("[Overview] Using cached operational state:", err);
+      setLoadError(err instanceof Error ? err.message : "Operational data could not be loaded.");
     } finally {
       setIsLoading(false);
     }
@@ -131,51 +75,27 @@ export default function OverviewPage() {
 
   React.useEffect(() => {
     loadLiveTelemetry();
+
+    // Subscribe to authoritative real-time SSE feed from FastAPI backend
+    const unsubscribe = realtimeClient.subscribePulse((pulse) => {
+      // Refresh telemetry when any vehicle moves, order dispatches, or incident transitions
+      loadLiveTelemetry();
+    });
+
+    // Optional lightweight heartbeat poll every 15s to keep overview metrics razor-sharp
+    const interval = setInterval(() => {
+      dataProvider.getVehicles().then((v) => {
+        if (v && v.length > 0) setVehicles(v);
+      }).catch(() => {});
+    }, 15000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, [loadLiveTelemetry]);
 
-  const handleRoleChange = (role: RoleType) => {
-    setActiveRole(role);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_user_role", role);
-    }
-    toast({
-      title: `Switched to ${role.replace("_", " ")} Cockpit`,
-      message: "Interface data density, actions, and priority widgets updated.",
-      type: "info",
-    });
-  };
-
-  const handleApplyDecision = async (simId: string) => {
-    await dataProvider.applyDecision(simId);
-    const updatedSims = await dataProvider.getSimulations();
-    setSimulations(updatedSims);
-  };
-
-  const handleToggleSandbox = async (mode: "PRODUCTION" | "SANDBOX") => {
-    setOperationalMode(mode);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_operational_mode", mode);
-    }
-    tactileAudio.playSuccess();
-    if (mode === "SANDBOX") {
-      // Provision sample preset so sandbox has rich interactive corridor
-      await dataProvider.provisionPreset("dehradun");
-      await loadLiveTelemetry();
-      toast({
-        title: "Sandbox Corridor Loaded",
-        message: "Loaded Regional Intermodal Corridors & EV fleet for exploration.",
-        type: "info",
-      });
-    } else {
-      toast({
-        title: "Production Mode Active",
-        message: "Operating strictly with genuine user-entered operational assets.",
-        type: "info",
-      });
-    }
-  };
-
-  const isZeroState = operationalMode === "PRODUCTION" && vehicles.length === 0 && warehouses.length === 0 && incidents.length === 0;
+  const isZeroState = vehicles.length === 0 && warehouses.length === 0 && incidents.length === 0;
 
   // Convert real assets into MapLibre GIS markers
   const mapWarehouses: MapWarehouse[] = React.useMemo(() => {
@@ -204,22 +124,13 @@ export default function OverviewPage() {
     }));
   }, [vehicles]);
 
-  const mapIncidents: MapIncident[] = React.useMemo(() => {
-    return incidents.map((i) => {
-      const affectedWh = warehouses.find((w) => w.id === i.affectedEntityId || w.code === i.affectedEntityId);
-      const affectedVeh = vehicles.find((v) => v.id === i.affectedEntityId || v.code === i.affectedEntityId);
-      const lat = affectedWh?.lat || affectedVeh?.lat || (warehouses[0]?.lat ? warehouses[0].lat + 0.03 : 30.3165);
-      const lng = affectedWh?.lng || affectedVeh?.lng || (warehouses[0]?.lng ? warehouses[0].lng + 0.03 : 78.0322);
-      return {
-        id: i.id,
-        code: i.code,
-        title: i.title,
-        severity: i.severity,
-        lat,
-        lng,
-      };
-    });
-  }, [incidents, warehouses, vehicles]);
+  const mapIncidents: MapIncident[] = React.useMemo(() => incidents.flatMap((i) => {
+    const wh = warehouses.find((w) => w.id === i.affectedEntityId || w.code === i.affectedEntityId);
+    const vehicle = vehicles.find((v) => v.id === i.affectedEntityId || v.code === i.affectedEntityId);
+    const asset = wh || vehicle;
+    if (!asset || !Number.isFinite(asset.lat) || !Number.isFinite(asset.lng)) return [];
+    return [{ id: i.id, code: i.code, title: i.title, severity: i.severity, lat: asset.lat, lng: asset.lng }];
+  }), [incidents, warehouses, vehicles]);
 
   const centerLocation: ResolvedLocation | null = React.useMemo(() => {
     if (warehouses.length > 0) {
@@ -251,7 +162,7 @@ export default function OverviewPage() {
           actions={
             <div className="flex flex-wrap items-center gap-2.5">
               <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
-                <Button
+                {canEditOperations && <Button
                   variant="default"
                   size="sm"
                   onClick={() => {
@@ -262,8 +173,8 @@ export default function OverviewPage() {
                 >
                   <Building2 className="w-3.5 h-3.5 mr-1" />
                   + Hub
-                </Button>
-                <Button
+                </Button>}
+                {canEditOperations && <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => {
@@ -274,8 +185,8 @@ export default function OverviewPage() {
                 >
                   <Truck className="w-3.5 h-3.5 mr-1 text-nexus-secondary" />
                   + Vehicle
-                </Button>
-                <Button
+                </Button>}
+                {canEditOperations && <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -286,8 +197,8 @@ export default function OverviewPage() {
                 >
                   <Package className="w-3.5 h-3.5 mr-1 text-nexus-primary" />
                   + Order
-                </Button>
-                <Button
+                </Button>}
+                {canEditOperations && <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
@@ -298,55 +209,29 @@ export default function OverviewPage() {
                 >
                   <AlertTriangle className="w-3.5 h-3.5 mr-1" />
                   + Exception
-                </Button>
+                </Button>}
               </div>
 
-              {/* Apple Segmented Sandbox / Production Toggle */}
-              <div className="flex items-center p-1 rounded-2xl bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] text-xs font-mono">
-                <button
-                  onClick={() => handleToggleSandbox("PRODUCTION")}
-                  className={`px-3 py-1.5 rounded-xl transition-all ${
-                    operationalMode === "PRODUCTION"
-                      ? "bg-white dark:bg-stone-850 text-stone-900 dark:text-white font-bold shadow-xs border border-black/5 dark:border-white/10"
-                      : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
-                  }`}
-                >
-                  Live Data
-                </button>
-                <button
-                  onClick={() => handleToggleSandbox("SANDBOX")}
-                  className={`px-3 py-1.5 rounded-xl transition-all ${
-                    operationalMode === "SANDBOX"
-                      ? "bg-emerald-600 text-white font-bold shadow-xs"
-                      : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200"
-                  }`}
-                >
-                  Demo Sandbox
-                </button>
-              </div>
             </div>
           }
         />
 
-        {/* Apple Segmented Role Cockpit Switcher */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <RoleCockpitSwitcher activeRole={activeRole} onRoleChange={handleRoleChange} />
-        </div>
+        {loadError && <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/[0.05] p-4 text-sm">Couldn’t load workspace data: {loadError} <Button variant="outline" size="sm" onClick={loadLiveTelemetry} className="ml-3">Retry</Button></div>}
 
-        {/* Zero-State Guide Banner if in Production with 0 records */}
+        {/* First-use setup for an empty workspace */}
         {isZeroState && (
           <div className="p-6 rounded-2xl border border-nexus-secondary/30 bg-gradient-to-r from-nexus-secondary/10 via-nexus-surface-container/80 to-purple-500/10 shadow-tactile flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-nexus-secondary text-white uppercase">
-                  Clean Zero-State Initialized
+                  No operational records yet
                 </span>
                 <span className="text-xs font-mono text-nexus-on-surface-variant">
-                  Zero mock data injected
+                  No demo data is loaded
                 </span>
               </div>
               <p className="text-xs text-nexus-on-surface leading-relaxed max-w-2xl">
-                Your workspace is operating in pristine zero-state. Establish your primary distribution hub, register commercial fleet vehicles, or dispatch orders to populate your Google Maps network.
+                Add your first warehouse or vehicle, or import your own operational records. Metrics and map markers appear when workspace data is available.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -366,20 +251,12 @@ export default function OverviewPage() {
               >
                 <Truck className="h-3.5 w-3.5" /> + Enroll Vehicle
               </Button>
-              <Button
-                variant="simulation"
-                size="sm"
-                onClick={() => handleToggleSandbox("SANDBOX")}
-                className="font-mono text-xs shadow-tactile"
-              >
-                <Sparkles className="h-3.5 w-3.5 mr-1" /> Load Regional Preset
-              </Button>
             </div>
           </div>
         )}
 
-        {/* Bespoke Active Role Dashboard Cockpit with Apple Shimmer Skeleton */}
-        <AnimatePresence mode="wait">
+        {/* Workspace operations summary */}
+        <>
           {isLoading ? (
             <motion.div
               key="overview-loading"
@@ -398,50 +275,23 @@ export default function OverviewPage() {
             </motion.div>
           ) : (
             <motion.div
-              key={normalizeRole(activeRole)}
+              key="workspace-operations"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
-              {normalizeRole(activeRole) === "OPERATOR" ? (
-                <OperatorDashboard
-                  vehicles={vehicles}
-                  warehouses={warehouses}
-                  onOpenCreateVehicle={() => setIsVehicleModalOpen(true)}
-                  onOpenCreateOrder={() => setIsOrderModalOpen(true)}
-                />
-              ) : normalizeRole(activeRole) === "ANALYST" ? (
-                <AnalystDashboard />
-              ) : normalizeRole(activeRole) === "ADMINISTRATOR" ? (
-                <AdminDashboard />
-              ) : normalizeRole(activeRole) === "VIEWER" ? (
-                <ViewerDashboard />
-              ) : (
-                <ManagerDashboard
-                  incidents={incidents}
-                  simulations={simulations}
-                  warehouses={warehouses}
-                  onApplyDecision={handleApplyDecision}
-                  onOpenCreateIncident={() => setIsIncidentModalOpen(true)}
-                  onOpenCreateWarehouse={() => setIsWarehouseModalOpen(true)}
-                />
-              )}
+              <ManagerDashboard incidents={incidents} simulations={simulations} warehouses={warehouses}
+                onOpenCreateIncident={canEditOperations ? () => setIsIncidentModalOpen(true) : undefined}
+                onOpenCreateWarehouse={canEditOperations ? () => setIsWarehouseModalOpen(true) : undefined}
+                canRunSimulations={canRunSimulations} />
             </motion.div>
           )}
-        </AnimatePresence>
+        </>
 
         {/* 2D Google Maps-Style GIS Network Map & Spatial Timeline Section */}
         <div className="space-y-4 pt-2">
           <div className="rounded-3xl border border-nexus-outline/30 overflow-hidden shadow-tactile bg-nexus-surface-container relative">
-            {/* Live GPS Telemetry Network HUD */}
-            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 p-1.5 rounded-2xl bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/80 dark:border-stone-800 shadow-xl text-xs font-mono">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 text-emerald-600 dark:text-emerald-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Live Telemetry Active
-              </span>
-            </div>
-
             {/* Quick Map Action Badge */}
             {clickedMapPoint && (
               <div className="absolute top-4 left-4 z-20 flex items-center gap-2 p-2 rounded-xl bg-nexus-surface/95 backdrop-blur-md border border-nexus-outline/40 shadow-tactile text-xs font-mono">
@@ -469,15 +319,6 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {/* 4D Time-Travel Scrubber & Spatial Geofence Tools */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-8">
-              <TimeTravelScrubber onTimeChange={(offset) => setTimelineOffset(offset)} />
-            </div>
-            <div className="lg:col-span-4">
-              <GeofenceHazardPainter />
-            </div>
-          </div>
         </div>
 
         {/* Real User Input Modals */}
@@ -504,9 +345,7 @@ export default function OverviewPage() {
           onClose={() => setIsOrderModalOpen(false)}
           warehouses={warehouses}
           vehicles={vehicles}
-          onSuccess={(newOrd) => {
-            setOrders((prev) => [newOrd, ...prev.filter((o) => o.id !== newOrd.id)]);
-          }}
+          onSuccess={() => { loadLiveTelemetry(); }}
         />
 
         <CreateIncidentModal

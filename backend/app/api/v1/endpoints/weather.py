@@ -16,15 +16,7 @@ async def get_point_weather(
         return await open_meteo_provider.get_point_weather(latitude, longitude)
     except Exception as e:
         logger.error(f"Error fetching point weather ({latitude}, {longitude}): {e}")
-        return {
-            "latitude": latitude,
-            "longitude": longitude,
-            "temperature_celsius": 14.5,
-            "wind_speed_kmh": 22.0,
-            "condition": "CLEAR",
-            "hazard_level": "LOW",
-            "provider": "fallback"
-        }
+        raise HTTPException(status_code=503, detail="Weather provider is temporarily unavailable")
 
 @router.get("/corridor-hazards")
 async def get_corridor_hazards():

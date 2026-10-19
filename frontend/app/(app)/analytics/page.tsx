@@ -71,31 +71,12 @@ export default function AnalyticsPage() {
         setOverviewData(await resOverview.json());
       }
 
-      // 2. Forecast
-      const resForecast = await apiFetch(
-        `/api/v1/analytics/forecast?metric=${forecastMetric}&horizon=${forecastHorizon}`
-      );
-      if (resForecast.ok) {
-        setForecastData(await resForecast.json());
-      }
-
-      // 3. Anomalies
-      const resAnomalies = await apiFetch(`/api/v1/analytics/anomalies`);
-      if (resAnomalies.ok) {
-        setAnomalyData(await resAnomalies.json());
-      }
-
-      // 4. Risk scores
+      // Record-based operational review
       const resRisk = await apiFetch(`/api/v1/analytics/risk-scores`);
       if (resRisk.ok) {
         setRiskData(await resRisk.json());
       }
 
-      // 5. Medallion architecture
-      const resMedallion = await apiFetch(`/api/v1/analytics/medallion-summary`);
-      if (resMedallion.ok) {
-        setMedallionData(await resMedallion.json());
-      }
     } catch (e) {
       console.error("Failed to fetch live analytics:", e);
     } finally {
@@ -145,7 +126,7 @@ export default function AnalyticsPage() {
         <PageHeader
           eyebrow="Intelligence & Network Dynamics"
           title="Operations analytics"
-          description="High-frequency operational metrics, predictive throughput forecasts, and autonomous anomaly detection."
+          description="Review recorded workspace activity, warehouse capacity, and orders that need attention."
           actions={
             <div className="flex flex-wrap items-center gap-3">
               {/* Global Timeframe Selector */}
@@ -197,10 +178,8 @@ export default function AnalyticsPage() {
           <Tabs
             tabs={[
               { id: "overview", label: "Operations Overview", icon: <Activity className="h-3.5 w-3.5" /> },
-              { id: "forecast", label: "Predictive Forecast", icon: <BrainCircuit className="h-3.5 w-3.5" /> },
-              { id: "anomalies", label: "Anomaly Hunter", icon: <AlertTriangle className="h-3.5 w-3.5" />, count: anomaliesList.length },
-              { id: "risk", label: "Corridor Risk Index", icon: <ShieldAlert className="h-3.5 w-3.5" /> },
-              { id: "medallion", label: "Data Pipeline", icon: <Layers className="h-3.5 w-3.5" /> },
+              { id: "overview", label: "Overview", icon: <Activity className="h-3.5 w-3.5" /> },
+              { id: "risk", label: "Order review", icon: <ShieldAlert className="h-3.5 w-3.5" /> },
             ]}
             activeTab={activeTab}
             onChange={(id) => setActiveTab(id as TabType)}
@@ -569,25 +548,23 @@ export default function AnalyticsPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40">
-                <p className="text-xs font-mono text-nexus-on-surface-variant uppercase">Portfolio Risk Exposure</p>
-                <p className="text-2xl font-bold font-mono text-red-600 mt-1">
-                  ${(riskData?.portfolioExposureUsd || 14200).toLocaleString()}
-                </p>
-                <p className="text-xs text-nexus-on-surface-variant mt-1">Potential SLA breach penalty fines</p>
+                <p className="text-xs font-mono text-nexus-on-surface-variant uppercase">Financial exposure</p>
+                <p className="text-2xl font-bold font-mono text-nexus-on-surface mt-1">Not recorded</p>
+                <p className="text-xs text-nexus-on-surface-variant mt-1">Contract penalties are not configured</p>
               </div>
 
               <div className="p-4 rounded-xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40">
-                <p className="text-xs font-mono text-nexus-on-surface-variant uppercase">Critical Orders at Risk</p>
+                <p className="text-xs font-mono text-nexus-on-surface-variant uppercase">Delayed orders</p>
                 <p className="text-2xl font-bold font-mono text-amber-600 mt-1">
-                  {riskData?.criticalRiskCount || 2} Orders
+                  {riskData?.delayedOrdersCount ?? "—"} Orders
                 </p>
-                <p className="text-xs text-nexus-on-surface-variant mt-1">Requiring active detour arbitration</p>
+                <p className="text-xs text-nexus-on-surface-variant mt-1">Currently marked delayed in dispatch</p>
               </div>
 
               <div className="p-4 rounded-xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40">
                 <p className="text-xs font-mono text-nexus-on-surface-variant uppercase">Scored Active Orders</p>
                 <p className="text-2xl font-bold font-mono text-nexus-on-surface mt-1">
-                  {riskData?.ordersScoredCount || 14}
+                  {riskData?.ordersScoredCount ?? "—"}
                 </p>
                 <p className="text-xs text-nexus-on-surface-variant mt-1">Evaluated across continental corridors</p>
               </div>
@@ -598,7 +575,7 @@ export default function AnalyticsPage() {
                 <div>
                   <CardTitle className="text-sm font-bold">Order Risk Matrix & Financial Exposure</CardTitle>
                   <CardDescription>
-                    Multi-factor index: Weather Severity + Route Congestion + SLA Urgency
+                    Based on the current order status and priority saved in this workspace.
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -611,9 +588,9 @@ export default function AnalyticsPage() {
                         <th className="py-2.5">CUSTOMER</th>
                         <th className="py-2.5">DESTINATION</th>
                         <th className="py-2.5">PRIORITY</th>
-                        <th className="py-2.5">RISK SCORE</th>
-                        <th className="py-2.5">TIER</th>
-                        <th className="py-2.5 text-right">EXPOSURE (USD)</th>
+                        <th className="py-2.5">RECORDED STATUS</th>
+                        <th className="py-2.5">REVIEW</th>
+                        <th className="py-2.5 text-right">EXPOSURE</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-nexus-outline-variant/20">
@@ -633,23 +610,11 @@ export default function AnalyticsPage() {
                               {r.priority}
                             </span>
                           </td>
-                          <td className="py-2.5 font-bold">{r.riskScore}/100</td>
+                          <td className="py-2.5 font-bold">{r.status}</td>
                           <td className="py-2.5">
-                            <span
-                              className={`font-bold ${
-                                r.riskTier === "CRITICAL"
-                                  ? "text-red-600"
-                                  : r.riskTier === "HIGH"
-                                  ? "text-amber-600"
-                                  : "text-emerald-600"
-                              }`}
-                            >
-                              {r.riskTier}
-                            </span>
+                            <span className="font-medium text-nexus-on-surface-variant">{r.assessment.replaceAll("_", " ")}</span>
                           </td>
-                          <td className="py-2.5 text-right font-bold text-nexus-on-surface">
-                            ${r.potentialLossUsd.toFixed(2)}
-                          </td>
+                          <td className="py-2.5 text-right text-nexus-on-surface-variant">Not recorded</td>
                         </tr>
                       ))}
                     </tbody>

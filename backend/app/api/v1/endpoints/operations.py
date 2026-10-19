@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from app.db.session import get_db
-from app.auth.dependencies import get_optional_principal, require_workspace
-from app.auth.principal import RequestPrincipal
+from app.auth.dependencies import require_workspace, require_permission
+from app.auth.principal import RequestPrincipal, PermissionEnum
 from app.models.operations import Warehouse, Vehicle, Route, Order
 from app.models.system import AuditLog, OperationalEvent, EventOutbox
 from app.schemas.operations import (
@@ -27,25 +27,19 @@ from app.schemas.operations import (
 from app.core.errors import EntityNotFoundException
 from app.realtime.sse import broadcaster
 
-from app.core.config import settings
 from fastapi import HTTPException
 
 router = APIRouter(prefix="/operations", tags=["Operations"])
 
-def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
-    """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
-    if principal and principal.workspace_id:
-        return principal.workspace_id
-    if fallback and fallback != "ws-continental-fleet-01":
-        return fallback
-    if settings.ENABLE_DEMO_AUTH:
-        return "ws-continental-fleet-01"
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication and active workspace required")
+def get_tenant_workspace(principal: RequestPrincipal) -> str:
+    if not principal.workspace_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="An active workspace is required")
+    return principal.workspace_id
 
 
 @router.get("/summary")
 async def get_operations_summary(
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve operational summary of warehouses, vehicles, routes, and orders."""
@@ -100,7 +94,7 @@ async def get_operations_summary(
 async def list_warehouses(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve operational hub warehouses directly from PostgreSQL scoped to tenant workspace."""
@@ -112,7 +106,7 @@ async def list_warehouses(
 @router.get("/warehouses/{warehouse_id}", response_model=WarehouseRead)
 async def get_warehouse(
     warehouse_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve warehouse by ID or Code from PostgreSQL scoped to tenant workspace."""
@@ -130,7 +124,7 @@ async def get_warehouse(
 @router.post("/warehouses", response_model=WarehouseRead, status_code=status.HTTP_201_CREATED)
 async def create_warehouse(
     req: WarehouseCreate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new warehouse in PostgreSQL."""
@@ -151,7 +145,7 @@ async def create_warehouse(
 async def update_warehouse(
     warehouse_id: str,
     req: WarehouseUpdate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Update warehouse attributes in PostgreSQL."""
@@ -179,7 +173,7 @@ async def update_warehouse(
 @router.delete("/warehouses/{warehouse_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_warehouse(
     warehouse_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Decommission and delete a warehouse from PostgreSQL."""
@@ -203,7 +197,7 @@ async def delete_warehouse(
 async def list_vehicles(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve commercial vehicles from PostgreSQL scoped to tenant workspace."""
@@ -215,7 +209,7 @@ async def list_vehicles(
 @router.get("/vehicles/{vehicle_id}", response_model=VehicleRead)
 async def get_vehicle(
     vehicle_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve vehicle by ID or Code from PostgreSQL."""
@@ -233,12 +227,16 @@ async def get_vehicle(
 @router.post("/vehicles", response_model=VehicleRead, status_code=status.HTTP_201_CREATED)
 async def create_vehicle(
     req: VehicleCreate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new commercial fleet vehicle in PostgreSQL."""
     ws = get_tenant_workspace(principal)
     data = req.model_dump()
+    if req.current_route_id:
+        route = (await db.execute(select(Route).where(Route.id == req.current_route_id, Route.workspace_id == ws))).scalars().first()
+        if not route:
+            raise EntityNotFoundException("Route", req.current_route_id)
     data["workspace_id"] = ws
     new_v = Vehicle(
         id=f"v-{uuid.uuid4().hex[:8]}",
@@ -254,7 +252,7 @@ async def create_vehicle(
 async def update_vehicle_telemetry(
     vehicle_id: str,
     req: VehicleUpdateTelemetry,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_ASSIGNED_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Update live GPS coordinates, speed, battery, and status."""
@@ -282,7 +280,7 @@ async def update_vehicle_telemetry(
 async def update_vehicle(
     vehicle_id: str,
     req: VehicleUpdate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Update commercial vehicle attributes in PostgreSQL."""
@@ -310,7 +308,7 @@ async def update_vehicle(
 @router.delete("/vehicles/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vehicle(
     vehicle_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Decommission and delete a vehicle from PostgreSQL."""
@@ -334,7 +332,7 @@ async def delete_vehicle(
 async def list_routes(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve logistics routes from PostgreSQL scoped to tenant workspace."""
@@ -346,7 +344,7 @@ async def list_routes(
 @router.get("/routes/{route_id}", response_model=RouteRead)
 async def get_route(
     route_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve route by ID or Code from PostgreSQL."""
@@ -364,7 +362,7 @@ async def get_route(
 @router.post("/routes", response_model=RouteRead, status_code=status.HTTP_201_CREATED)
 async def create_route(
     req: RouteCreate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new route in PostgreSQL."""
@@ -385,7 +383,7 @@ async def create_route(
 async def update_route(
     route_id: str,
     req: RouteUpdate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Update logistics route in PostgreSQL."""
@@ -413,7 +411,7 @@ async def update_route(
 @router.delete("/routes/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_route(
     route_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a route from PostgreSQL."""
@@ -437,7 +435,7 @@ async def delete_route(
 async def list_orders(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve freight customer orders from PostgreSQL scoped to tenant workspace."""
@@ -449,7 +447,7 @@ async def list_orders(
 @router.get("/orders/{order_id}", response_model=OrderRead)
 async def get_order(
     order_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve order by ID or Order Number from PostgreSQL."""
@@ -467,11 +465,18 @@ async def get_order(
 @router.post("/orders", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
 async def create_order(
     req: OrderCreate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new freight consignment order in PostgreSQL."""
     ws = get_tenant_workspace(principal)
+    for model, entity_id, label in (
+        (Warehouse, req.warehouse_id, "Warehouse"),
+        (Route, req.route_id, "Route"),
+        (Vehicle, req.vehicle_id, "Vehicle"),
+    ):
+        if entity_id and not (await db.execute(select(model.id).where(model.id == entity_id, model.workspace_id == ws))).scalar_one_or_none():
+            raise EntityNotFoundException(label, entity_id)
     data = req.model_dump()
     data["workspace_id"] = ws
     new_o = Order(
@@ -488,7 +493,7 @@ async def create_order(
 async def update_order(
     order_id: str,
     req: OrderUpdate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Update freight consignment order in PostgreSQL."""
@@ -516,7 +521,7 @@ async def update_order(
 @router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_order(
     order_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Cancel and delete order from PostgreSQL."""

@@ -12,77 +12,67 @@ import {
   DollarSign,
   TrendingDown,
   Building2,
-  CheckCircle2,
   GitBranch,
   Truck,
   Activity,
   Zap,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MetricTile } from "@/components/ui/metric-tile";
 import { IncidentItem, SimulationItem, WarehouseItem } from "@/lib/mock-data";
+import { realtimeClient, NexusPulseItem } from "@/lib/realtime-client";
 import { tactileAudio } from "@/lib/sound-effects";
 import { useToast } from "@/components/ui/toast";
-import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 
 export interface ManagerDashboardProps {
   incidents: IncidentItem[];
   simulations: SimulationItem[];
   warehouses: WarehouseItem[];
-  onApplyDecision?: (simId: string) => Promise<void>;
   onOpenCreateIncident?: () => void;
   onOpenCreateWarehouse?: () => void;
+  canRunSimulations?: boolean;
 }
 
 export function ManagerDashboard({
   incidents,
   simulations,
   warehouses,
-  onApplyDecision,
   onOpenCreateIncident,
   onOpenCreateWarehouse,
+  canRunSimulations = false,
 }: ManagerDashboardProps) {
   const { toast } = useToast();
   const [selectedIncident, setSelectedIncident] = React.useState<IncidentItem | null>(
     incidents[0] || null
   );
-  const [isApplying, setIsApplying] = React.useState(false);
-  const [pendingSimId, setPendingSimId] = React.useState<string | null>(null);
+
+  const [livePulse, setLivePulse] = React.useState<NexusPulseItem[]>([]);
+
+  React.useEffect(() => {
+    setLivePulse(realtimeClient.getPulseHistory().slice(0, 5));
+    const unsub = realtimeClient.subscribePulse((item) => {
+      setLivePulse((prev) => [item, ...prev.slice(0, 4)]);
+    });
+    return unsub;
+  }, []);
+
+  React.useEffect(() => {
+    if (!selectedIncident || !incidents.some((incident) => incident.id === selectedIncident.id)) {
+      setSelectedIncident(incidents[0] || null);
+    }
+  }, [incidents, selectedIncident]);
 
   const activeIncidents = incidents.filter(
     (i) => i.status !== "RESOLVED" && i.status !== "ARCHIVED"
   );
-  const totalFinancialLiability = activeIncidents.reduce(
-    (acc, i) => acc + (i.costEstimate || 4200),
-    0
-  );
-
-  const handleExecuteReroute = async (simId: string) => {
-    setIsApplying(true);
-    tactileAudio.playClick();
-    try {
-      if (onApplyDecision) {
-        await onApplyDecision(simId);
-      }
-      tactileAudio.playSuccess();
-      toast({
-        title: "Operational Plan Applied",
-        message: "Reroute plan applied and synchronized with fleet dispatch records.",
-        type: "success",
-      });
-    } catch {
-      toast({
-        title: "Update Failed",
-        message: "Unable to apply plan to active operations. Check permissions or network.",
-        type: "critical",
-      });
-    } finally {
-      setIsApplying(false);
-      setPendingSimId(null);
-    }
-  };
+  const knownIncidentCosts = activeIncidents.map((i) => i.costEstimate).filter((value): value is number => typeof value === "number");
+  const totalFinancialLiability = knownIncidentCosts.length ? knownIncidentCosts.reduce((sum, value) => sum + value, 0) : null;
+  const warehouseCapacity = warehouses.reduce((sum, warehouse) => sum + (warehouse.capacityUnits || 0), 0);
+  const warehouseUnits = warehouses.reduce((sum, warehouse) => sum + (warehouse.currentUnits || 0), 0);
+  const warehouseUtilization = warehouseCapacity > 0 ? `${Math.round((warehouseUnits / warehouseCapacity) * 100)}%` : "Unavailable";
 
   return (
     <div className="space-y-6">
@@ -92,7 +82,7 @@ export function ManagerDashboard({
           title="Active Disruptions"
           value={activeIncidents.length}
           subtitle="Hotspots Flagged"
-          change={activeIncidents.length > 0 ? "+2 from shift" : "0 normal"}
+          change={activeIncidents.length > 0 ? `${activeIncidents.length} active` : "No active disruptions"}
           trend={activeIncidents.length > 0 ? "down" : "up"}
           status={activeIncidents.length > 0 ? "CRITICAL" : "HEALTHY"}
           icon={AlertTriangle}
@@ -100,11 +90,11 @@ export function ManagerDashboard({
         />
         <MetricTile
           title="SLA Risk Exposure"
-          value={`$${(totalFinancialLiability / 1000).toFixed(1)}k`}
-          subtitle="Potential Penalties"
-          change="-$12.4k mitigated"
-          trend="up"
-          status={totalFinancialLiability > 5000 ? "ATTENTION" : "HEALTHY"}
+          value={totalFinancialLiability == null ? "Unavailable" : `$${(totalFinancialLiability / 1000).toFixed(1)}k`}
+          subtitle="Recorded incident estimates"
+          change={knownIncidentCosts.length ? `${knownIncidentCosts.length} recorded estimate(s)` : "No cost estimates recorded"}
+          trend="neutral"
+          status="NEUTRAL"
           icon={DollarSign}
           variant="default"
         />
@@ -120,11 +110,11 @@ export function ManagerDashboard({
         />
         <MetricTile
           title="Warehouse Dock Balance"
-          value="94.2%"
-          subtitle="Equilibrium Score"
-          change="4 hubs optimal"
-          trend="up"
-          status="HEALTHY"
+          value={warehouseUtilization}
+          subtitle="Recorded capacity utilization"
+          change={`${warehouses.length} workspace location(s)`}
+          trend="neutral"
+          status="NEUTRAL"
           icon={Building2}
           variant="default"
         />
@@ -218,10 +208,10 @@ export function ManagerDashboard({
                         </div>
                         <div className="text-right shrink-0">
                           <span className="text-xs font-mono font-extrabold text-rose-600 dark:text-rose-400 block">
-                            ${(inc.costEstimate || 4200).toLocaleString()}
+                            {inc.costEstimate == null ? "Not recorded" : `$${inc.costEstimate.toLocaleString()}`}
                           </span>
                           <span className="text-[10px] font-mono text-nexus-on-surface-variant flex items-center gap-1 justify-end">
-                            <Clock className="w-3 h-3" /> {inc.delayMinutes || 85}m delay
+                            <Clock className="w-3 h-3" /> {inc.delayMinutes == null ? "Delay unavailable" : `${inc.delayMinutes}m delay`}
                           </span>
                         </div>
                       </div>
@@ -233,129 +223,67 @@ export function ManagerDashboard({
           </Card>
         </div>
 
-        {/* Right Column: AI Mitigation Resolver */}
         <div className="lg:col-span-7 space-y-4">
-          <Card className="border-nexus-outline/30 shadow-tactile bg-gradient-to-br from-nexus-surface-container to-nexus-surface-container-high">
+          <Card className="border-nexus-outline/30 shadow-tactile">
             <CardHeader className="pb-3 border-b border-nexus-outline/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-nexus-secondary text-white shadow-xs">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-sm font-mono font-bold">
-                      One-Click AI Mitigation Resolver
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Compare baseline delay liability against simulated bypass corridor
-                    </CardDescription>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-nexus-secondary/10 text-nexus-secondary font-bold">
-                  Monte Carlo Verified
-                </span>
-              </div>
+              <CardTitle className="text-sm">Incident context</CardTitle>
+              <CardDescription>Review recorded information and create a planning estimate from assigned route data.</CardDescription>
             </CardHeader>
-            <CardContent className="p-5 space-y-5">
-              {selectedIncident ? (
-                <div className="space-y-4">
-                  {/* Delta Comparison Box */}
-                  <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-nexus-surface border border-nexus-outline/30">
-                    <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20">
-                      <span className="text-[10px] font-mono uppercase text-rose-600 dark:text-rose-400 font-bold block mb-1">
-                        Current Baseline Path
-                      </span>
-                      <div className="text-xl font-black text-rose-600 dark:text-rose-400 font-mono">
-                        +{selectedIncident.delayMinutes || 85} mins
-                      </div>
-                      <div className="text-xs font-mono text-nexus-on-surface-variant mt-1">
-                        Cost Penalty: <span className="font-bold text-nexus-on-surface">${(selectedIncident.costEstimate || 4200).toLocaleString()}</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-rose-600 dark:text-rose-400 mt-2">
-                        Status: Severe Chokepoint
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                      <span className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 font-bold block mb-1">
-                        Recommended Mitigation Plan
-                      </span>
-                      <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                        +14 mins
-                      </div>
-                      <div className="text-xs font-mono text-nexus-on-surface-variant mt-1">
-                        Net Savings: <span className="font-bold text-emerald-600 dark:text-emerald-400">+$3,820.00</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 mt-2">
-                        Transit Risk: Low • Verified via DOT status feed
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Operational Rationale Brief */}
-                  <div className="p-3.5 rounded-xl bg-nexus-surface-container-high border border-nexus-outline/20 text-xs text-nexus-on-surface leading-relaxed">
-                    <span className="font-bold text-nexus-secondary font-mono block mb-1">
-                      Route Evaluation Rationale:
-                    </span>
-                    Rerouting vehicles through secondary bypass avoids the high-elevation snow obstruction on I-80. Dock turnaround at receiving terminal remains within operational schedule tolerance.
-                  </div>
-
-                  {/* Action Bar */}
-                  <div className="flex items-center justify-between pt-2">
-                    <Link href={`/simulations/new?incidentId=${selectedIncident.id}`}>
-                      <Button variant="outline" size="sm" className="font-mono text-xs">
-                        <GitBranch className="w-3.5 h-3.5 mr-1" /> Compare Variables
-                      </Button>
-                    </Link>
-
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setPendingSimId(simulations[0]?.id || "sim-1")}
-                      disabled={isApplying}
-                      className="font-mono text-xs shadow-tactile"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-300" />
-                      Apply Plan
-                    </Button>
-                  </div>
+            <CardContent className="p-5 space-y-4">
+              {selectedIncident ? <>
+                <div><div className="font-semibold text-nexus-on-surface">{selectedIncident.title}</div><p className="mt-1 text-sm text-nexus-on-surface-variant">{selectedIncident.summary}</p></div>
+                <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                  <div><span className="text-nexus-on-surface-variant">Reported delay</span><p className="font-medium">{selectedIncident.delayMinutes == null ? "Not recorded" : `${selectedIncident.delayMinutes} min`}</p></div>
+                  <div><span className="text-nexus-on-surface-variant">Cost estimate</span><p className="font-medium">{selectedIncident.costEstimate == null ? "Not recorded" : `$${selectedIncident.costEstimate.toLocaleString()}`}</p></div>
+                  <div><span className="text-nexus-on-surface-variant">Cause</span><p className="font-medium">{selectedIncident.rootCause || "Not recorded"}</p></div>
+                  <div><span className="text-nexus-on-surface-variant">Affected asset</span><p className="font-medium">{selectedIncident.affectedEntityName || "Not recorded"}</p></div>
                 </div>
-              ) : (
-                <div className="py-12 text-center text-xs font-mono text-nexus-on-surface-variant">
-                  Select an incident from the queue to review scenario alternatives and operational trade-offs.
-                </div>
-              )}
+                {canRunSimulations && <Link href={`/simulations/new?incidentId=${encodeURIComponent(selectedIncident.id)}`}>
+                  <Button variant="outline" size="sm" className="font-mono text-xs"><GitBranch className="mr-1 h-3.5 w-3.5"/>Create planning estimate</Button>
+                </Link>}
+                <p className="text-xs text-nexus-on-surface-variant">Estimates do not change live dispatch. Dispatch integration is not configured.</p>
+              </> : <p className="py-12 text-center text-sm text-nexus-on-surface-variant">Select an incident to review its recorded details.</p>}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <ConfirmActionModal
-        isOpen={!!pendingSimId}
-        onClose={() => setPendingSimId(null)}
-        onConfirm={async () => {
-          if (pendingSimId) {
-            await handleExecuteReroute(pendingSimId);
-          }
-        }}
-        title="Execute Reroute Plan"
-        description="Applying this mitigation scenario will issue route modifications to active vehicles and notify downstream receiving docks."
-        affectedEntities={
-          selectedIncident
-            ? [
-                {
-                  type: "Incident",
-                  id: selectedIncident.id,
-                  name: selectedIncident.title || selectedIncident.id,
-                },
-              ]
-            : []
-        }
-        consequenceWarning="This will update active driver dispatch instructions. Drivers will be prompted to confirm route deviation."
-        confirmLabel="Apply & Dispatch Reroute"
-        confirmVariant="primary"
-        isLoading={isApplying}
-      />
+      {/* Real-Time Operational Event Feed */}
+      {livePulse.length > 0 && (
+        <Card className="border-nexus-outline/30 shadow-tactile overflow-hidden">
+          <CardHeader className="py-3 px-4 border-b border-nexus-outline/20 bg-nexus-surface-container-high/30 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <CardTitle className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface">
+                Live Operations & Dispatch Stream
+              </CardTitle>
+            </div>
+            <span className="text-[10px] font-mono text-nexus-on-surface-variant">Connected to SSE Telemetry Channel</span>
+          </CardHeader>
+          <CardContent className="p-3 divide-y divide-nexus-outline/10 space-y-0 text-xs">
+            {livePulse.map((item) => (
+              <div key={item.id} className="py-2.5 px-2 flex items-center justify-between gap-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Badge variant={item.severity === "CRITICAL" ? "critical" : item.severity === "SUCCESS" ? "healthy" : "neutral"} className="text-[10px] font-mono shrink-0">
+                    {item.eventType}
+                  </Badge>
+                  <div>
+                    <span className="font-semibold text-nexus-on-surface block sm:inline mr-2">{item.title}:</span>
+                    <span className="text-nexus-on-surface-variant text-[11px]">{item.message}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-nexus-on-surface-variant shrink-0">
+                  {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }

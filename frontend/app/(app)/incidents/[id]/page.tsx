@@ -93,16 +93,16 @@ export default function IncidentDetailPage() {
   const handleAdvanceStatus = async (nextStatus: IncidentItem["status"]) => {
     setIsUpdating(true);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-      const res = await fetch(`${apiBase}/api/v1/incidents/${incident?.id}`, {
+      const res = await fetch(`/api/v1/incidents/${incident.id}`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: nextStatus,
           note: `Advanced incident state machine to ${nextStatus}`,
-          actorName: "Sarah Chen",
         }),
       });
+      if (!res.ok) throw new Error("Incident status could not be updated.");
       const json = await res.json();
       const incData = json.data || json;
       if (incData && incData.id) {
@@ -113,11 +113,12 @@ export default function IncidentDetailPage() {
           type: nextStatus === "RESOLVED" ? "success" : "info",
         });
       }
-    } catch {
-      if (incident) {
-        const updated = { ...incident, status: nextStatus };
-        setIncident(updated);
-      }
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        message: error instanceof Error ? error.message : "The incident status could not be saved.",
+        type: "critical",
+      });
     } finally {
       setIsUpdating(false);
     }

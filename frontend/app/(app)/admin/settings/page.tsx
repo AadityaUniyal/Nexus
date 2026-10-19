@@ -1,107 +1,35 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import Link from 'next/link';
-import { AppShell } from '@/components/layout/AppShell';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Shield, Key, Lock, Save, Sliders } from 'lucide-react';
-import { useToast } from '@/components/ui/toast';
-import { FadeIn, SpringCard } from '@/components/motion';
+import Link from "next/link";
+import { AppShell } from "@/components/layout/AppShell";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { FadeIn } from "@/components/motion";
+import { ArrowRight, Shield } from "lucide-react";
 
 export default function AdminSettingsPage() {
-  const { toast } = useToast();
-  const [workspaceName, setWorkspaceName] = React.useState('Continental Logistics North America');
-  const [sessionTimeout, setSessionTimeout] = React.useState('12');
-  const [requireMFA, setRequireMFA] = React.useState(true);
-  const [auditRetention, setAuditRetention] = React.useState('365');
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: 'Platform Governance Updated',
-      message: 'Workspace security and audit retention parameters saved.',
-      type: 'success',
-    });
-  };
+  const { user } = useAuth();
 
   return (
     <AppShell>
-      <FadeIn className="space-y-6 max-w-4xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
-              <Link href="/admin" className="hover:underline">Admin Center</Link>
-              <span>·</span>
-              <span>Workspace Governance</span>
+      <FadeIn className="mx-auto max-w-3xl space-y-6">
+        <header className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-nexus-on-surface-variant">Administration</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-nexus-on-surface">Workspace governance</h1>
+          <p className="max-w-2xl text-sm leading-6 text-nexus-on-surface-variant">Security policies and retention controls are not configurable in this deployment. No changes have been saved.</p>
+        </header>
+
+        <section className="rounded-2xl border border-nexus-outline-variant/50 bg-nexus-surface-container-low p-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-nexus-surface-container p-3 text-nexus-on-surface-variant"><Shield className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-semibold text-nexus-on-surface">{user?.workspace_name || "Your workspace"}</h2>
+              <p className="mt-1 text-sm leading-6 text-nexus-on-surface-variant">This page previously displayed local-only security controls. Those controls have been removed until the service can enforce and persist them.</p>
+              <Link href="/settings" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-nexus-primary hover:underline">
+                Open available workspace settings <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Platform Security & Workspace Settings
-            </h1>
           </div>
-        </div>
-
-        <SpringCard className="p-8 space-y-6">
-          <form onSubmit={handleSave} className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-mono uppercase font-bold text-nexus-secondary">
-                Workspace Identity
-              </h3>
-              <Input
-                label="Workspace Legal Entity"
-                value={workspaceName}
-                onChange={(e) => setWorkspaceName(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-4 border-t border-nexus-surface-container-high pt-6">
-              <h3 className="text-sm font-mono uppercase font-bold text-nexus-secondary">
-                Security & Session Policies
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-medium text-nexus-on-surface-variant uppercase">
-                    Session Inactivity Timeout (Hours)
-                  </label>
-                  <Input
-                    type="number"
-                    value={sessionTimeout}
-                    onChange={(e) => setSessionTimeout(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-medium text-nexus-on-surface-variant uppercase">
-                    Audit Log Retention (Days)
-                  </label>
-                  <Input
-                    type="number"
-                    value={auditRetention}
-                    onChange={(e) => setAuditRetention(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <label className="p-4 rounded-xl border border-nexus-surface-container-high bg-nexus-surface-container/30 flex items-center justify-between cursor-pointer">
-                <div>
-                  <span className="text-sm font-bold">Enforce Hardware FIDO2 MFA</span>
-                  <p className="text-xs text-nexus-on-surface-variant">Required for all Operations Managers and Administrators</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={requireMFA}
-                  onChange={(e) => setRequireMFA(e.target.checked)}
-                  className="h-4 w-4 text-nexus-secondary focus:ring-nexus-secondary"
-                />
-              </label>
-            </div>
-
-            <div className="pt-4 flex justify-end">
-              <Button type="submit" variant="primary" className="gap-2">
-                <Save className="h-4 w-4" /> Save Configuration
-              </Button>
-            </div>
-          </form>
-        </SpringCard>
+        </section>
       </FadeIn>
     </AppShell>
   );

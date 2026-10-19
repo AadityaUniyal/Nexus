@@ -49,7 +49,7 @@ export function OperationalCopilot({ className }: { className?: string }) {
       id: "welcome-msg",
       sender: "COPILOT",
       content:
-        "Greetings, Operations Commander. I am Nexus Operational Copilot, wired directly to your workspace telemetry, live GIS routing, and simulation engine. How can I assist your fleet decisions today?",
+        "I can explain the SLA, turnaround, and network-volume metrics recorded for your workspace. I can analyze those figures, but I cannot execute dispatch changes.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -128,7 +128,7 @@ export function OperationalCopilot({ className }: { className?: string }) {
         title: decision === "APPROVE" ? "Action Executed" : "Recommendation Rejected",
         message:
           decision === "APPROVE"
-            ? "Vehicle reroute dispatched to cab telematics. Immutable audit event logged."
+            ? "Dispatch route updated in Nexus and an audit event was recorded. No external telematics command was sent."
             : "Approval request dismissed. Corridor maintained.",
         type: decision === "APPROVE" ? "success" : "info",
       });
@@ -196,7 +196,7 @@ export function OperationalCopilot({ className }: { className?: string }) {
                   <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
                     Nexus Copilot
                     <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50">
-                      FOUNDRY-AGENT
+                      WORKSPACE AI
                     </Badge>
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400">
@@ -217,22 +217,22 @@ export function OperationalCopilot({ className }: { className?: string }) {
             {/* Quick Action Chips */}
             <div className="px-4 py-2.5 bg-stone-50 dark:bg-slate-900/50 border-b border-stone-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto text-xs no-scrollbar">
               <button
-                onClick={() => handleSendMessage("Give me a summary of fleet status and active incidents.")}
+                onClick={() => handleSendMessage("Summarize the SLA, average turnaround, and network volume recorded for my workspace.")}
                 className="whitespace-nowrap px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-emerald-500 transition-colors"
               >
                 📊 Fleet Summary
               </button>
               <button
-                onClick={() => handleSendMessage("Which deliveries are at risk of SLA breach?")}
+                onClick={() => handleSendMessage("What is the recorded SLA compliance for my workspace, and is it available?")}
                 className="whitespace-nowrap px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-emerald-500 transition-colors"
               >
-                ⚠️ SLA Risks
+                ⚠️ SLA Status
               </button>
               <button
-                onClick={() => handleSendMessage("Simulate route options for vehicle NX-104 to bypass weather.")}
+                onClick={() => handleSendMessage("How many units are currently recorded across my network?")}
                 className="whitespace-nowrap px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 hover:border-emerald-500 transition-colors"
               >
-                ⚡ Simulate Detour
+                📋 Available Data
               </button>
             </div>
 
@@ -365,7 +365,7 @@ export function OperationalCopilot({ className }: { className?: string }) {
               {isLoading && (
                 <div className="flex items-center gap-2 text-xs text-stone-400 p-2">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
-                  <span>Nexus AI reasoning across fleet telemetry...</span>
+                <span>Reviewing recorded workspace data...</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -382,7 +382,7 @@ export function OperationalCopilot({ className }: { className?: string }) {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Ask Copilot about fleet status, risks, or reroutes..."
+                placeholder="Ask about recorded fleet, incidents, orders, or SLA metrics..."
                 className="text-xs h-10 bg-stone-50 dark:bg-slate-800 border-stone-200 dark:border-slate-700 rounded-xl"
               />
               <Button

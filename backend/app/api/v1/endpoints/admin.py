@@ -1,19 +1,19 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, text
 from app.db.session import get_db
 from app.core.config import settings
-from app.models.user import User
+from app.models.user import User, WorkspaceMembership
 from app.models.system import AuditLog, PipelineHealth
 from app.schemas.user import UserRead, UserRoleUpdate
 from app.schemas.system import AuditLogRead, PipelineHealthRead
 from app.integrations.location import get_location_provider
 from app.services.location_service import LocationService
-from app.core.errors import EntityNotFoundException
+from app.core.errors import EntityNotFoundException, NexusException
 from app.auth.dependencies import require_permission, get_current_principal, get_optional_principal
-from app.auth.principal import PermissionEnum, RequestPrincipal
+from app.auth.principal import PermissionEnum, RequestPrincipal, RoleEnum
 
 router = APIRouter(prefix="/admin", tags=["Admin & Governance"])
 
@@ -24,8 +24,8 @@ async def get_admin_overview(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
 ) -> Dict[str, Any]:
     """Retrieve platform governance overview and aggregate statistics."""
-    ws = principal.workspace_id or workspace_id or "ws-continental-fleet-01"
-    u_stmt = select(func.count()).select_from(User).where(User.workspace_id == ws)
+    ws = principal.workspace_id
+    u_stmt = select(func.count()).select_from(WorkspaceMembership).where(WorkspaceMembership.workspace_id == ws)
     u_res = await db.execute(u_stmt)
     users_count = u_res.scalar() or 0
 
@@ -35,11 +35,11 @@ async def get_admin_overview(
 
     return {
         "usersCount": users_count,
-        "activePipelines": 4,
+        "activePipelines": None,
         "auditLogsCount": audit_count,
-        "systemStatus": "HEALTHY",
-        "activeIntegrations": 4,
-        "securityAlerts": 0,
+        "systemStatus": "UNVERIFIED",
+        "activeIntegrations": None,
+        "securityAlerts": None,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -52,20 +52,27 @@ async def list_admin_users(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_USERS)),
 ):
     """List all workspace users directly from PostgreSQL with pagination."""
-    ws = principal.workspace_id or workspace_id or "ws-continental-fleet-01"
-    stmt = select(User).where(User.workspace_id == ws).offset(skip).limit(limit)
+    ws = principal.workspace_id
+    stmt = (
+        select(User, WorkspaceMembership.role)
+        .join(WorkspaceMembership, WorkspaceMembership.user_id == User.id)
+        .where(WorkspaceMembership.workspace_id == ws)
+        .order_by(User.name, User.id)
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(stmt)
-    users = result.scalars().all()
+    users = result.all()
     return [
         UserRead(
             id=u.id,
             email=u.email,
             name=u.name,
-            role=u.role,
+            role=membership_role,
             department=u.department or "Operations",
             is_active=u.is_active,
-            workspace_id=u.workspace_id,
-        ) for u in users
+            workspace_id=ws,
+        ) for u, membership_role in users
     ]
 
 @router.get("/users/{user_id}", response_model=UserRead)
@@ -75,23 +82,26 @@ async def get_admin_user(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_USERS)),
 ):
     """Retrieve a single user by ID from PostgreSQL within the principal workspace."""
-    ws = principal.workspace_id or "ws-continental-fleet-01"
-    stmt = select(User).where(
-        User.workspace_id == ws,
+    ws = principal.workspace_id
+    stmt = select(User, WorkspaceMembership.role).join(
+        WorkspaceMembership, WorkspaceMembership.user_id == User.id
+    ).where(
+        WorkspaceMembership.workspace_id == ws,
         or_(User.id == user_id, User.email == user_id)
     )
     result = await db.execute(stmt)
-    user = result.scalars().first()
-    if not user:
+    row = result.first()
+    if not row:
         raise EntityNotFoundException("User", user_id)
+    user, membership_role = row
     return UserRead(
         id=user.id,
         email=user.email,
         name=user.name,
-        role=user.role,
+        role=membership_role,
         department=user.department or "Operations",
         is_active=user.is_active,
-        workspace_id=user.workspace_id,
+        workspace_id=ws,
     )
 
 @router.patch("/users/{user_id}/role", response_model=UserRead)
@@ -102,17 +112,32 @@ async def update_user_role(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_ROLES)),
 ):
     """Update a user's RBAC role in PostgreSQL within the principal workspace."""
-    ws = principal.workspace_id or "ws-continental-fleet-01"
-    stmt = select(User).where(
-        User.workspace_id == ws,
+    ws = principal.workspace_id
+    stmt = select(User, WorkspaceMembership).join(
+        WorkspaceMembership, WorkspaceMembership.user_id == User.id
+    ).where(
+        WorkspaceMembership.workspace_id == ws,
         or_(User.id == user_id, User.email == user_id)
     )
     result = await db.execute(stmt)
-    user = result.scalars().first()
-    if not user:
+    row = result.first()
+    if not row:
         raise EntityNotFoundException("User", user_id)
 
-    user.role = req.role.upper()
+    user, membership = row
+    try:
+        new_role = RoleEnum(req.role.upper()).value
+    except ValueError as exc:
+        raise NexusException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code="INVALID_ROLE",
+            message="Choose a supported workspace role.",
+        ) from exc
+    membership.role = new_role
+    # Retain the legacy field only for the user's default workspace during the
+    # transition; authorization for a selected workspace reads its membership.
+    if user.workspace_id == ws:
+        user.role = new_role
     await db.commit()
     await db.refresh(user)
 
@@ -120,10 +145,10 @@ async def update_user_role(
         id=user.id,
         email=user.email,
         name=user.name,
-        role=user.role,
+        role=membership.role,
         department=user.department or "Operations",
         is_active=user.is_active,
-        workspace_id=user.workspace_id,
+        workspace_id=ws,
     )
 
 @router.get("/roles")
@@ -154,154 +179,51 @@ async def get_admin_roles(
     }
 
 
-DEFAULT_PIPELINE = [
-    PipelineHealthRead(id="pip-1", source_name="Realtime Telemetry Ingestion Engine", source_type="IOT_TELEMETRY", status="HEALTHY", latency_ms=12, throughput_per_sec=1450, records_today=1240000),
-    PipelineHealthRead(id="pip-2", source_name="Azure IoT Hub Gateway", source_type="AZURE_HUB", status="HEALTHY", latency_ms=28, throughput_per_sec=890, records_today=840000),
-    PipelineHealthRead(id="pip-3", source_name="Microsoft Fabric Delta Lake", source_type="FABRIC_LAKE", status="HEALTHY", latency_ms=64, throughput_per_sec=420, records_today=3600000),
-    PipelineHealthRead(id="pip-4", source_name="PostgreSQL Neon Operational Stream", source_type="POSTGRESQL", status="HEALTHY", latency_ms=8, throughput_per_sec=2100, records_today=2100000),
-]
-
 @router.get("/pipeline", response_model=List[PipelineHealthRead])
 async def get_data_pipeline_health(
     db: AsyncSession = Depends(get_db),
     principal: Optional[RequestPrincipal] = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
 ):
     """Retrieve telemetry ingestion pipeline health status from PostgreSQL."""
-    try:
-        stmt = select(PipelineHealth)
-        result = await db.execute(stmt)
-        if hasattr(result, "scalars"):
-            sc = result.scalars()
-            if hasattr(sc, "all"):
-                rows = sc.all()
-                if rows:
-                    return [
-                        PipelineHealthRead(
-                            id=p.id,
-                            source_name=p.source_name,
-                            source_type=p.source_type,
-                            status=p.status,
-                            latency_ms=p.latency_ms,
-                            throughput_per_sec=p.throughput_per_sec,
-                            records_today=p.records_today,
-                        ) for p in rows
-                    ]
-    except Exception:
-        pass
-    return DEFAULT_PIPELINE
+    result = await db.execute(select(PipelineHealth))
+    rows = result.scalars().all()
+    return [
+        PipelineHealthRead(
+            id=p.id,
+            source_name=p.source_name,
+            source_type=p.source_type,
+            status=p.status,
+            latency_ms=p.latency_ms,
+            throughput_per_sec=p.throughput_per_sec,
+            records_today=p.records_today,
+        ) for p in rows
+    ]
 
 @router.get("/health")
 @router.get("/system-health")
 async def get_system_health(
     db: AsyncSession = Depends(get_db),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
 ) -> Dict[str, Any]:
-    """Retrieve platform system health metrics verified via live DB probe and Azure services."""
-    db_connected = False
-    db_latency = 8
+    """Return only checks performed by this request."""
+    started = datetime.now(timezone.utc)
     try:
-        start_t = datetime.now(timezone.utc)
-        res = await db.execute(text("SELECT 1"))
-        if res.scalar() == 1:
-            db_connected = True
-            db_latency = max(2, int((datetime.now(timezone.utc) - start_t).total_seconds() * 1000))
+        result = await db.execute(text("SELECT 1"))
+        connected = result.scalar() == 1
+        latency = round((datetime.now(timezone.utc) - started).total_seconds() * 1000, 2) if connected else None
     except Exception:
-        db_connected = False
+        connected = False
+        latency = None
 
-    subsystems = {
-        "api": {
-            "name": "Core API Gateway",
-            "status": "HEALTHY",
-            "latencyMs": 12,
-            "role": "FastAPI / Next.js Gateway (Azure App Service)",
-            "detail": f"Uvicorn ASGI on Python 3.11 · {settings.AZURE_LOCATION}",
-        },
-        "database": {
-            "name": "PostgreSQL Operational DB",
-            "status": "HEALTHY" if db_connected else "DISCONNECTED",
-            "latencyMs": db_latency,
-            "role": "Primary Persistence (Neon PostgreSQL + asyncpg)",
-            "detail": "Connected via SSL (55 tables active)" if db_connected else "Disconnected",
-        },
-        "redis": {
-            "name": "Redis Cache & Pub/Sub",
-            "status": "HEALTHY",
-            "latencyMs": 3,
-            "role": "State Buffer & Event PubSub",
-            "detail": "Operational In-Memory / Distributed Cache",
-        },
-        "sseStream": {
-            "name": "Server-Sent Events (SSE) Stream",
-            "status": "HEALTHY",
-            "latencyMs": 1,
-            "role": "Real-time Outbox Broadcaster",
-            "detail": "Active Pulse Channel (/api/v1/realtime/stream)",
-        },
-        "simulation": {
-            "name": "Deterministic Simulation Engine",
-            "status": "HEALTHY",
-            "latencyMs": 15,
-            "role": "Physics & Pareto Scoring Engine",
-            "detail": "Stochastic & Deterministic Evaluators Online",
-        },
-        "fabric": {
-            "name": "Nexus Sovereign Delta Interconnect",
-            "status": "HEALTHY",
-            "latencyMs": 18,
-            "role": "High-Throughput Analytics Mirror",
-            "detail": f"Workspace {settings.FABRIC_WORKSPACE_ID or 'ws-nexus-analytics'} Synchronized",
-        },
-        "streamGrid": {
-            "name": "Sovereign StreamGrid™ Telemetry Bus",
-            "status": "HEALTHY",
-            "latencyMs": 8,
-            "role": "IoT Fleet Gateway",
-            "detail": f"Interconnect: {settings.AZURE_IOT_HUB_HOSTNAME or 'nexus-streamgrid.mesh'}",
-        },
-        "neuralEngine": {
-            "name": "Nexus Neural Engine™ Core",
-            "status": "HEALTHY",
-            "latencyMs": 35,
-            "role": "Deterministic & Multi-Modal Inference",
-            "detail": "Sub-Second Situational Synthesis Online",
-        },
-        "deepStorage": {
-            "name": "Nexus DeepStorage Medallion™",
-            "status": "HEALTHY",
-            "latencyMs": 14,
-            "role": "Bronze / Silver / Gold Partitioned State",
-            "detail": "Encrypted Immutable Object Storage",
-        },
-        "keyVault": {
-            "name": "Aegis Cryptographic KeyVault™",
-            "status": "HEALTHY",
-            "latencyMs": 11,
-            "role": "Hardware Security Modules & Master Secrets",
-            "detail": "Zero-Knowledge Hardware-Bound Isolation",
-        },
-        "telemetryMonitor": {
-            "name": "Nexus OpenTelemetry Observer",
-            "status": "HEALTHY",
-            "latencyMs": 6,
-            "role": "Distributed Tracing & Metric Collector",
-            "detail": "Sub-millisecond latency profile nominal",
-        },
-    }
-
+    status_value = "HEALTHY" if connected else "DEGRADED"
     return {
-        "status": "HEALTHY" if db_connected else "DEGRADED",
-        "subsystems": subsystems,
-        "services": {
-            "database": "CONNECTED" if db_connected else "DISCONNECTED",
-            "telemetryPipeline": "HEALTHY",
-            "aiInference": "ONLINE",
-            "sseBroadcaster": "ACTIVE",
-            "locationProvider": "OPERATIONAL",
-            "azureBlob": "CONNECTED",
-            "azureIot": "HEALTHY",
-            "azureMonitor": "ACTIVE",
-            "keyVault": "CONFIGURED",
+        "status": status_value,
+        "subsystems": {
+            "api": {"name": "API process", "status": "RUNNING"},
+            "database": {"name": "Database", "status": "CONNECTED" if connected else "DISCONNECTED", "latencyMs": latency},
         },
-        "platform": "Azure Free Tier Cloud Hub",
+        "services": {"database": "CONNECTED" if connected else "DISCONNECTED"},
+        "platform": "NEXUS",
         "version": settings.VERSION,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -313,7 +235,7 @@ async def list_audit_logs(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.VIEW_AUDIT)),
 ):
     """Retrieve immutable audit log history from PostgreSQL."""
-    ws = principal.workspace_id or workspace_id or "ws-continental-fleet-01"
+    ws = principal.workspace_id
     stmt = select(AuditLog).where(AuditLog.workspace_id == ws).order_by(AuditLog.created_at.desc()).limit(50)
     result = await db.execute(stmt)
     logs = result.scalars().all()
@@ -336,102 +258,20 @@ async def list_audit_logs(
 async def list_integrations(
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
 ) -> List[Dict[str, Any]]:
-    """Retrieve list of platform integrations and their operational status."""
-    location_provider = get_location_provider()
-    loc_health = await location_provider.health_check()
-    ai_health = {"status": "ONLINE"}
-
+    """Report configured integrations without implying an unperformed health check."""
+    location_health = await get_location_provider().health_check()
+    entries = [
+        ("geoapify", "Location and geocoding", bool(settings.GEOAPIFY_API_KEY), location_health.get("status", "UNKNOWN") if settings.GEOAPIFY_API_KEY else "NOT_CONFIGURED"),
+        ("groq", "Groq AI", bool(settings.GROQ_API_KEY), "CONFIGURED" if settings.GROQ_API_KEY else "NOT_CONFIGURED"),
+        ("gemini", "Gemini AI fallback", bool(settings.GEMINI_API_KEY), "CONFIGURED" if settings.GEMINI_API_KEY else "NOT_CONFIGURED"),
+        ("azure_iot", "Azure IoT Hub", bool(settings.AZURE_IOT_HUB_HOSTNAME), "CONFIGURED" if settings.AZURE_IOT_HUB_HOSTNAME else "NOT_CONFIGURED"),
+        ("azure_blob", "Azure Blob Storage", bool(settings.AZURE_STORAGE_CONNECTION_STRING), "CONFIGURED" if settings.AZURE_STORAGE_CONNECTION_STRING else "NOT_CONFIGURED"),
+        ("azure_key_vault", "Azure Key Vault", bool(settings.AZURE_KEYVAULT_URL), "CONFIGURED" if settings.AZURE_KEYVAULT_URL else "NOT_CONFIGURED"),
+        ("fabric", "Microsoft Fabric", bool(settings.FABRIC_WORKSPACE_ID), "CONFIGURED" if settings.FABRIC_WORKSPACE_ID else "NOT_CONFIGURED"),
+    ]
     return [
-        {
-            "id": "fabric",
-            "name": "Microsoft Fabric & OneLake Bridge",
-            "provider": "fabric",
-            "category": "DATA_LAKEHOUSE",
-            "status": "HEALTHY",
-            "configured": True,
-            "latencyMs": 42,
-            "desc": "Delta Lake parquet mirroring for cloud-scale analytics & Power BI ingestion.",
-        },
-        {
-            "id": "azure_iot",
-            "name": "Azure IoT Hub Gateway",
-            "provider": "azure_iot",
-            "category": "TELEMETRY_INGESTION",
-            "status": "HEALTHY",
-            "configured": True,
-            "latencyMs": 24,
-            "desc": f"IoT Hub ingress gateway ({settings.AZURE_IOT_HUB_HOSTNAME or 'nexus-telematics-hub.local'}).",
-        },
-        {
-            "id": "azure_blob",
-            "name": "Azure Blob Storage (Medallion Lake)",
-            "provider": "azure_blob",
-            "category": "OBJECT_STORAGE",
-            "status": "HEALTHY",
-            "configured": bool(settings.AZURE_STORAGE_CONNECTION_STRING),
-            "latencyMs": 31,
-            "desc": "Medallion telemetry lake (nexusstorprod): bronze, silver, gold, and uploads.",
-        },
-        {
-            "id": "azure_kv",
-            "name": "Azure Key Vault",
-            "provider": "azure_kv",
-            "category": "SECURITY_AND_SECRETS",
-            "status": "HEALTHY",
-            "configured": bool(settings.AZURE_KEYVAULT_URL),
-            "latencyMs": 19,
-            "desc": f"Enterprise secret store & encryption keys ({settings.AZURE_KEYVAULT_URL or 'nexus-kv-prod24'}).",
-        },
-        {
-            "id": "azure_monitor",
-            "name": "Azure Application Insights",
-            "provider": "azure_monitor",
-            "category": "OBSERVABILITY",
-            "status": "HEALTHY",
-            "configured": bool(settings.APPLICATIONINSIGHTS_CONNECTION_STRING),
-            "latencyMs": 16,
-            "desc": "Live APM tracing, OpenTelemetry metrics, and alerts (nexus-ai-prod).",
-        },
-        {
-            "id": "azure_functions",
-            "name": "Azure Functions (Serverless Tasks)",
-            "provider": "azure_functions",
-            "category": "SERVERLESS_COMPUTE",
-            "status": "HEALTHY",
-            "configured": True,
-            "latencyMs": 12,
-            "desc": "Timer triggers for daily KPI rollups, fleet anomaly sweeps, and SLA audits.",
-        },
-        {
-            "id": "geoapify",
-            "name": "Geoapify Spatial Intelligence",
-            "provider": "geoapify",
-            "category": "MAPPING_AND_ROUTING",
-            "status": loc_health.get("status", "HEALTHY"),
-            "configured": True,
-            "latencyMs": 18,
-            "desc": "Geocoding, route matrix optimization, isolines, and road network snapping.",
-        },
-        {
-            "id": "groq",
-            "name": "Groq LLaMA 3.3 70B AI Engine",
-            "provider": "groq",
-            "category": "AI_INFERENCE",
-            "status": ai_health.get("status", "ONLINE"),
-            "configured": True,
-            "latencyMs": 240,
-            "desc": "Sub-second LLaMA 3.3 LPUs for executive dispatch briefings & voice companion.",
-        },
-        {
-            "id": "webhook",
-            "name": "Enterprise Webhook Dispatcher",
-            "provider": "webhook",
-            "category": "INTEGRATION_BUS",
-            "status": "IDLE",
-            "configured": True,
-            "latencyMs": 5,
-            "desc": "Outbound event webhooks for enterprise SAP/Oracle TMS/WMS synchronization.",
-        },
+        {"id": key, "name": name, "provider": key, "configured": configured, "status": state}
+        for key, name, configured, state in entries
     ]
 
 @router.get("/integrations/geoapify")
@@ -442,15 +282,7 @@ async def get_geoapify_integration_status(
     metrics = LocationService.get_metrics()
     provider = get_location_provider()
     health = await provider.health_check()
-    return {
-        "configured": True,
-        "provider": health.get("provider", "geoapify"),
-        "status": health.get("status", "HEALTHY"),
-        "geocoding": health.get("geocoding", "operational"),
-        "routing": health.get("routing", "operational"),
-        "places": health.get("places", "operational"),
-        "metrics": metrics,
-    }
+    return {"configured": bool(settings.GEOAPIFY_API_KEY), "health": health, "metrics": metrics}
 
 @router.post("/integrations/geoapify/test")
 async def test_geoapify_integration(
@@ -465,76 +297,13 @@ async def test_integration_provider(
     provider: str,
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
 ) -> Dict[str, Any]:
-    """Perform a live diagnostics test for a given provider."""
-    provider_clean = provider.lower()
-    if provider_clean in ["geoapify", "location", "maps"]:
-        loc = get_location_provider()
-        return await loc.health_check()
-    elif provider_clean in ["groq", "gemini", "ai", "groq_ai", "llm"]:
-        return {"provider": "groq", "status": "ONLINE", "model": settings.GROQ_MODEL or "llama-3.3-70b-versatile", "latencyMs": 68}
-    elif provider_clean in ["azure", "azure_iot", "iot"]:
-        return {
-            "provider": "azure_iot",
-            "status": "HEALTHY",
-            "hub": settings.AZURE_IOT_HUB_HOSTNAME or "nexus-telematics-hub.local",
-            "latencyMs": 24,
-            "testedAt": datetime.now(timezone.utc).isoformat(),
-        }
-    elif provider_clean in ["azure_blob", "blob", "storage"]:
-        return {
-            "provider": "azure_blob",
-            "status": "HEALTHY",
-            "account": "nexusstorprod",
-            "containers": ["telemetry-bronze", "telemetry-silver", "analytics-gold", "uploads", "csv-imports"],
-            "latencyMs": 31,
-            "testedAt": datetime.now(timezone.utc).isoformat(),
-        }
-    elif provider_clean in ["azure_kv", "keyvault", "key_vault"]:
-        return {
-            "provider": "azure_kv",
-            "status": "HEALTHY",
-            "vault": settings.AZURE_KEYVAULT_URL or "nexus-kv-prod24",
-            "latencyMs": 19,
-            "testedAt": datetime.now(timezone.utc).isoformat(),
-        }
-    elif provider_clean in ["azure_monitor", "app_insights", "monitor"]:
-        return {
-            "provider": "azure_monitor",
-            "status": "HEALTHY",
-            "resource": "nexus-ai-prod",
-            "quota": "5 GB/month (Free Tier)",
-            "latencyMs": 16,
-            "testedAt": datetime.now(timezone.utc).isoformat(),
-        }
-    elif provider_clean in ["azure_functions", "functions"]:
-        return {
-            "provider": "azure_functions",
-            "status": "HEALTHY",
-            "triggers": ["daily_analytics_summary", "anomaly_detection_sweep", "sla_compliance_report"],
-            "latencyMs": 12,
-            "testedAt": datetime.now(timezone.utc).isoformat(),
-        }
-    elif provider_clean in ["fabric", "microsoft_fabric", "lake"]:
-        return {
-            "provider": "fabric",
-            "status": "HEALTHY",
-            "workspace": settings.FABRIC_WORKSPACE_ID or "ws-fabric-nexus-analytics",
-            "latencyMs": 42,
-            "testedAt": datetime.now(timezone.utc).isoformat(),
-        }
-    elif provider_clean in ["webhook", "webhooks"]:
-        return {
-            "provider": "webhook",
-            "status": "OPERATIONAL",
-            "dispatcher": "Async HTTP/2 Worker",
-            "latencyMs": 5,
-            "testedAt": datetime.now(timezone.utc).isoformat(),
-        }
-    else:
-        return {"provider": provider, "status": "HEALTHY", "testedAt": datetime.now(timezone.utc).isoformat()}
+    if provider.lower() in {"geoapify", "location", "maps"}:
+        return await get_location_provider().health_check()
+    raise HTTPException(status_code=501, detail=f"No live connectivity probe is implemented for {provider}.")
 
 @router.get("/sync-status")
 async def get_admin_sync_status(
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """Retrieve real-time database connection metrics, engine pool stats, and cache performance."""
@@ -562,203 +331,33 @@ async def get_admin_sync_status(
         },
         "cache": entity_cache.get_metrics(),
         "taskQueue": task_queue.get_metrics(),
-        "aegisStateProtocol": {
-            "status": "ACTIVE_CONSENSUS",
-            "optimisticLocking": "ENABLED",
-            "cryptographicLedger": "SYNCED",
-        },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
 @router.get("/azure/telemetry")
 async def get_azure_cloud_telemetry(
-    principal: Optional[RequestPrincipal] = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
 ) -> Dict[str, Any]:
-    """Retrieve comprehensive live Azure cloud services telemetry, IoT quotas, and App Insights metrics."""
+    from app.integrations.azure_iot_consumer import azure_iot_consumer
+    from app.integrations.azure_blob_storage import azure_blob_storage_client
+    from app.integrations.azure_monitor import _configured
     return {
-        "subscription": {
-            "name": "Azure for Students",
-            "id": "5d4d8b69-8275-474f-84ed-cc922cba5ecc",
-            "tenantId": "1490b17d-5dc9-4cbf-aeba-a2e854f521b8",
-            "user": "240211539@geu.ac.in",
-            "status": "Enabled",
-        },
-        "resourceGroup": "nexus-api-prod_group",
-        "primaryRegion": "austriaeast",
-        "secondaryRegion": "southeastasia",
         "services": {
-            "iotHub": {
-                "name": "nexus-iothub-prod24",
-                "type": "Microsoft.Devices/IotHubs",
-                "location": "southeastasia",
-                "status": "HEALTHY",
-                "messagesToday": 1420,
-                "dailyLimit": 8000,
-                "throughputPerSec": 14.2,
-                "connectedDevices": 30,
-                "latencyMs": 24,
-                "sku": "Free (F1)",
-            },
-            "appInsights": {
-                "name": "nexus-ai-prod",
-                "type": "Microsoft.Insights/components",
-                "location": "austriaeast",
-                "status": "HEALTHY",
-                "p50LatencyMs": 18.4,
-                "p95LatencyMs": 42.1,
-                "availabilityPct": 99.98,
-                "monthlyIngestionGb": 0.84,
-                "monthlyLimitGb": 5.0,
-                "activeAlerts": 0,
-            },
-            "logAnalytics": {
-                "name": "nexus-logs-prod",
-                "type": "Microsoft.OperationalInsights/workspaces",
-                "location": "austriaeast",
-                "status": "HEALTHY",
-                "retentionDays": 30,
-                "recordsIngestedToday": 184200,
-            },
-            "keyVault": {
-                "name": "nexus-kv-prod24",
-                "type": "Microsoft.KeyVault/vaults",
-                "location": "austriaeast",
-                "status": "HEALTHY",
-                "vaultUri": settings.AZURE_KEYVAULT_URL or "https://nexus-kv-prod24.vault.azure.net/",
-                "activeSecrets": 12,
-                "hsmStatus": "ENFORCED",
-                "hardwareBound": True,
-            },
-            "postgresFlex": {
-                "name": "nexus-pg-prod",
-                "type": "Microsoft.DBforPostgreSQL/flexibleServers",
-                "location": "austriaeast",
-                "status": "CONNECTED",
-                "activeConnections": 8,
-                "poolUtilizationPct": 24.5,
-                "avgQueryTimeMs": 4.2,
-                "sslEnforced": True,
-            },
-            "redisEnterprise": {
-                "name": "nexus-redis-prod",
-                "type": "Microsoft.Cache/redisEnterprise",
-                "location": "austriaeast",
-                "status": "HEALTHY",
-                "cacheHitRatioPct": 94.8,
-                "memoryUsedMb": 128.4,
-                "latencyMs": 1.2,
-            },
-            "blobStorage": {
-                "name": "nexusstorprod",
-                "type": "Microsoft.Storage/storageAccounts",
-                "location": "austriaeast",
-                "status": "AVAILABLE",
-                "accessTier": "Hot",
-                "primaryEndpoint": "https://nexusstorprod.blob.core.windows.net/",
-                "containers": [
-                    "telemetry-bronze",
-                    "telemetry-silver",
-                    "analytics-gold",
-                    "uploads",
-                    "csv-imports",
-                ],
-                "totalStorageGb": 1.42,
-                "freeLimitGb": 5.0,
-            },
-        },
-        "costGovernor": {
-            "currency": "USD",
-            "estimatedSpendToday": 0.00,
-            "monthlySpendEstimate": 0.00,
-            "studentCreditLimit": 100.00,
-            "freeTierCompliant": True,
+            "iotHub": {"status": azure_iot_consumer.status, "eventsReceived": azure_iot_consumer.received_count, "lastEventAt": azure_iot_consumer.last_event_at},
+            "blobStorage": {"status": "CONNECTED" if azure_blob_storage_client.enabled and azure_blob_storage_client.blob_service_client else "NOT_CONFIGURED"},
+            "applicationInsights": {"status": "CONFIGURED" if _configured else "NOT_CONFIGURED"},
+            "fabric": {"status": "NOT_CONFIGURED"},
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
-
-@router.post("/azure/probe")
-async def probe_azure_service(
-    service_id: str = Query(default="iotHub"),
-    principal: Optional[RequestPrincipal] = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM)),
-) -> Dict[str, Any]:
-    """Execute a real-time diagnostic probe on an Azure Cloud service."""
-    t0 = datetime.now()
-    import asyncio
-    await asyncio.sleep(0.05)  # Synthetic network probe pulse
-    latency = round((datetime.now() - t0).total_seconds() * 1000 + 12, 1)
-
-    return {
-        "service": service_id,
-        "status": "HEALTHY",
-        "latencyMs": latency,
-        "region": "austriaeast",
-        "verifiedAt": datetime.now(timezone.utc).isoformat(),
-    }
-
-
 @router.get("/azure/maps/route")
-async def calculate_azure_truck_route(
-    origin_lat: float = Query(default=41.8781),
-    origin_lng: float = Query(default=-87.6298),
-    dest_lat: float = Query(default=40.7128),
-    dest_lng: float = Query(default=-74.0060),
-    weight_kg: float = Query(default=36000.0),
-    height_meters: float = Query(default=4.1),
-    hazmat: str = Query(default="otherHazmat"),
-) -> Dict[str, Any]:
-    """Calculate commercial truck route with Azure Maps clearance & bridge checks."""
-    from app.integrations.azure_maps import AzureMapsService
-    return await AzureMapsService.calculate_commercial_truck_route(
-        origin_lat=origin_lat,
-        origin_lng=origin_lng,
-        dest_lat=dest_lat,
-        dest_lng=dest_lng,
-        vehicle_weight_kg=weight_kg,
-        vehicle_height_meters=height_meters,
-        vehicle_load_type=hazmat,
-    )
-
-
 @router.get("/azure/maps/isoline")
-async def calculate_azure_ev_isoline(
-    lat: float = Query(default=41.8781),
-    lng: float = Query(default=-87.6298),
-    soc_percent: float = Query(default=75.0),
-    payload_weight_kg: float = Query(default=22000.0),
-) -> Dict[str, Any]:
-    """Compute EV battery reachable isoline boundary polygon."""
-    from app.integrations.azure_maps import AzureMapsService
-    return await AzureMapsService.compute_ev_reachable_isoline(
-        current_lat=lat,
-        current_lng=lng,
-        battery_state_of_charge_percent=soc_percent,
-        payload_weight_kg=payload_weight_kg,
-    )
-
-
 @router.post("/azure/vision/bol-ocr")
-async def analyze_bol_document() -> Dict[str, Any]:
-    """Analyze Bill of Lading (BoL) document via Azure AI Vision."""
-    from app.integrations.azure_ai_vision import AzureVisionService
-    return await AzureVisionService.analyze_bill_of_lading()
-
-
 @router.post("/azure/vision/cargo-damage")
-async def inspect_cargo_damage() -> Dict[str, Any]:
-    """Inspect pallet integrity and detect cargo defects via Azure AI Vision."""
-    from app.integrations.azure_ai_vision import AzureVisionService
-    return await AzureVisionService.inspect_cargo_damage()
-
-
 @router.get("/azure/pubsub/token")
-async def get_pubsub_token(
-    user_id: str = Query(default="usr-nexus-ops-01"),
+async def azure_integration_unavailable(
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
 ) -> Dict[str, Any]:
-    """Generate ephemeral WebSocket access token for Azure Web PubSub real-time streaming."""
-    from app.integrations.azure_pubsub import AzureWebPubSubService
-    return await AzureWebPubSubService.get_client_access_token(user_id=user_id)
-
-
-
+    raise HTTPException(status_code=501, detail="Azure maps, vision, and pub/sub integrations are not connected to verified provider services.")

@@ -39,7 +39,7 @@ async def get_settings(
             "notifications": settings_dict.get("notifications", True),
             "autoRerouteApproval": settings_dict.get("autoRerouteApproval", False),
             "telemetryRefreshSec": settings_dict.get("telemetryRefreshSec", 5),
-            "region": ws.region if ws else "North America Central"
+            "region": ws.region if ws and ws.region else None
         }
     except Exception as e:
         logger.error(f"Error fetching settings: {e}")

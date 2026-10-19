@@ -12,37 +12,6 @@ async def verify_clerk_token(token: str) -> Dict[str, Any]:
     if not token:
         raise UnauthenticatedException("Missing authorization bearer token")
 
-    # Fast-path for demo sessions strictly in non-production development environments
-    is_prod = getattr(settings, "APP_ENV", "development").lower() == "production"
-    if settings.ENABLE_DEMO_AUTH and not is_prod:
-        if token in ("demo-admin-token", "demo_admin"):
-            return {
-                "sub": "usr-admin-alex",
-                "name": "Alex Rivera",
-                "email": "alex.rivera@continental-logistics.com",
-                "role": "ADMINISTRATOR",
-                "workspace_id": "ws-continental-fleet-01",
-                "organization_id": "org-nexus-demo",
-            }
-        elif token in ("demo-viewer-token", "demo_viewer"):
-            return {
-                "sub": "usr-viewer-01",
-                "name": "Guest Auditor",
-                "email": "auditor@external-esg.org",
-                "role": "VIEWER",
-                "workspace_id": "ws-continental-fleet-01",
-                "organization_id": "org-nexus-demo",
-            }
-        elif token in ("demo-operator-token", "demo_operator", "nexus_demo_token") or token.startswith("demo_"):
-            return {
-                "sub": "usr-demo-sarah",
-                "name": "Sarah Chen",
-                "email": "sarah.chen@nexus.platform",
-                "role": "OPERATIONS_MANAGER",
-                "workspace_id": "ws-continental-fleet-01",
-                "organization_id": "org-nexus-demo",
-            }
-
     # Inspect token header algorithm
     try:
         unverified_headers = jwt.get_unverified_header(token)

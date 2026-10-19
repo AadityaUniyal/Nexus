@@ -1,9 +1,11 @@
 import uuid
 from typing import Dict, Any
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.user import User, Workspace, WorkspaceMembership
-from app.auth.principal import RequestPrincipal
+from app.auth.principal import PermissionEnum, RequestPrincipal
+from app.core.errors import ForbiddenException
 from app.schemas.onboarding import (
     OnboardingStateRead,
     WorkspaceCreateRequest,
@@ -50,6 +52,10 @@ async def advance_welcome(db: AsyncSession, principal: RequestPrincipal) -> Onbo
     return await get_onboarding_state(db, principal)
 
 async def create_workspace_step(db: AsyncSession, principal: RequestPrincipal, req: WorkspaceCreateRequest) -> OnboardingStateRead:
+    if not principal.has_permission(PermissionEnum.MANAGE_SYSTEM):
+        raise ForbiddenException("Only an organization administrator can create workspaces")
+    if not principal.organization_id:
+        raise ForbiddenException("An organization is required to create a workspace")
     ws_id = f"ws-{uuid.uuid4().hex[:8]}"
     slug = req.name.lower().replace(" ", "-") + f"-{uuid.uuid4().hex[:4]}"
     workspace = Workspace(
@@ -61,7 +67,8 @@ async def create_workspace_step(db: AsyncSession, principal: RequestPrincipal, r
         timezone=req.timezone,
         scale=req.scale,
         is_demo=req.isDemo,
-        is_active=True
+        is_active=True,
+        organization_id=principal.organization_id,
     )
     db.add(workspace)
     await db.flush()
@@ -76,7 +83,7 @@ async def create_workspace_step(db: AsyncSession, principal: RequestPrincipal, r
         membership = WorkspaceMembership(
             workspace_id=ws_id,
             user_id=user.id,
-            role="ADMINISTRATOR"
+            role=principal.role.value
         )
         db.add(membership)
         await db.commit()
@@ -107,7 +114,6 @@ async def set_role_preference_step(db: AsyncSession, principal: RequestPrincipal
     res = await db.execute(stmt)
     user = res.scalars().first()
     if user:
-        user.role = req.preferredRole
         user.department = req.department
         user.onboarding_status = "ROLE_PREFERENCE_COMPLETED"
         await db.commit()
@@ -126,12 +132,11 @@ async def finalize_onboarding(db: AsyncSession, principal: RequestPrincipal) -> 
     stmt = select(User).where(User.email == principal.email)
     res = await db.execute(stmt)
     user = res.scalars().first()
-    if user:
-        user.onboarding_status = "COMPLETE"
-        await db.commit()
-        ws_id = user.workspace_id
-    else:
-        ws_id = "ws-continental-fleet-01"
+    if not user:
+        raise HTTPException(status_code=403, detail="User is not registered in a Nexus workspace.")
+    user.onboarding_status = "COMPLETE"
+    await db.commit()
+    ws_id = user.workspace_id
 
     await record_operational_event(
         db=db,
@@ -147,5 +152,5 @@ async def finalize_onboarding(db: AsyncSession, principal: RequestPrincipal) -> 
         success=True,
         workspaceId=ws_id,
         destination="/app/overview",
-        message="Workspace successfully provisioned. Operational intelligence live."
+        message="Workspace setup completed. Operational integrations can be configured from Settings."
     )

@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.db.session import get_db
-from app.auth.dependencies import require_onboarded
-from app.auth.principal import RequestPrincipal
+from app.auth.dependencies import require_onboarded, require_permission
+from app.auth.principal import PermissionEnum, RequestPrincipal
 from app.models.system import Report
 from app.services.analytics_service import AnalyticsService
 from pydantic import BaseModel
@@ -20,31 +20,13 @@ class ReportCreate(BaseModel):
 
 @router.get("")
 async def get_reports(
-    principal: RequestPrincipal = Depends(require_onboarded),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.VIEW_REPORTS)),
     db: AsyncSession = Depends(get_db)
 ):
     ws_id = principal.workspace_id
     stmt = select(Report).where(Report.workspace_id == ws_id).order_by(desc(Report.created_at))
     res = await db.execute(stmt)
     reports = res.scalars().all()
-    if not reports:
-        # Default report computed live
-        overview = await AnalyticsService.get_overview(db, workspace_id=ws_id)
-        return [
-            {
-                "id": "rep-daily-1",
-                "title": "Daily Continental Logistics Briefing",
-                "type": "DAILY_BRIEFING",
-                "generatedAt": datetime.now(timezone.utc).isoformat(),
-                "author": "Nexus Analytics Engine",
-                "summary": f"Executive operational summary detailing fleet performance and {overview['slaComplianceRate']}% SLA compliance.",
-                "kpis": {
-                    "slaCompliance": overview["slaComplianceRate"],
-                    "throughput": overview["totalNetworkUnits"],
-                    "activeVehicles": overview["fleetSummary"]["activeVehicles"]
-                }
-            }
-        ]
     return [
         {
             "id": r.id,
@@ -61,7 +43,7 @@ async def get_reports(
 @router.post("")
 async def create_report(
     req: ReportCreate,
-    principal: RequestPrincipal = Depends(require_onboarded),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.VIEW_REPORTS)),
     db: AsyncSession = Depends(get_db)
 ):
     ws_id = principal.workspace_id
@@ -82,7 +64,7 @@ async def create_report(
         title=req.title,
         type=req.type,
         author=principal.display_name,
-        summary=req.summary or f"Executive briefing detailing {overview['totalNetworkUnits']} network units and {overview['slaComplianceRate']}% SLA compliance.",
+        summary=req.summary or f"Recorded workspace snapshot: {overview['fleetSummary']['totalVehicles']} vehicles, {overview['ordersSummary']['total']} orders, and {overview['incidentsSummary']['activeIncidents']} active incidents.",
         kpis=kpis,
         generated_at=now_iso
     )
@@ -92,181 +74,13 @@ async def create_report(
     return report
 
 
-def generate_executive_pdf_buffer(title: str = "Executive Board Briefing", timestamp: str = "") -> bytes:
-    """Generate authentic vector-rendered PDF document using ReportLab with standard fallback."""
-    import io
-    try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    except (ImportError, Exception):
-        # Generate valid binary PDF with stream and metadata > 1000 bytes
-        body_text = (
-            "NEXUS LOGISTICS INTELLIGENCE PLATFORM - EXECUTIVE BRIEFING\n"
-            "Autonomous Operating System - Realtime Telemetry and Fleet SLA Attestation\n\n"
-            "1. EXECUTIVE SUMMARY\n"
-            "Nexus autonomous orchestration maintains multi-modal freight consistency across continental corridors.\n"
-            "Predictive telemetry ingestion and physics-informed Pareto optimization eliminate unmitigated transit delays.\n\n"
-            "2. MACRO OPERATIONAL & ESG INDICES\n"
-            "Global On-Time Delivery (SLA): 98.4% (Target: 95.0%)\n"
-            "Supply Chain Cost Avoidance: $1,420,500.00\n"
-            "ESG Carbon Avoidance: 42.8 Metric Tons CO2e\n"
-            "Active Autonomous Fleets: 14 Units Active\n"
-            "Edge Telemetry Ingestion Latency: 12ms\n\n"
-            "3. SOC 2 TYPE II COMPLIANCE & AUDIT ATTESTATION\n"
-            "All state transitions, what-if simulations, and operator approvals are recorded in immutable audit logs.\n"
-            "Cryptographic signature: SHA256-RSA-VALIDATED-NEXUS-CORP-GOVERNANCE\n"
-        ) * 3
-        stream_bytes = body_text.encode("utf-8")
-        stream_len = len(stream_bytes)
-        pdf_raw = (
-            f"%PDF-1.4\n"
-            f"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
-            f"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"
-            f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>\nendobj\n"
-            f"4 0 obj\n<< /Length {stream_len} >>\nstream\n"
-            f"BT /F1 10 Tf 40 750 Td 12 TL\n"
-        ).encode("latin1") + stream_bytes + (
-            f"\nET\nendstream\nendobj\n"
-            f"xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000280 00000 n \n"
-            f"trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n{stream_len + 350}\n%%EOF\n"
-        ).encode("latin1")
-        return pdf_raw
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf,
-        pagesize=letter,
-        rightMargin=40,
-        leftMargin=40,
-        topMargin=40,
-        bottomMargin=40,
-    )
-    styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Heading1'],
-        fontName='Helvetica-Bold',
-        fontSize=20,
-        leading=24,
-        textColor=colors.HexColor('#059669'),
-    )
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=10,
-        leading=14,
-        textColor=colors.HexColor('#4B5563'),
-    )
-    heading_style = ParagraphStyle(
-        'SectionHeading',
-        parent=styles['Heading2'],
-        fontName='Helvetica-Bold',
-        fontSize=12,
-        leading=16,
-        textColor=colors.HexColor('#111827'),
-    )
-    body_style = ParagraphStyle(
-        'DocBody',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=9,
-        leading=13,
-        textColor=colors.HexColor('#374151'),
-    )
-
-    story = []
-    story.append(Paragraph("NEXUS LOGISTICS INTELLIGENCE PLATFORM", title_style))
-    story.append(Paragraph(f"Autonomous Operating System · {title} · Generated: {timestamp or datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}", subtitle_style))
-    story.append(Spacer(1, 15))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#10B981'), spaceAfter=15))
-
-    # Executive Overview Narrative
-    story.append(Paragraph("1. EXECUTIVE SUMMARY & STRATEGIC DISPATCH", heading_style))
-    story.append(Spacer(1, 5))
-    story.append(Paragraph(
-        "NEXUS autonomous orchestration maintains multi-modal freight consistency across continental routes. "
-        "Through predictive telemetry ingestion, physics-based Pareto decision optimization, and automated geofencing, "
-        "fleet operations have eliminated unmitigated transit halts while achieving peak energy efficiency.",
-        body_style
-    ))
-    story.append(Spacer(1, 12))
-
-    # KPI Table
-    story.append(Paragraph("2. MACRO OPERATIONAL & ESG INDICES", heading_style))
-    story.append(Spacer(1, 6))
-    kpi_data = [
-        ["METRIC", "CURRENT INDEX", "BENCHMARK", "VARIANCE / STATUS"],
-        ["Global On-Time Delivery (SLA)", "98.4%", "95.0%", "+3.4% Outperforming SLA"],
-        ["Supply Chain Cost Avoidance", "$1.42M", "$1.10M", "+29.0% Penalty Mitigation"],
-        ["ESG Carbon Avoidance (CO2e)", "42.8 Metric Tons", "35.0 T", "≈ 1,940 Equivalent Trees"],
-        ["Fleet Network Resilience", "96.8 / 100", "90.0 / 100", "Optimal Fault Tolerance"],
-        ["Active Autonomous Fleets", "14 Active Units", "12 Units", "100% In-Flight Telemetry"],
-        ["Edge Ingestion Latency", "12 ms", "< 50 ms", "Sub-second Telematics"],
-    ]
-    t = Table(kpi_data, colWidths=[180, 100, 100, 150])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#064E3B')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('TOPPADDING', (0, 0), (-1, 0), 6),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F9FAFB')),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#1F2937')),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E5E7EB')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
-    story.append(t)
-    story.append(Spacer(1, 15))
-
-    # Audit & Compliance Seal
-    story.append(Paragraph("3. GOVERNANCE & SOC 2 COMPLIANCE ATTESTATION", heading_style))
-    story.append(Spacer(1, 5))
-    story.append(Paragraph(
-        "All fleet state transitions, what-if simulations, and operator approvals are recorded in immutable audit logs "
-        "verified under SOC 2 Type II controls. Telemetry streams conform to SAE J1939 and ISO 15118 protocol specifications.",
-        body_style
-    ))
-    story.append(Spacer(1, 15))
-
-    attestation_data = [
-        ["Audit Certificate ID:", f"CERT-NX-{uuid.uuid4().hex[:8].upper()}"],
-        ["Security Level:", "Enterprise Multi-Tenant Isolation (AES-GCM / RS256)"],
-        ["Platform Status:", "Commercial Production Ready · Zero Fatal Faults"],
-    ]
-    at_table = Table(attestation_data, colWidths=[160, 370])
-    at_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#374151')),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-    ]))
-    story.append(at_table)
-
-    doc.build(story)
-    return buf.getvalue()
-
-
 @router.get("/board-briefing.pdf")
 @router.get("/download-pdf")
-async def download_board_briefing_pdf():
-    """Generate and return authentic downloadable PDF board briefing."""
-    from fastapi.responses import Response
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    pdf_bytes = generate_executive_pdf_buffer(title="Executive Board & ESG Operational Briefing", timestamp=now_str)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": 'attachment; filename="nexus-executive-board-briefing.pdf"',
-            "Content-Type": "application/pdf",
-        },
+async def download_board_briefing_pdf(
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.VIEW_REPORTS)),
+):
+    """The legacy static briefing is disabled until factual workspace reports exist."""
+    raise HTTPException(
+        status_code=503,
+        detail="PDF briefing export is unavailable until workspace-backed report content is implemented.",
     )
-

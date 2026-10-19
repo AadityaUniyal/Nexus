@@ -1,13 +1,13 @@
 import uuid
 from typing import List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from app.db.session import get_db
-from app.auth.dependencies import get_optional_principal
-from app.auth.principal import RequestPrincipal
+from app.auth.dependencies import require_workspace, require_permission
+from app.auth.principal import RequestPrincipal, PermissionEnum
 from app.models.incidents import Incident, IncidentTimeline
 from app.models.system import OperationalEvent, EventOutbox, AuditLog
 from app.schemas.incidents import (
@@ -23,11 +23,11 @@ from app.realtime.sse import broadcaster
 
 router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
-def get_tenant_workspace(principal: Optional[RequestPrincipal], fallback: Optional[str] = None) -> str:
-    """Derives workspace strictly from authenticated principal, preventing tenant leakage."""
-    if principal and principal.workspace_id:
-        return principal.workspace_id
-    return fallback or "ws-continental-fleet-01"
+def get_tenant_workspace(principal: RequestPrincipal) -> str:
+    if not principal.workspace_id:
+        raise HTTPException(status_code=403, detail="An active workspace is required")
+    return principal.workspace_id
+
 
 @router.get("", response_model=List[IncidentRead])
 async def list_incidents(
@@ -35,11 +35,11 @@ async def list_incidents(
     workspace_id: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve operational incidents directly from PostgreSQL with timelines and pagination support."""
-    ws = get_tenant_workspace(principal, fallback=workspace_id)
+    ws = get_tenant_workspace(principal)
     stmt = (
         select(Incident)
         .options(selectinload(Incident.timeline))
@@ -89,7 +89,7 @@ async def list_incidents(
 @router.get("/{incident_id}", response_model=IncidentRead)
 async def get_incident(
     incident_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieve detailed incident record with full audit timeline from PostgreSQL."""
@@ -137,13 +137,13 @@ async def get_incident(
 @router.post("", response_model=IncidentRead, status_code=status.HTTP_201_CREATED)
 async def create_incident(
     req: IncidentCreate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Create and triage a new operational incident in PostgreSQL with transactional outbox."""
     inc_id = f"inc-{uuid.uuid4().hex[:8]}"
     inc_code = f"INC-{int(datetime.now().timestamp()) % 10000}"
-    ws_id = get_tenant_workspace(principal, fallback=req.workspace_id)
+    ws_id = get_tenant_workspace(principal)
 
     new_inc = Incident(
         id=inc_id,
@@ -157,8 +157,8 @@ async def create_incident(
         affected_entity_name=req.affected_entity_name,
         delay_minutes=req.delay_minutes,
         cost_estimate=req.cost_estimate,
-        root_cause=req.root_cause or "Triaged by Operator",
-        ai_analysis=req.ai_analysis or "Impact analysis running in background.",
+        root_cause=req.root_cause,
+        ai_analysis=req.ai_analysis,
         workspace_id=ws_id,
     )
     db.add(new_inc)
@@ -168,7 +168,7 @@ async def create_incident(
         incident_id=inc_id,
         status="DETECTED",
         note=f"Incident reported: {req.title}",
-        actor_name="Dispatcher Console",
+        actor_name=principal.display_name,
     )
     db.add(tl)
 
@@ -239,7 +239,7 @@ async def create_incident(
 async def update_incident(
     incident_id: str,
     req: IncidentUpdate,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.EDIT_OPERATIONS)),
     db: AsyncSession = Depends(get_db)
 ):
     """Update incident fields or advance state in PostgreSQL."""
@@ -351,7 +351,7 @@ async def update_incident(
 @router.post("/{incident_id}/acknowledge", response_model=IncidentRead)
 async def acknowledge_incident(
     incident_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.ACKNOWLEDGE_INCIDENT)),
     db: AsyncSession = Depends(get_db)
 ):
     """Acknowledge an incident in PostgreSQL."""
@@ -362,7 +362,7 @@ async def acknowledge_incident(
 @router.post("/{incident_id}/start-investigation", response_model=IncidentRead)
 async def start_investigation_incident(
     incident_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.ACKNOWLEDGE_INCIDENT)),
     db: AsyncSession = Depends(get_db)
 ):
     """Start investigation on an incident in PostgreSQL."""
@@ -373,7 +373,7 @@ async def start_investigation_incident(
 @router.post("/{incident_id}/resolve", response_model=IncidentRead)
 async def resolve_incident(
     incident_id: str,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.ACKNOWLEDGE_INCIDENT)),
     db: AsyncSession = Depends(get_db)
 ):
     """Resolve an incident in PostgreSQL."""
@@ -385,7 +385,7 @@ async def resolve_incident(
 async def transition_incident_state(
     incident_id: str,
     req: IncidentTransitionRequest,
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.ACKNOWLEDGE_INCIDENT)),
     db: AsyncSession = Depends(get_db)
 ):
     """Enforce state machine transition and record audit timeline in PostgreSQL."""
@@ -494,41 +494,3 @@ async def transition_incident_state(
             ) for t in inc.timeline
         ]
     )
-
-
-async def resolve_incident_by_decision_db(
-    db: AsyncSession,
-    incident_id_or_entity: str,
-    actor_name: str = "Sarah Chen",
-    note: str = "Decision applied: Reroute detour activated."
-):
-    """Advance incident status to ACTION_APPLIED or RESOLVED upon decision execution in PostgreSQL."""
-    stmt = (
-        select(Incident)
-        .options(selectinload(Incident.timeline))
-        .where(
-            or_(
-                Incident.id == incident_id_or_entity,
-                Incident.code == incident_id_or_entity,
-                Incident.affected_entity_id == incident_id_or_entity,
-                Incident.code.ilike("%8041%"),
-                Incident.code.ilike("%849201%")
-            )
-        )
-    )
-    res = await db.execute(stmt)
-    inc = res.scalars().first()
-    if inc:
-        inc.status = "ACTION_APPLIED"
-        inc.delay_minutes = 45
-        inc.version += 1
-        tl = IncidentTimeline(
-            id=f"tl-{uuid.uuid4().hex[:8]}",
-            incident_id=inc.id,
-            status="ACTION_APPLIED",
-            note=note,
-            actor_name=actor_name,
-        )
-        db.add(tl)
-        return inc
-    return None

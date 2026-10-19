@@ -1,8 +1,8 @@
 {
-  "name": "nexus-monorepo",
+  "name": "voyage-freight",
   "version": "1.0.0",
   "private": true,
-  "description": "NEXUS Operational Intelligence & Decision Simulation Platform",
+  "description": "VOYAGE - The Freight Operating System",
   "workspaces": [
     "frontend"
   ],

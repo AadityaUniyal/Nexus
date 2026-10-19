@@ -14,8 +14,8 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_optional_principal
-from app.auth.principal import RequestPrincipal
+from app.auth.dependencies import get_optional_principal, require_workspace, require_permission
+from app.auth.principal import PermissionEnum, RequestPrincipal
 from app.db.session import get_db
 from app.models.product_analytics import ProductEvent
 from app.services.ai_service import ai_service
@@ -115,15 +115,13 @@ def _since(range_: str) -> datetime:
 @router.get("/summary")
 async def summary(
     range: str = Query("7d", pattern="^(24h|7d|30d|90d)$"),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
     """Aggregated (non-PII) product usage: traffic, top pages, features, devices, daily trend."""
     since = _since(range)
-    ws = principal.workspace_id if principal and principal.workspace_id else None
-    where = [ProductEvent.occurred_at >= since]
-    if ws:
-        where.append(ProductEvent.workspace_id == ws)
+    ws = principal.workspace_id
+    where = [ProductEvent.occurred_at >= since, ProductEvent.workspace_id == ws]
 
     totals = (await db.execute(
         select(
@@ -175,6 +173,6 @@ async def summary(
 
 
 @router.get("/platform")
-async def platform():
+async def platform(principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_SYSTEM))):
     """Live API health metrics for this instance plus AI provider usage."""
     return {"api": platform_metrics.snapshot(), "ai": ai_service.status()}

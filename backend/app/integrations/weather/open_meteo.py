@@ -39,10 +39,13 @@ class OpenMeteoWeatherProvider:
                 if res.status_code == 200:
                     data = res.json()
                     curr = data.get("current", {})
-                    wind_speed = curr.get("wind_speed_10m", 12.0)
-                    wind_gusts = curr.get("wind_gusts_10m", 18.0)
-                    snowfall = curr.get("snowfall", 0.0)
-                    temp = curr.get("temperature_2m", 18.0)
+                    required = ("wind_speed_10m", "wind_gusts_10m", "snowfall", "temperature_2m")
+                    if any(curr.get(key) is None for key in required):
+                        raise ValueError("Weather provider returned an incomplete current observation")
+                    wind_speed = curr["wind_speed_10m"]
+                    wind_gusts = curr["wind_gusts_10m"]
+                    snowfall = curr["snowfall"]
+                    temp = curr["temperature_2m"]
 
                     # Assess highway hazard level
                     hazard_level = "NORMAL"
@@ -73,19 +76,6 @@ class OpenMeteoWeatherProvider:
         except Exception:
             pass
 
-        # Deterministic offline fallback
-        fallback = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "temperature_c": -4.2 if latitude > 40.0 else 22.0,
-            "wind_speed_kmh": 35.0 if latitude > 40.0 else 12.0,
-            "wind_gusts_kmh": 58.0 if latitude > 40.0 else 18.0,
-            "snowfall_cm": 3.4 if latitude > 40.0 else 0.0,
-            "hazard_level": "CRITICAL" if latitude > 40.0 else "NORMAL",
-            "hazard_notes": "High-altitude mountain blizzard advisory." if latitude > 40.0 else "Corridor clear.",
-            "provider": "open-meteo-fallback",
-        }
-        self._memory_cache[cache_key] = {"data": fallback, "cached_at": now}
-        return fallback
+        raise RuntimeError("Weather provider did not return a valid observation")
 
 open_meteo_provider = OpenMeteoWeatherProvider()

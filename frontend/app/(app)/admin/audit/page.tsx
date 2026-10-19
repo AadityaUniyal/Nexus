@@ -150,7 +150,7 @@ export default function AdminAuditPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    <Lock className="w-2.5 h-2.5" /> VERIFIED
+                    <Lock className="w-2.5 h-2.5" /> RECORDED
                   </span>
                 </TableCell>
               </TableRow>
@@ -204,7 +204,7 @@ export default function AdminAuditPage() {
                 </div>
                 <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>SHA-256 cryptographically chained record. SOC-2 Type II audit compliance verified.</span>
+                  <span>This event was returned by the workspace audit API. This view does not certify tamper-proof storage or regulatory compliance.</span>
                 </div>
               </div>
 

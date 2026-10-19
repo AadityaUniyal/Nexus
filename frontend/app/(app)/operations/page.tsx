@@ -19,11 +19,8 @@ import {
   ArrowUpRight,
   Plus,
   Upload,
-  Globe,
-  MapPin,
   CheckCircle2,
   X,
-  Zap,
 } from "lucide-react";
 import {
   VehicleItem,
@@ -48,35 +45,23 @@ export default function OperationsPage() {
   const [routes, setRoutes] = React.useState<RouteItem[]>([]);
   const [orders, setOrders] = React.useState<OrderItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   // Modal States
   const [isAddHubOpen, setIsAddHubOpen] = React.useState(false);
   const [isAddVehicleOpen, setIsAddVehicleOpen] = React.useState(false);
-  const [activePreset, setActivePreset] = React.useState<string>("custom");
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
   // Form states for new Hub
   const [hubForm, setHubForm] = React.useState({
-    code: "WH-DED-01",
-    name: "Dehradun Intermodal Superhub",
-    city: "Dehradun",
-    state: "Uttarakhand",
-    lat: "30.3165",
-    lng: "78.0322",
-    capacityUnits: "60000",
-    dockCount: "16",
+    code: "", name: "", city: "", state: "", lat: "", lng: "",
+    capacityUnits: "", currentUnits: "", dockCount: "", activeDocks: "", efficiencyPct: "",
   });
 
   // Form states for new Vehicle
   const [vehicleForm, setVehicleForm] = React.useState({
-    code: "NX-DED-104",
-    name: "Himalayan Prime Rig",
-    model: "Class-8 EV Hauler",
-    driverName: "Rohit Bhatt",
-    lat: "30.3165",
-    lng: "78.0322",
-    speedKmh: "65",
-    batteryPct: "92",
+    code: "", name: "", model: "", driverName: "", lat: "", lng: "",
+    speedKmh: "", batteryPct: "", healthScore: "", status: "IDLE",
   });
 
   const loadData = React.useCallback(async () => {
@@ -91,8 +76,10 @@ export default function OperationsPage() {
       setWarehouses(w);
       setRoutes(r);
       setOrders(o);
+      setLoadError(null);
     } catch (err) {
       console.error("Failed to load operations data:", err);
+      setLoadError(err instanceof Error ? err.message : "Operations data could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -101,22 +88,6 @@ export default function OperationsPage() {
   React.useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // Handle Quick Regional Setup Preset
-  const handleApplyPreset = async (presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago", label: string) => {
-    setLoading(true);
-    try {
-      await dataProvider.provisionPreset(presetKey);
-      setActivePreset(presetKey);
-      await loadData();
-      setStatusMessage(`Successfully activated ${label}! Topology synchronized.`);
-      setTimeout(() => setStatusMessage(null), 4000);
-    } catch (e: any) {
-      console.error("Failed to switch preset:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Submit new Hub
   const handleCreateHub = async (e: React.FormEvent) => {
@@ -127,21 +98,17 @@ export default function OperationsPage() {
         name: hubForm.name,
         city: hubForm.city,
         state: hubForm.state,
-        lat: parseFloat(hubForm.lat) || 30.3165,
-        lng: parseFloat(hubForm.lng) || 78.0322,
-        capacityUnits: parseInt(hubForm.capacityUnits) || 50000,
-        currentUnits: Math.floor((parseInt(hubForm.capacityUnits) || 50000) * 0.65),
-        dockCount: parseInt(hubForm.dockCount) || 12,
-        activeDocks: Math.floor((parseInt(hubForm.dockCount) || 12) * 0.7),
-        efficiencyPct: 96,
-        status: "OPERATIONAL",
+        lat: Number(hubForm.lat), lng: Number(hubForm.lng),
+        capacityUnits: Number(hubForm.capacityUnits), currentUnits: Number(hubForm.currentUnits),
+        dockCount: Number(hubForm.dockCount), activeDocks: Number(hubForm.activeDocks),
+        efficiencyPct: Number(hubForm.efficiencyPct), status: "OPERATIONAL",
       });
       setIsAddHubOpen(false);
-      setStatusMessage(`Hub ${hubForm.code} (${hubForm.name}) registered in live ledger!`);
+      setStatusMessage(`Location ${hubForm.code} (${hubForm.name}) saved to this workspace.`);
       setTimeout(() => setStatusMessage(null), 4000);
       loadData();
     } catch (err) {
-      console.error("Failed to create hub:", err);
+      setStatusMessage(err instanceof Error ? err.message : "Location could not be saved.");
     }
   };
 
@@ -154,18 +121,16 @@ export default function OperationsPage() {
         name: vehicleForm.name,
         model: vehicleForm.model,
         driverName: vehicleForm.driverName,
-        lat: parseFloat(vehicleForm.lat) || 30.3165,
-        lng: parseFloat(vehicleForm.lng) || 78.0322,
-        speedKmh: parseFloat(vehicleForm.speedKmh) || 60,
-        batteryPct: parseInt(vehicleForm.batteryPct) || 85,
-        status: "IN_TRANSIT",
+        lat: Number(vehicleForm.lat), lng: Number(vehicleForm.lng),
+        speedKmh: Number(vehicleForm.speedKmh), batteryPct: Number(vehicleForm.batteryPct),
+        healthScore: Number(vehicleForm.healthScore), status: vehicleForm.status as any,
       });
       setIsAddVehicleOpen(false);
-      setStatusMessage(`Vehicle ${vehicleForm.code} deployed to active dispatch!`);
+      setStatusMessage(`Vehicle ${vehicleForm.code} saved to this workspace.`);
       setTimeout(() => setStatusMessage(null), 4000);
       loadData();
     } catch (err) {
-      console.error("Failed to deploy vehicle:", err);
+      setStatusMessage(err instanceof Error ? err.message : "Vehicle could not be saved.");
     }
   };
 
@@ -179,6 +144,7 @@ export default function OperationsPage() {
   return (
     <AppShell>
       <div className="space-y-6 animate-in fade-in duration-500 font-sans">
+        {loadError && <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300"><span>{loadError}</span><Button variant="outline" size="sm" onClick={() => { setLoading(true); void loadData(); }}>Retry</Button></div>}
         {/* Top Notification Toast */}
         <AnimatePresence>
           {statusMessage && (
@@ -198,7 +164,7 @@ export default function OperationsPage() {
         <PageHeader
           eyebrow="Operational Assets · Global Topology Command"
           title="Fleet & Infrastructure Command"
-          description="Provision distribution hubs, monitor live autonomous EV fleet health, and dispatch intermodal consignments."
+          description="Manage vehicle and warehouse records used by your operations workspace. Current location updates require a connected source."
           actions={
             <div className="flex flex-wrap items-center gap-2.5">
               <Button
@@ -228,42 +194,6 @@ export default function OperationsPage() {
             </div>
           }
         />
-
-        {/* Global Regional Topology Presets Switcher (Apple Control Strip) */}
-        <div className="p-2.5 bg-stone-200/50 dark:bg-stone-900/70 backdrop-blur-xl rounded-2xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 px-2 text-xs font-semibold text-stone-700 dark:text-stone-300">
-            <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="font-bold text-stone-900 dark:text-stone-100">Regional Topology:</span>
-            <span className="text-stone-500 text-[11px] font-normal hidden sm:inline">
-              1-click synchronous deployment for active grid
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1 text-xs">
-            {[
-              { key: "dehradun" as const, label: "Dehradun / India", flag: "🇮🇳" },
-              { key: "delhi" as const, label: "Delhi NCR", flag: "🇮🇳" },
-              { key: "london" as const, label: "London / UK", flag: "🇬🇧" },
-              { key: "tokyo" as const, label: "Tokyo / Japan", flag: "🇯🇵" },
-              { key: "chicago" as const, label: "US Central", flag: "🇺🇸" },
-            ].map((preset) => {
-              const isSelected = activePreset === preset.key;
-              return (
-                <button
-                  key={preset.key}
-                  onClick={() => handleApplyPreset(preset.key, preset.label)}
-                  className={`relative px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 font-medium select-none ${
-                    isSelected
-                      ? "text-stone-900 dark:text-white font-bold shadow-xs bg-white dark:bg-stone-800 border border-black/5 dark:border-white/15"
-                      : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-black/5 dark:hover:bg-white/5"
-                  }`}
-                >
-                  <span className="text-xs">{preset.flag}</span>
-                  <span>{preset.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Tab Switcher & Search Bar */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -329,8 +259,8 @@ export default function OperationsPage() {
                         <TableHead>Driver Pilot</TableHead>
                         <TableHead>Speed</TableHead>
                         <TableHead>Battery / Energy</TableHead>
-                        <TableHead>Health Score</TableHead>
                         <TableHead>Assigned Corridor</TableHead>
+                        <TableHead className="text-right">Driver Web Pass</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -391,11 +321,18 @@ export default function OperationsPage() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                              {v.healthScore}%
-                            </TableCell>
                             <TableCell className="text-xs text-stone-600 dark:text-stone-300">
                               {v.currentRouteName || "Standby Dock"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Link
+                                href={`/driver-pass?v=${encodeURIComponent(v.code)}&token=demo-token-${v.id}`}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-black/[0.1] dark:border-white/[0.12] bg-white dark:bg-neutral-800 text-[11px] font-mono text-[#0071E3] hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors shadow-2xs"
+                              >
+                                <span>Launch Pass</span>
+                                <ArrowUpRight className="w-3 h-3" />
+                              </Link>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -654,6 +591,8 @@ export default function OperationsPage() {
                     />
                   </div>
 
+                  <div><label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">STATE / REGION</label><Input value={hubForm.state} onChange={(e) => setHubForm({ ...hubForm, state: e.target.value })} required className="text-xs" /></div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">LATITUDE</label>
@@ -682,6 +621,8 @@ export default function OperationsPage() {
                         value={hubForm.capacityUnits}
                         onChange={(e) => setHubForm({ ...hubForm, capacityUnits: e.target.value })}
                         type="number"
+                        min="0"
+                        required
                         className="text-xs font-mono"
                       />
                     </div>
@@ -691,10 +632,18 @@ export default function OperationsPage() {
                         value={hubForm.dockCount}
                         onChange={(e) => setHubForm({ ...hubForm, dockCount: e.target.value })}
                         type="number"
+                        min="0"
+                        required
                         className="text-xs font-mono"
                       />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">CURRENT UNITS</label><Input value={hubForm.currentUnits} onChange={(e) => setHubForm({ ...hubForm, currentUnits: e.target.value })} type="number" min="0" required className="text-xs font-mono" /></div>
+                    <div><label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">ACTIVE DOCKS</label><Input value={hubForm.activeDocks} onChange={(e) => setHubForm({ ...hubForm, activeDocks: e.target.value })} type="number" min="0" required className="text-xs font-mono" /></div>
+                  </div>
+                  <div><label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">MEASURED EFFICIENCY %</label><Input value={hubForm.efficiencyPct} onChange={(e) => setHubForm({ ...hubForm, efficiencyPct: e.target.value })} type="number" min="0" max="100" step="0.1" required className="text-xs font-mono" /></div>
 
                   <div className="pt-3 flex items-center justify-end gap-2">
                     <Button
@@ -729,7 +678,7 @@ export default function OperationsPage() {
                 <div className="flex items-center justify-between pb-4 border-b border-stone-100 dark:border-stone-800">
                   <div>
                     <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">Deploy Fleet Vehicle</h3>
-                    <p className="text-xs text-stone-500">Commission an active hauler or delivery unit to the network</p>
+                    <p className="text-xs text-stone-500">Add a vehicle record. Live location updates require a connected telematics source.</p>
                   </div>
                   <button
                     onClick={() => setIsAddVehicleOpen(false)}
@@ -771,6 +720,8 @@ export default function OperationsPage() {
                     />
                   </div>
 
+                  <div><label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">MODEL</label><Input value={vehicleForm.model} onChange={(e) => setVehicleForm({ ...vehicleForm, model: e.target.value })} required className="text-xs" /></div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">LATITUDE</label>
@@ -799,6 +750,7 @@ export default function OperationsPage() {
                         value={vehicleForm.speedKmh}
                         onChange={(e) => setVehicleForm({ ...vehicleForm, speedKmh: e.target.value })}
                         type="number"
+                        required
                         className="text-xs font-mono"
                       />
                     </div>
@@ -808,9 +760,15 @@ export default function OperationsPage() {
                         value={vehicleForm.batteryPct}
                         onChange={(e) => setVehicleForm({ ...vehicleForm, batteryPct: e.target.value })}
                         type="number"
+                        required
                         className="text-xs font-mono"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">HEALTH SCORE %</label><Input value={vehicleForm.healthScore} onChange={(e) => setVehicleForm({ ...vehicleForm, healthScore: e.target.value })} type="number" min="0" max="100" required className="text-xs font-mono" /></div>
+                    <div><label className="text-[11px] font-mono font-bold text-stone-600 block mb-1">INITIAL STATUS</label><select value={vehicleForm.status} onChange={(e) => setVehicleForm({ ...vehicleForm, status: e.target.value })} className="h-10 w-full rounded-lg border border-stone-200 bg-white px-3 text-xs"><option value="IDLE">Idle</option><option value="IN_TRANSIT">In transit</option><option value="MAINTENANCE">Maintenance</option></select></div>
                   </div>
 
                   <div className="pt-3 flex items-center justify-end gap-2">
@@ -824,7 +782,7 @@ export default function OperationsPage() {
                       Cancel
                     </Button>
                     <Button type="submit" variant="primary" size="sm" className="text-xs font-semibold">
-                      Commission & Deploy
+                      Save vehicle
                     </Button>
                   </div>
                 </form>

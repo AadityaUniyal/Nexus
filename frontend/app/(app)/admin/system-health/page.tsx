@@ -1,252 +1,78 @@
 'use client';
 
-import * as React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Database, RefreshCw, Server } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
+import { FadeIn } from '@/components/motion';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { StatusLed } from '@/components/ui/status-led';
-import { Server, Database, Activity, RefreshCw, Cpu, Radio, Sparkles, Cloud } from 'lucide-react';
-import { useToast } from '@/components/ui/toast';
-import { FadeIn, SpringCard } from '@/components/motion';
 
-interface HealthSubsystem {
-  name: string;
-  status: 'HEALTHY' | 'OPERATIONAL' | 'STANDBY' | 'DEGRADED' | 'DISCONNECTED';
-  latency: string;
-  uptime: string;
-  role: string;
-  detail?: string;
-  icon: React.ElementType;
+interface HealthResponse {
+  status: string;
+  version: string;
+  timestamp: string;
+  subsystems: {
+    api?: { name: string; status: string };
+    database?: { name: string; status: string; latencyMs?: number | null };
+  };
 }
 
 export default function AdminSystemHealthPage() {
-  const { toast } = useToast();
-  const [checking, setChecking] = React.useState(false);
-  const [overallStatus, setOverallStatus] = React.useState<'HEALTHY' | 'DEGRADED' | 'CHECKING'>('CHECKING');
-  const [totalLatency, setTotalLatency] = React.useState<number>(0);
-  const [lastChecked, setLastChecked] = React.useState<string>('Just now');
-  const [services, setServices] = React.useState<HealthSubsystem[]>([
-    { name: 'Core API Gateway', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'FastAPI / Next.js', icon: Server },
-    { name: 'Nexus Sovereign Ledger™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Primary Persistence', icon: Database },
-    { name: 'Redis Cache & Pub/Sub', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'State Buffer', icon: Activity },
-    { name: 'Server-Sent Events (SSE) Stream', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Real-time Telemetry', icon: Radio },
-    { name: 'Nexus Kinetic Reroute Matrix™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Isolated What-If Worker', icon: Cpu },
-    { name: 'Nexus Sovereign Lakehouse Bridge™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'OneLake Cloud Bridge', icon: Cloud },
-    { name: 'Nexus Sub-Second StreamGrid™', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'IoT Ingestion', icon: Radio },
-    { name: 'Nexus Neural Engine™ Provider', status: 'STANDBY', latency: 'Probing...', uptime: '...', role: 'Autonomous Dispatch AI', icon: Sparkles },
-  ]);
+  const [data, setData] = useState<HealthResponse | null>(null);
+  const [requestDuration, setRequestDuration] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchHealth = React.useCallback(async (showNotification = false) => {
-    setChecking(true);
-    const start = performance.now();
-
+  const fetchHealth = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const startedAt = performance.now();
     try {
-      const res = await fetch('/api/v1/admin/health', {
-        cache: 'no-store',
-      });
-      const clientLatency = Math.round(performance.now() - start);
-      setTotalLatency(clientLatency);
-
-      if (res.ok) {
-        const data = await res.json();
-        const subs = data.subsystems || {};
-
-        const isDbOk = subs.database?.status === 'HEALTHY' || subs.database?.detail?.includes('CONNECTED');
-        const dbStatus = isDbOk ? 'HEALTHY' : 'DISCONNECTED';
-        const isDegraded = data.status === 'DEGRADED' || !isDbOk;
-
-        setOverallStatus(isDegraded ? 'DEGRADED' : 'HEALTHY');
-        setLastChecked(new Date().toLocaleTimeString());
-
-        setServices([
-          {
-            name: 'Core API Gateway',
-            status: subs.api?.status === 'HEALTHY' ? 'HEALTHY' : 'DEGRADED',
-            latency: `${subs.api?.latencyMs ?? clientLatency}ms`,
-            uptime: '99.99%',
-            role: subs.api?.role || 'FastAPI / Next.js Gateway',
-            detail: subs.api?.detail,
-            icon: Server,
-          },
-          {
-            name: 'Nexus Sovereign Ledger™',
-            status: dbStatus,
-            latency: `${subs.database?.latencyMs ?? 2}ms`,
-            uptime: isDbOk ? '100%' : 'Offline',
-            role: 'Primary Persistence (Sovereign PostgreSQL)',
-            detail: subs.database?.detail || (isDbOk ? 'Active Pool' : 'Disconnected'),
-            icon: Database,
-          },
-          {
-            name: 'Redis Cache & Pub/Sub',
-            status: subs.redis?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
-            latency: `${subs.redis?.latencyMs ?? 1}ms`,
-            uptime: '99.98%',
-            role: 'State Buffer & Event PubSub',
-            detail: subs.redis?.detail,
-            icon: Activity,
-          },
-          {
-            name: 'Server-Sent Events (SSE) Stream',
-            status: subs.sseStream?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
-            latency: '0ms',
-            uptime: '100%',
-            role: 'Real-time Outbox Broadcaster',
-            icon: Radio,
-          },
-          {
-            name: 'Nexus Kinetic Reroute Matrix™',
-            status: subs.simulation?.status === 'HEALTHY' ? 'HEALTHY' : 'DEGRADED',
-            latency: `${subs.simulation?.latencyMs ?? 12}ms`,
-            uptime: '100%',
-            role: 'Physics & Pareto Scoring Engine',
-            icon: Cpu,
-          },
-          {
-            name: 'Nexus Sovereign Lakehouse Bridge™',
-            status: subs.fabric?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
-            latency: `${subs.fabric?.latencyMs ?? 64}ms`,
-            uptime: '99.90%',
-            role: 'Enterprise Data Bridge',
-            detail: subs.fabric?.detail,
-            icon: Cloud,
-          },
-          {
-            name: 'Nexus Sub-Second StreamGrid™',
-            status: subs.azureIot?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
-            latency: `${subs.azureIot?.latencyMs ?? 18}ms`,
-            uptime: '99.95%',
-            role: 'IoT Ingestion Gateway',
-            detail: subs.azureIot?.detail,
-            icon: Radio,
-          },
-          {
-            name: 'Nexus Neural Engine™ Provider',
-            status: subs.ai?.status === 'HEALTHY' ? 'HEALTHY' : 'STANDBY',
-            latency: `${subs.ai?.latencyMs ?? 110}ms`,
-            uptime: '99.85%',
-            role: 'Nexus Neural Engine™ 70B',
-            detail: subs.ai?.detail,
-            icon: Sparkles,
-          },
-        ]);
-
-        if (showNotification) {
-          toast({
-            title: isDegraded ? 'Health Check: Subsystems Degraded' : 'Health Check Completed',
-            message: `Platform status is ${data.status || 'HEALTHY'} (${clientLatency}ms latency). Database: ${subs.database?.detail || dbStatus}.`,
-            type: isDegraded ? 'warning' : 'success',
-          });
-        }
-      } else {
-        setOverallStatus('DEGRADED');
-        setServices((prev) =>
-          prev.map((s) => ({ ...s, status: s.name.includes('DB') ? 'DISCONNECTED' : 'DEGRADED', latency: 'Error' }))
-        );
-        if (showNotification) {
-          toast({
-            title: 'Health Check Failed',
-            message: `Health probe returned HTTP ${res.status}.`,
-            type: 'critical',
-          });
-        }
-      }
-    } catch (err: any) {
-      setOverallStatus('DEGRADED');
-      setServices((prev) =>
-        prev.map((s) => ({ ...s, status: s.name.includes('DB') ? 'DISCONNECTED' : 'DEGRADED', latency: 'Error' }))
-      );
-      if (showNotification) {
-        toast({
-          title: 'Probe Error',
-          message: err?.message || 'Failed to contact live health endpoints.',
-          type: 'critical',
-        });
-      }
+      const response = await fetch('/api/v1/admin/health', { cache: 'no-store' });
+      setRequestDuration(Math.round(performance.now() - startedAt));
+      if (!response.ok) throw new Error(response.status === 403 ? 'You do not have permission to view system diagnostics.' : `Health check failed (${response.status}).`);
+      setData(await response.json() as HealthResponse);
+    } catch (cause) {
+      setData(null);
+      setError(cause instanceof Error ? cause.message : 'System diagnostics could not be loaded.');
     } finally {
-      setChecking(false);
+      setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
-  React.useEffect(() => {
-    fetchHealth(false);
-  }, [fetchHealth]);
+  useEffect(() => { void fetchHealth(); }, [fetchHealth]);
 
-  const handleRefresh = () => {
-    fetchHealth(true);
-  };
+  const checks = [
+    { label: 'API process', icon: Server, status: data?.subsystems.api?.status ?? 'Not measured', detail: requestDuration == null ? 'Response time unavailable' : `${requestDuration} ms browser-observed response time` },
+    { label: 'PostgreSQL database', icon: Database, status: data?.subsystems.database?.status ?? 'Not measured', detail: data?.subsystems.database?.latencyMs == null ? 'Database latency not reported' : `${data.subsystems.database.latencyMs} ms measured by the server` },
+  ];
 
   return (
     <AppShell>
-      <FadeIn className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <FadeIn className="mx-auto max-w-5xl space-y-7">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
-              <Link href="/admin" className="hover:underline">Admin Center</Link>
-              <span>·</span>
-              <span>Subsystem Diagnostics</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Live Subsystem & Microservice Health
-            </h1>
-            <p className="text-xs text-nexus-on-surface-variant font-mono mt-1">
-              Live Probe Status: <strong className={overallStatus === 'HEALTHY' ? 'text-emerald-600' : 'text-amber-600'}>{overallStatus}</strong> · Roundtrip: <strong className="text-nexus-primary">{totalLatency}ms</strong> · Last verified: {lastChecked}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-stone-500"><Link href="/admin" className="hover:underline">Admin</Link><span aria-hidden="true">/</span><span>System health</span></div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900 dark:text-white">System health</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-stone-400">A live check of the API process and its PostgreSQL connection. This page does not report historical uptime or optional integration health.</p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => void fetchHealth()} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Check again</Button>
+        </header>
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleRefresh}
-              isLoading={checking}
-              className="font-mono text-xs gap-1.5"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${checking ? 'animate-spin' : ''}`} /> Re-check Health Probes
-            </Button>
-          </div>
-        </div>
+        {error && <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{error}</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {services.map((s) => {
-            const Icon = s.icon;
-            const badgeVariant =
-              s.status === 'HEALTHY' || s.status === 'OPERATIONAL'
-                ? 'healthy'
-                : s.status === 'DEGRADED' || s.status === 'STANDBY'
-                ? 'attention'
-                : 'critical';
+        <section className="grid gap-3 sm:grid-cols-2" aria-label="Current service checks">
+          {checks.map(({ label, icon: Icon, status, detail }) => <article key={label} className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300"><Icon className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="text-sm font-semibold text-stone-900 dark:text-white">{label}</h2><p className="mt-1 text-xs text-stone-500">{status}</p></div></div>
+            <p className="mt-4 text-xs text-stone-500">{detail}</p>
+          </article>)}
+        </section>
 
-            return (
-              <SpringCard key={s.name} className="p-5 flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-nexus-secondary" />
-                    <span className="font-bold text-sm text-nexus-on-surface">{s.name}</span>
-                  </div>
-                  <p className="text-xs text-nexus-on-surface-variant font-mono">{s.role}</p>
-                  {s.detail && (
-                    <p className="text-[11px] text-nexus-on-surface-variant/80 font-mono italic">
-                      {s.detail}
-                    </p>
-                  )}
-                  <div className="text-[11px] font-mono text-nexus-on-surface-variant flex items-center gap-3 pt-1">
-                    <span>Latency: <strong className="text-nexus-primary">{s.latency}</strong></span>
-                    <span>Uptime: <strong className={s.status === 'HEALTHY' ? 'text-emerald-600' : 'text-amber-600'}>{s.uptime}</strong></span>
-                  </div>
-                </div>
-
-                <div>
-                  <Badge variant={badgeVariant}>
-                    <StatusLed status={s.status} className="mr-1.5" />
-                    {s.status}
-                  </Badge>
-                </div>
-              </SpringCard>
-            );
-          })}
-        </div>
+        <section className="rounded-2xl border border-stone-200 bg-white p-5 text-sm leading-6 text-stone-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400">
+          <h2 className="font-semibold text-stone-900 dark:text-white">About this check</h2>
+          <p className="mt-2">The API performs a database connectivity query when this page is refreshed. The response time shown for the API is measured in your browser; database latency is shown only when the server returns it. These point-in-time checks are not an uptime commitment.</p>
+          <p className="mt-2 text-xs">{data ? `Version ${data.version} · Checked ${new Date(data.timestamp).toLocaleString()}` : loading ? 'Checking current status…' : 'No successful check is available.'}</p>
+        </section>
       </FadeIn>
     </AppShell>
   );

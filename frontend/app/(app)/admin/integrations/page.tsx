@@ -1,176 +1,84 @@
 'use client';
 
-import * as React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Activity, Cloud, Database, KeyRound, MapPin, Radio, RefreshCw, Server, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
+import { FadeIn } from '@/components/motion';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { StatusLed } from '@/components/ui/status-led';
-import { Cloud, Cpu, Radio, Sparkles, Database, Key, Activity, RefreshCw, Server, MapPin } from 'lucide-react';
-import { useToast } from '@/components/ui/toast';
-import { FadeIn, SpringCard } from '@/components/motion';
-
 import { authFetch } from '@/lib/api/auth-fetch';
 
+interface Integration {
+  id: string;
+  name: string;
+  provider: string;
+  configured: boolean;
+  status: string;
+}
+
+const providerIcons: Record<string, typeof Cloud> = {
+  geoapify: MapPin,
+  groq: Sparkles,
+  gemini: Sparkles,
+  azure_iot: Radio,
+  azure_blob: Database,
+  azure_key_vault: KeyRound,
+  fabric: Cloud,
+};
+
 export default function AdminIntegrationsPage() {
-  const { toast } = useToast();
-  const [testingId, setTestingId] = React.useState<string | null>(null);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
 
-  const integrations = [
-    {
-      id: 'streamgrid',
-      name: 'Nexus Sub-Second StreamGrid™',
-      category: 'Telemetry Stream Engine',
-      desc: 'Sub-second telematic packet ingestion for real-time CAN-bus GPS and thermal sensors.',
-      status: 'CONNECTED',
-      icon: Radio,
-    },
-    {
-      id: 'deepstorage',
-      name: 'Nexus DeepStorage Medallion™',
-      category: 'Sovereign Analytics Lake',
-      desc: 'Bronze/Silver/Gold multi-tier storage partitions and cryptographically verified manifests.',
-      status: 'CONNECTED',
-      icon: Database,
-    },
-    {
-      id: 'cryptovault',
-      name: 'Nexus Cryptographic Vault™',
-      category: 'Hardware Security',
-      desc: 'Enterprise hardware-backed vault for company encryption keys and multi-tenant credentials.',
-      status: 'CONNECTED',
-      icon: Key,
-    },
-    {
-      id: 'apm_tracing',
-      name: 'Nexus Telemetry APM & Tracing™',
-      category: 'Observability Matrix',
-      desc: 'Sub-second APM tracing, distributed transaction telemetry, and live health monitors.',
-      status: 'ACTIVE',
-      icon: Activity,
-    },
-    {
-      id: 'kinetic_compute',
-      name: 'Nexus Kinetic Compute Matrix™',
-      category: 'Autonomous Compute',
-      desc: 'Scheduled anomaly sweeps, SLA risk evaluations, and autonomous reroute calculations.',
-      status: 'CONNECTED',
-      icon: Server,
-    },
-    {
-      id: 'sovereign_bridge',
-      name: 'Nexus Sovereign Data Bridge™',
-      category: 'Enterprise Lakehouse',
-      desc: 'Cloud-scale operational data mirroring and executive BI dashboard synchronization.',
-      status: 'CONNECTED',
-      icon: Cloud,
-    },
-    {
-      id: 'spatial_matrix',
-      name: 'Nexus Spatial Intelligence Grid™',
-      category: 'Geospatial & Topographic Routing',
-      desc: 'Sub-second geocoding, multi-variable road grade calculations, and weather barrier snapping.',
-      status: 'CONNECTED',
-      icon: MapPin,
-    },
-    {
-      id: 'neural_engine',
-      name: 'Nexus Neural Engine™ 70B',
-      category: 'Autonomous Dispatch AI',
-      desc: 'Sub-second cognitive intelligence for proactive rerouting and situational synthesis.',
-      status: 'ACTIVE',
-      icon: Sparkles,
-    },
-    {
-      id: 'webhook_gateway',
-      name: 'Nexus Enterprise Webhook Gateway™',
-      category: 'Integration Bus',
-      desc: 'Outbound REST event dispatch for enterprise TMS/WMS/ERP bi-directional synchronization.',
-      status: 'IDLE',
-      icon: Cpu,
-    },
-  ];
-
-  const handleTest = async (id: string, name: string) => {
-    setTestingId(id);
+  const loadIntegrations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await authFetch<any>(`/api/v1/admin/integrations/${id}/test`, {
-        method: 'POST',
-      });
-      toast({
-        title: 'Adapter Ping Successful',
-        message: `${name}: ${res.status || 'ONLINE'}${res.latencyMs ? ` (${res.latencyMs}ms)` : ''}`,
-        type: 'success',
-      });
-    } catch (err: any) {
-      toast({
-        title: 'Adapter Probe Result',
-        message: `${name} responded: ${err?.message || 'Ready'}`,
-        type: 'info',
-      });
+      const rows = await authFetch<Integration[]>('/api/v1/admin/integrations');
+      setIntegrations(rows);
+      setCheckedAt(new Date().toLocaleString());
+    } catch (cause) {
+      setIntegrations([]);
+      setError(cause instanceof Error ? cause.message : 'Integration settings could not be loaded.');
     } finally {
-      setTestingId(null);
+      setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { void loadIntegrations(); }, [loadIntegrations]);
 
   return (
     <AppShell>
-      <FadeIn className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <FadeIn className="mx-auto max-w-6xl space-y-7">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-mono text-nexus-on-surface-variant uppercase">
-              <Link href="/admin" className="hover:underline">Admin Center</Link>
-              <span>·</span>
-              <span>Cloud Adapters</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              External Cloud & Data Integrations
-            </h1>
+            <div className="flex items-center gap-2 text-xs text-stone-500"><Link href="/admin" className="hover:underline">Admin</Link><span aria-hidden="true">/</span><span>Integrations</span></div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900 dark:text-white">Integrations</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600 dark:text-stone-400">Most entries report configuration only. Geoapify also returns a provider health check. Neither proves that operational data is flowing into your workspace.</p>
           </div>
-        </div>
+          <Button variant="outline" size="sm" onClick={() => void loadIntegrations()} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh settings</Button>
+        </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {integrations.map((integ) => {
-            const Icon = integ.icon;
-            const isTesting = testingId === integ.id;
-            return (
-              <SpringCard key={integ.id} className="p-6 space-y-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="h-10 w-10 rounded-xl bg-nexus-secondary-container/40 text-nexus-secondary flex items-center justify-center">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <Badge variant="healthy">
-                      <StatusLed status="healthy" className="mr-1.5" />
-                      {integ.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    {integ.category && (
-                      <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-nexus-primary block mb-1">
-                        {integ.category}
-                      </span>
-                    )}
-                    <h3 className="text-base font-bold text-nexus-on-surface">{integ.name}</h3>
-                    <p className="text-xs text-nexus-on-surface-variant mt-1 leading-relaxed">{integ.desc}</p>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex justify-end">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleTest(integ.id, integ.name)}
-                    isLoading={isTesting}
-                    className="font-mono text-xs gap-1"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" /> Test Endpoint
-                  </Button>
-                </div>
-              </SpringCard>
-            );
+        {error && <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{error}</div>}
+        {!error && <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {integrations.map((integration) => {
+            const Icon = providerIcons[integration.provider] ?? Server;
+            return <article key={integration.id} className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${integration.configured ? 'bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200' : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300'}`}>
+                  {integration.configured ? 'Configured' : 'Not configured'}
+                </span>
+              </div>
+              <h2 className="mt-4 text-sm font-semibold text-stone-900 dark:text-white">{integration.name}</h2>
+              <p className="mt-1 text-xs leading-5 text-stone-500">{integration.configured ? integration.provider === 'geoapify' ? `Provider health check: ${integration.status}. This does not verify workspace data flow.` : `Configuration status: ${integration.status}. Provider connectivity is not checked here.` : 'No provider configuration was detected by the server.'}</p>
+            </article>;
           })}
-        </div>
+        </div>}
+        {!loading && !error && integrations.length === 0 && <div className="rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-500 dark:border-stone-700">The server returned no integration settings.</div>}
+        {checkedAt && <p className="flex items-center gap-2 text-xs text-stone-500"><Activity className="h-3.5 w-3.5" aria-hidden="true" />Settings retrieved {checkedAt}</p>}
       </FadeIn>
     </AppShell>
   );

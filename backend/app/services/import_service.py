@@ -3,6 +3,7 @@ import io
 import json
 import uuid
 import re
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,10 +15,13 @@ from app.models.logistics import Customer, Trip, Stop
 from app.models.telemetry import TelemetryEvent, VehicleStatus
 from app.models.governance import AuditEvent
 
+MAX_IMPORT_BYTES = 10_000_000
+MAX_IMPORT_ROWS = 10_000
+
 ENTITY_FIELDS = {
     "VEHICLES": {
-        "required": ["code", "name"],
-        "optional": ["model", "driver_name", "status", "lat", "lng", "speed_kmh", "battery_pct", "health_score"],
+        "required": ["code", "name", "model", "driver_name", "status", "lat", "lng", "speed_kmh", "heading", "battery_pct", "health_score"],
+        "optional": [],
         "aliases": {
             "code": ["code", "id", "vin", "registration", "registration_number", "registrationnumber", "reg_no", "license_plate", "truck_id", "vehicle_id", "unit_no"],
             "name": ["name", "vehicle_name", "unit_name", "truck_name", "truckname", "title"],
@@ -28,11 +32,13 @@ ENTITY_FIELDS = {
             "lng": ["lng", "longitude", "long", "current_lng", "x"],
             "speed_kmh": ["speed_kmh", "speedkmh", "speed", "velocity"],
             "battery_pct": ["battery_pct", "battery", "battery_percentage", "batterypercentage", "soc", "fuel", "fuel_pct"],
+            "health_score": ["health_score", "health", "vehicle_health"],
+            "heading": ["heading", "heading_deg", "bearing"],
         }
     },
     "DRIVERS": {
-        "required": ["code", "name", "license_number"],
-        "optional": ["email", "phone", "license_class", "duty_status", "total_hours_today"],
+        "required": ["code", "name", "license_number", "phone", "license_class", "duty_status", "total_hours_today"],
+        "optional": ["email"],
         "aliases": {
             "code": ["code", "driver_id", "badge_no", "employee_id", "id"],
             "name": ["name", "driver_name", "full_name", "employee_name"],
@@ -40,11 +46,12 @@ ENTITY_FIELDS = {
             "phone": ["phone", "mobile", "contact_number", "cell"],
             "email": ["email", "mail"],
             "duty_status": ["duty_status", "status", "shift_status"],
+            "total_hours_today": ["total_hours_today", "hours_today", "driving_hours_today"],
         }
     },
     "CUSTOMERS": {
-        "required": ["code", "name", "email"],
-        "optional": ["contact_name", "phone", "sla_tier"],
+        "required": ["code", "name", "email", "phone", "sla_tier"],
+        "optional": ["contact_name"],
         "aliases": {
             "code": ["code", "customer_code", "account_id", "client_code", "id"],
             "name": ["name", "customer_name", "company_name", "client_name"],
@@ -54,8 +61,8 @@ ENTITY_FIELDS = {
         }
     },
     "ORDERS": {
-        "required": ["order_number", "customer_name", "destination", "deadline"],
-        "optional": ["priority", "status", "total_cost", "vehicle_code"],
+        "required": ["order_number", "customer_name", "destination", "deadline", "priority", "status", "total_cost"],
+        "optional": ["vehicle_code"],
         "aliases": {
             "order_number": ["order_number", "order_id", "order_no", "tracking_no", "shipment_id", "po_number"],
             "customer_name": ["customer_name", "customer", "client", "shipper"],
@@ -67,8 +74,8 @@ ENTITY_FIELDS = {
         }
     },
     "TRIPS": {
-        "required": ["trip_number", "origin_warehouse_id", "dest_warehouse_id", "scheduled_departure", "scheduled_arrival"],
-        "optional": ["vehicle_id", "driver_id", "distance_km", "status"],
+        "required": ["trip_number", "vehicle_id", "origin_warehouse_id", "dest_warehouse_id", "scheduled_departure", "scheduled_arrival", "distance_km", "status"],
+        "optional": ["driver_id"],
         "aliases": {
             "trip_number": ["trip_number", "trip_id", "manifest_number", "dispatch_id", "load_id"],
             "origin_warehouse_id": ["origin_warehouse_id", "origin", "source_hub", "from_wh"],
@@ -76,6 +83,20 @@ ENTITY_FIELDS = {
             "scheduled_departure": ["scheduled_departure", "departure", "start_time", "depart_at"],
             "scheduled_arrival": ["scheduled_arrival", "arrival", "end_time", "arrive_at"],
             "distance_km": ["distance_km", "distance", "miles", "km"],
+        }
+    },
+    "WAREHOUSES": {
+        "required": ["code", "name", "city", "state", "lat", "lng"],
+        "optional": ["capacity_units", "dock_count"],
+        "aliases": {
+            "code": ["code", "warehouse_id", "hub_code", "depot_code", "id"],
+            "name": ["name", "warehouse_name", "hub_name", "depot_name", "facility_name"],
+            "city": ["city", "town", "location_city"],
+            "state": ["state", "province", "region"],
+            "lat": ["lat", "latitude", "dock_lat", "y"],
+            "lng": ["lng", "longitude", "dock_lng", "x"],
+            "capacity_units": ["capacity_units", "capacity", "max_capacity", "units"],
+            "dock_count": ["dock_count", "docks", "dock_bays", "bays"],
         }
     }
 }
@@ -96,24 +117,38 @@ class ImportExecutionResult(BaseModel):
     record_ids: List[str]
     audit_id: str
 
+
+class ImportExecutionError(Exception):
+    """A batch failed before commit; no row from the batch is persisted."""
+
 def parse_import_file(content: str, filename: str) -> List[Dict[str, Any]]:
     """Parse CSV or JSON string into array of flat dictionaries."""
     filename_lower = filename.lower()
+    if not (filename_lower.endswith(".csv") or filename_lower.endswith(".json")):
+        raise ValueError("Only CSV and JSON files are supported.")
+    if len(content.encode("utf-8")) > MAX_IMPORT_BYTES:
+        raise ValueError(f"Import files must be {MAX_IMPORT_BYTES // 1_000_000} MB or smaller.")
+
     if filename_lower.endswith(".json"):
         data = json.loads(content)
         if isinstance(data, list):
-            return data
+            rows = data
         elif isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
-            return data["data"]
-        raise ValueError("JSON must contain an array of row objects or a {data: [...]} key")
-    
-    # Otherwise treat as CSV
-    reader = csv.DictReader(io.StringIO(content))
-    rows = []
-    for r in reader:
-        # Strip whitespace from keys and values
-        clean_row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in r.items() if k}
-        rows.append(clean_row)
+            rows = data["data"]
+        else:
+            raise ValueError("JSON must contain an array of row objects or a {data: [...]} key")
+    else:
+        reader = csv.DictReader(io.StringIO(content))
+        rows = []
+        for r in reader:
+            # Strip whitespace from keys and values
+            clean_row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in r.items() if k}
+            rows.append(clean_row)
+
+    if len(rows) > MAX_IMPORT_ROWS:
+        raise ValueError(f"Import files can contain at most {MAX_IMPORT_ROWS:,} data rows.")
+    if any(not isinstance(row, dict) for row in rows):
+        raise ValueError("Every import row must be a JSON object or CSV record.")
     return rows
 
 def suggest_mapping(columns: List[str], entity_type: str) -> Dict[str, str]:
@@ -232,19 +267,23 @@ async def execute_import_data(
                 mapped_row[target_field] = raw_row[source_col]
 
         try:
+            cfg = ENTITY_FIELDS.get(e_type)
+            missing = [field for field in cfg["required"] if mapped_row.get(field) in (None, "")] if cfg else []
+            if missing:
+                raise ValueError(f"Missing required field(s): {', '.join(missing)}")
             if e_type == "VEHICLES":
-                code = str(mapped_row.get("code") or f"NX-{uuid.uuid4().hex[:6].upper()}")
+                code = str(mapped_row["code"])
                 v = Vehicle(
                     code=code,
-                    name=str(mapped_row.get("name") or f"Hauler {code}"),
-                    model=str(mapped_row.get("model") or "Freightliner eCascadia"),
-                    driver_name=str(mapped_row.get("driver_name") or "Unassigned"),
-                    status=str(mapped_row.get("status") or "IN_TRANSIT"),
-                    current_lat=float(mapped_row.get("lat") or 41.8781),
-                    current_lng=float(mapped_row.get("lng") or -87.6298),
-                    speed_kmh=float(mapped_row.get("speed_kmh") or 65.0),
-                    battery_pct=int(float(mapped_row.get("battery_pct") or 90)),
-                    health_score=int(float(mapped_row.get("health_score") or 95)),
+                    name=str(mapped_row["name"]),
+                    model=str(mapped_row["model"]),
+                    driver_name=str(mapped_row["driver_name"]),
+                    status=str(mapped_row["status"]),
+                    current_lat=float(mapped_row["lat"]),
+                    current_lng=float(mapped_row["lng"]),
+                    speed_kmh=float(mapped_row["speed_kmh"]),
+                    battery_pct=int(float(mapped_row["battery_pct"])),
+                    health_score=int(float(mapped_row["health_score"])),
                     workspace_id=workspace_id,
                 )
                 db.add(v)
@@ -256,10 +295,10 @@ async def execute_import_data(
                     lat=v.current_lat,
                     lng=v.current_lng,
                     speed_kmh=v.speed_kmh,
-                    heading=90.0,
+                    heading=float(mapped_row["heading"]),
                     battery_pct=v.battery_pct,
                     health_score=v.health_score,
-                    last_telemetry_at="2026-09-14T12:00:00Z",
+                    last_telemetry_at=datetime.now(timezone.utc).isoformat(),
                     workspace_id=workspace_id,
                 )
                 db.add(vs)
@@ -267,13 +306,14 @@ async def execute_import_data(
 
             elif e_type == "DRIVERS":
                 drv = Driver(
-                    code=str(mapped_row.get("code") or f"DRV-{uuid.uuid4().hex[:6].upper()}"),
+                    code=str(mapped_row["code"]),
                     name=str(mapped_row.get("name")),
                     email=mapped_row.get("email"),
-                    phone=str(mapped_row.get("phone") or "+1 (555) 019-2834"),
+                    phone=str(mapped_row["phone"]),
                     license_number=str(mapped_row.get("license_number")),
-                    license_class=str(mapped_row.get("license_class") or "CDL_CLASS_A"),
-                    duty_status=str(mapped_row.get("duty_status") or "ON_DUTY"),
+                    license_class=str(mapped_row["license_class"]),
+                    duty_status=str(mapped_row["duty_status"]),
+                    total_hours_today=float(mapped_row["total_hours_today"]),
                     workspace_id=workspace_id,
                 )
                 db.add(drv)
@@ -282,12 +322,12 @@ async def execute_import_data(
 
             elif e_type == "CUSTOMERS":
                 cust = Customer(
-                    code=str(mapped_row.get("code") or f"CUST-{uuid.uuid4().hex[:6].upper()}"),
+                    code=str(mapped_row["code"]),
                     name=str(mapped_row.get("name")),
                     email=str(mapped_row.get("email")),
-                    contact_name=str(mapped_row.get("contact_name") or "Operations Lead"),
-                    phone=str(mapped_row.get("phone") or "+1 (800) 555-0199"),
-                    sla_tier=str(mapped_row.get("sla_tier") or "GOLD_95"),
+                    contact_name=mapped_row.get("contact_name"),
+                    phone=str(mapped_row["phone"]),
+                    sla_tier=str(mapped_row["sla_tier"]),
                     workspace_id=workspace_id,
                 )
                 db.add(cust)
@@ -299,10 +339,10 @@ async def execute_import_data(
                     order_number=str(mapped_row.get("order_number") or f"ORD-{uuid.uuid4().hex[:8].upper()}"),
                     customer_name=str(mapped_row.get("customer_name")),
                     destination=str(mapped_row.get("destination")),
-                    priority=str(mapped_row.get("priority") or "STANDARD"),
-                    status=str(mapped_row.get("status") or "IN_TRANSIT"),
-                    total_cost=float(mapped_row.get("total_cost") or 15000.0),
-                    deadline=str(mapped_row.get("deadline") or "2026-09-20T18:00:00Z"),
+                    priority=str(mapped_row["priority"]),
+                    status=str(mapped_row["status"]),
+                    total_cost=float(mapped_row["total_cost"]),
+                    deadline=str(mapped_row["deadline"]),
                     vehicle_code=mapped_row.get("vehicle_code"),
                     workspace_id=workspace_id,
                 )
@@ -311,6 +351,11 @@ async def execute_import_data(
                 imported_ids.append(ord_item.id)
 
             elif e_type == "TRIPS":
+                scoped_vehicle = await db.execute(select(Vehicle).where(Vehicle.id == str(mapped_row["vehicle_id"]), Vehicle.workspace_id == workspace_id))
+                scoped_origin = await db.execute(select(Warehouse).where(Warehouse.id == str(mapped_row["origin_warehouse_id"]), Warehouse.workspace_id == workspace_id))
+                scoped_destination = await db.execute(select(Warehouse).where(Warehouse.id == str(mapped_row["dest_warehouse_id"]), Warehouse.workspace_id == workspace_id))
+                if not scoped_vehicle.scalar_one_or_none() or not scoped_origin.scalar_one_or_none() or not scoped_destination.scalar_one_or_none():
+                    raise ValueError("Trip vehicle and both locations must exist in the active workspace.")
                 trip = Trip(
                     trip_number=str(mapped_row.get("trip_number") or f"TRIP-{uuid.uuid4().hex[:8].upper()}"),
                     vehicle_id=str(mapped_row.get("vehicle_id")),
@@ -318,16 +363,35 @@ async def execute_import_data(
                     dest_warehouse_id=str(mapped_row.get("dest_warehouse_id")),
                     scheduled_departure=str(mapped_row.get("scheduled_departure")),
                     scheduled_arrival=str(mapped_row.get("scheduled_arrival")),
-                    status=str(mapped_row.get("status") or "IN_TRANSIT"),
-                    distance_km=float(mapped_row.get("distance_km") or 1000.0),
+                    status=str(mapped_row["status"]),
+                    distance_km=float(mapped_row["distance_km"]),
                     workspace_id=workspace_id,
                 )
                 db.add(trip)
                 await db.flush()
                 imported_ids.append(trip.id)
 
-        except Exception:
-            failed_count += 1
+            elif e_type == "WAREHOUSES":
+                wh = Warehouse(
+                    code=str(mapped_row["code"]),
+                    name=str(mapped_row["name"]),
+                    city=str(mapped_row["city"]),
+                    state=str(mapped_row["state"]),
+                    lat=float(mapped_row["lat"]),
+                    lng=float(mapped_row["lng"]),
+                    capacity_units=int(float(mapped_row.get("capacity_units") or 10000)),
+                    dock_count=int(float(mapped_row.get("dock_count") or 8)),
+                    workspace_id=workspace_id,
+                )
+                db.add(wh)
+                await db.flush()
+                imported_ids.append(wh.id)
+
+        except Exception as exc:
+            await db.rollback()
+            raise ImportExecutionError(
+                f"Import stopped on row {idx + 1}; no records were saved. Check the row against the preview and retry."
+            ) from exc
 
     # Record Audit Event
     audit = AuditEvent(
@@ -342,7 +406,13 @@ async def execute_import_data(
     )
     db.add(audit)
 
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        raise ImportExecutionError(
+            "The import could not be committed; no records were saved. Refresh the preview and retry."
+        ) from exc
 
     return ImportExecutionResult(
         entity_type=e_type,

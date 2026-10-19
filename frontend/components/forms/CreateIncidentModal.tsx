@@ -29,30 +29,30 @@ export function CreateIncidentModal({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const [title, setTitle] = React.useState("Severe Corridor Obstruction");
-  const [summary, setSummary] = React.useState("Flash flooding and mudslide blocking commercial freight corridor.");
-  const [severity, setSeverity] = React.useState("HIGH");
+  const [title, setTitle] = React.useState("");
+  const [summary, setSummary] = React.useState("");
+  const [severity, setSeverity] = React.useState("");
   const [entityType, setEntityType] = React.useState("VEHICLE");
   const [entityId, setEntityId] = React.useState(vehicles[0]?.id || "");
-  const [delayMinutes, setDelayMinutes] = React.useState("75");
-  const [costEstimate, setCostEstimate] = React.useState("3800");
-  const [rootCause, setRootCause] = React.useState("Adverse Weather & Roadway Hazard");
+  const [delayMinutes, setDelayMinutes] = React.useState("");
+  const [costEstimate, setCostEstimate] = React.useState("");
+  const [rootCause, setRootCause] = React.useState("");
 
   // Keep entityId synced when vehicles or warehouses change
   React.useEffect(() => {
-    if (entityType === "VEHICLE" && vehicles.length > 0 && !entityId) {
-      setEntityId(vehicles[0].id);
-    } else if (entityType === "WAREHOUSE" && warehouses.length > 0 && !entityId) {
-      setEntityId(warehouses[0].id);
+    if (entityType === "VEHICLE" && !vehicles.some((v) => v.id === entityId)) {
+      setEntityId("");
+    } else if (entityType === "WAREHOUSE" && !warehouses.some((w) => w.id === entityId)) {
+      setEntityId("");
     }
   }, [entityType, vehicles, warehouses, entityId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !summary.trim()) {
+    if (!title.trim() || !summary.trim() || !severity || !entityId || delayMinutes === "" || costEstimate === "") {
       toast({
         title: "Validation Error",
-        message: "Incident title and description are required.",
+        message: "Complete incident details, affected asset, severity, delay, and cost estimate before saving.",
         type: "critical",
       });
       return;
@@ -62,7 +62,7 @@ export function CreateIncidentModal({
     tactileAudio.playClick();
 
     try {
-      let entityName = "Field Fleet";
+      let entityName = "";
       if (entityType === "VEHICLE") {
         const found = vehicles.find((v) => v.id === entityId);
         if (found) entityName = `${found.code} (${found.driverName})`;
@@ -71,23 +71,23 @@ export function CreateIncidentModal({
         if (found) entityName = `${found.name} (${found.city})`;
       }
 
+      if (!entityName) throw new Error("Select an existing affected asset in this workspace.");
       const created = await dataProvider.createIncident({
         title: title.trim(),
         summary: summary.trim(),
         severity: severity as any,
         affectedEntityType: entityType as any,
-        affectedEntityId: entityId || "unknown-node",
+        affectedEntityId: entityId,
         affectedEntityName: entityName,
-        delayMinutes: parseInt(delayMinutes, 10) || 45,
-        costEstimate: parseFloat(costEstimate) || 2500,
+        delayMinutes: Number(delayMinutes),
+        costEstimate: Number(costEstimate),
         rootCause: rootCause.trim(),
-        aiAnalysis: "Autonomous reroute and dock rescheduling stageable via Manager Cockpit.",
       });
 
       tactileAudio.playCriticalAlert();
       toast({
-        title: "Incident Logged & Escalated",
-        message: `${created.title} pinned to Google Maps network with high-priority SLA countdown.`,
+        title: "Incident saved",
+        message: `${created.title} was added to this workspace.`,
         type: "critical",
       });
 
@@ -140,6 +140,7 @@ export function CreateIncidentModal({
               value={severity}
               onChange={(e) => setSeverity(e.target.value)}
               options={[
+                { label: "Select severity", value: "" },
                 { label: "Critical Breach", value: "CRITICAL" },
                 { label: "High Severity", value: "HIGH" },
                 { label: "Medium Impact", value: "MEDIUM" },
@@ -176,7 +177,6 @@ export function CreateIncidentModal({
             options={[
               { label: "Fleet Commercial Vehicle", value: "VEHICLE" },
               { label: "Warehouse / Terminal Hub", value: "WAREHOUSE" },
-              { label: "Interstate Route Corridor", value: "ROUTE" },
             ]}
           />
           <Select
@@ -194,7 +194,7 @@ export function CreateIncidentModal({
             type="number"
             value={delayMinutes}
             onChange={(e) => setDelayMinutes(e.target.value)}
-            placeholder="75"
+            min="0"
             required
           />
           <Input
@@ -202,7 +202,8 @@ export function CreateIncidentModal({
             type="number"
             value={costEstimate}
             onChange={(e) => setCostEstimate(e.target.value)}
-            placeholder="3800"
+            min="0"
+            required
           />
         </div>
 
@@ -210,7 +211,7 @@ export function CreateIncidentModal({
           label="Root Cause Category"
           value={rootCause}
           onChange={(e) => setRootCause(e.target.value)}
-          placeholder="Adverse Weather / Blizzard Corridor"
+          placeholder="Enter the reported cause, if known"
         />
 
         {/* Action Controls */}

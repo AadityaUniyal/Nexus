@@ -29,17 +29,15 @@ export function CreateOrderModal({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const [orderNumber, setOrderNumber] = React.useState(`ORD-${Math.floor(10000 + Math.random() * 90000)}`);
-  const [customerName, setCustomerName] = React.useState("Continental Retail Logistics");
-  const [destination, setDestination] = React.useState("Haridwar Industrial Estate, Uttarakhand");
+  const [orderNumber, setOrderNumber] = React.useState("");
+  const [customerName, setCustomerName] = React.useState("");
+  const [destination, setDestination] = React.useState("");
   const [warehouseId, setWarehouseId] = React.useState(warehouses[0]?.id || "");
   const [vehicleId, setVehicleId] = React.useState(vehicles[0]?.id || "");
-  const [priority, setPriority] = React.useState("NORMAL");
-  const [deadline, setDeadline] = React.useState(
-    new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 16)
-  );
-  const [totalCost, setTotalCost] = React.useState("1850");
-  const [itemsCount, setItemsCount] = React.useState("16");
+  const [priority, setPriority] = React.useState("STANDARD");
+  const [deadline, setDeadline] = React.useState("");
+  const [totalCost, setTotalCost] = React.useState("");
+  const [createdShareInfo, setCreatedShareInfo] = React.useState<{ orderNumber: string; driverUrl: string; trackingUrl: string } | null>(null);
 
   // Keep origin warehouse default synced
   React.useEffect(() => {
@@ -78,27 +76,33 @@ export function CreateOrderModal({
         customerName: customerName.trim(),
         destination: destination.trim(),
         warehouseId: selectedWh?.id || null,
-        warehouseName: selectedWh?.name || "Regional Dispatch Hub",
+        warehouseName: selectedWh?.name || "",
         vehicleId: selectedVeh?.id || null,
-        vehicleCode: selectedVeh?.code || "Unassigned",
+        vehicleCode: selectedVeh?.code || undefined,
+        routeId: null,
         priority: priority as any,
         deadline: new Date(deadline).toISOString(),
-        totalCost: parseFloat(totalCost) || 1500,
-        itemsCount: parseInt(itemsCount, 10) || 12,
-        status: "ASSIGNED" as any,
+        totalCost: Number(totalCost),
+        status: "PENDING" as any,
       });
 
       tactileAudio.playSuccess();
+      const driverUrl = `${window.location.origin}/driver-pass?v=${selectedVeh?.code || "NX-804"}&order=${encodeURIComponent(created.orderNumber)}`;
+      setCreatedShareInfo({
+        orderNumber: created.orderNumber,
+        driverUrl,
+        trackingUrl: `${window.location.origin}/track/${encodeURIComponent(created.orderNumber)}`,
+      });
+
       toast({
         title: "Consignment Dispatched",
-        message: `Order #${created.orderNumber} successfully booked with ${created.customerName}.`,
+        message: `Trip for #${created.orderNumber} created. Share pass with driver.`,
         type: "success",
       });
 
       if (onSuccess) {
         onSuccess(created);
       }
-      onClose();
     } catch (err: any) {
       toast({
         title: "Order Dispatch Failed",
@@ -123,9 +127,84 @@ export function CreateOrderModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Create Freight Consignment Order"
-      description="Role Requirement: Dispatcher scheduling customer orders and binding SLA guarantees."
+      description="Create an order record. Dispatch and SLA tracking require assigned routes and real operational updates."
       maxWidth="lg"
     >
+      {createdShareInfo ? (
+        <div className="space-y-4 py-2">
+          <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] text-left">
+            <span className="text-[11px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+              ✓ Consignment Trip Created &amp; Dispatched
+            </span>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-white mt-1">
+              Order #{createdShareInfo.orderNumber} is assigned to active road transit.
+            </p>
+          </div>
+
+          <div className="space-y-3 text-left">
+            <div className="p-3.5 rounded-xl border border-black/[0.08] dark:border-white/[0.10] bg-neutral-50 dark:bg-neutral-900/50">
+              <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
+                1. Driver Mobile Web Pass (Zero-Install WhatsApp Link)
+              </span>
+              <div className="flex items-center gap-2 mt-1.5">
+                <input
+                  readOnly
+                  value={createdShareInfo.driverUrl}
+                  className="w-full text-xs font-mono bg-white dark:bg-neutral-800 border border-black/[0.1] dark:border-white/[0.1] rounded-lg px-2.5 py-1.5 text-neutral-700 dark:text-neutral-300 select-all"
+                />
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdShareInfo.driverUrl);
+                    toast({ title: "Copied!", message: "Driver pass URL copied to clipboard.", type: "success" });
+                  }}
+                  className="shrink-0 text-xs font-mono"
+                >
+                  Copy Link
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-black/[0.08] dark:border-white/[0.10] bg-neutral-50 dark:bg-neutral-900/50">
+              <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
+                2. Client / Consignor Live Tracking Link (Public Read-Only)
+              </span>
+              <div className="flex items-center gap-2 mt-1.5">
+                <input
+                  readOnly
+                  value={createdShareInfo.trackingUrl}
+                  className="w-full text-xs font-mono bg-white dark:bg-neutral-800 border border-black/[0.1] dark:border-white/[0.1] rounded-lg px-2.5 py-1.5 text-neutral-700 dark:text-neutral-300 select-all"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdShareInfo.trackingUrl);
+                    toast({ title: "Copied!", message: "Client tracking URL copied to clipboard.", type: "success" });
+                  }}
+                  className="shrink-0 text-xs font-mono"
+                >
+                  Copy Link
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-black/[0.08] dark:border-white/[0.10]">
+            <Button
+              variant="default"
+              onClick={() => {
+                setCreatedShareInfo(null);
+                onClose();
+              }}
+              className="text-xs font-mono"
+            >
+              Done &amp; Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Core Order Info */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -140,7 +219,7 @@ export function CreateOrderModal({
             label="Customer / Enterprise Client"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Continental Retail Logistics"
+            placeholder="Enter customer name"
             required
           />
         </div>
@@ -150,7 +229,7 @@ export function CreateOrderModal({
           label="Destination Delivery Address"
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          placeholder="Haridwar Industrial Estate, Uttarakhand"
+          placeholder="Enter delivery address"
           required
         />
 
@@ -177,9 +256,9 @@ export function CreateOrderModal({
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
             options={[
-              { label: "Normal (Standard SLA)", value: "NORMAL" },
+              { label: "Standard", value: "STANDARD" },
               { label: "High Priority", value: "HIGH" },
-              { label: "Urgent Critical", value: "URGENT" },
+              { label: "Critical", value: "CRITICAL" },
             ]}
           />
           <Input
@@ -194,7 +273,8 @@ export function CreateOrderModal({
             type="number"
             value={totalCost}
             onChange={(e) => setTotalCost(e.target.value)}
-            placeholder="1850"
+            min="0"
+            required
           />
         </div>
 
@@ -215,10 +295,11 @@ export function CreateOrderModal({
             disabled={isSubmitting}
             className="font-mono text-xs shadow-tactile"
           >
-            {isSubmitting ? "Generating Consignment..." : "Commit Order & SLA Contract"}
+            {isSubmitting ? "Saving order…" : "Save order"}
           </Button>
         </div>
       </form>
+      )}
     </Dialog>
   );
 }

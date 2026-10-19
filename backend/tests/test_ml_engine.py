@@ -15,14 +15,10 @@ from app.services.ml_engine import (
 
 client = TestClient(app)
 
-def test_ml_status_endpoint():
-    """Verify ML Engine reports READY status and Intel i7 optimization."""
+def test_ml_status_endpoint_requires_workspace_admin():
+    """Provider/model readiness is an administrative diagnostic, not a public endpoint."""
     response = client.get("/api/v1/ml/status")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "READY"
-    assert data["models_loaded"] >= 4
-    assert "Intel Core i7" in data["target_hardware"]
+    assert response.status_code == 401
 
 def test_ml_predict_delay():
     """Verify predictive delay regressor with weather and modality inputs."""

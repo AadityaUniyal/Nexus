@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
+import { usePathname } from "next/navigation";
 import { Drawer } from "@/components/ui/drawer";
 import { CommandMenu } from "@/components/ui/command-palette";
 import { VoiceCompanionWidget } from "@/components/voice/VoiceCompanionWidget";
@@ -13,23 +14,17 @@ import { formatRelativeTime } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { SupportTicketModal } from "@/components/ui/SupportTicketModal";
-import { DemoModeBanner } from "@/components/ui/DemoModeBanner";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
+import { Bell, LayoutDashboard, Map, MoreHorizontal, Package } from "lucide-react";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() || "";
+  const reduceMotion = useReducedMotion();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = React.useState(false);
   const [supportModalOpen, setSupportModalOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState<any[]>([]);
-  const [isSandboxMode, setIsSandboxMode] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const mode = localStorage.getItem("nexus_operational_mode");
-      setIsSandboxMode(mode === "SANDBOX");
-    }
-  }, []);
 
   // Fetch initial notifications from dataProvider
   React.useEffect(() => {
@@ -93,6 +88,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-nexus-surface flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-nexus-surface-lowest focus:px-4 focus:py-2 focus:text-sm focus:text-nexus-on-surface focus:shadow-md"
+      >
+        Skip to main content
+      </a>
       <Navbar
         unreadCount={unreadCount}
         onOpenNotifications={() => setNotificationsOpen(true)}
@@ -101,31 +102,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onOpenSupport={() => setSupportModalOpen(true)}
       />
 
-      {isSandboxMode && (
-        <DemoModeBanner
-          onExitDemo={() => {
-            if (typeof window !== "undefined") {
-              localStorage.setItem("nexus_operational_mode", "PRODUCTION");
-              setIsSandboxMode(false);
-              window.location.reload();
-            }
-          }}
-        />
-      )}
-
       <div className="flex-1 flex overflow-hidden">
         <Sidebar className="hidden md:flex shrink-0" />
 
         <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-32 sm:pb-32 md:pb-36 space-y-6 md:space-y-8 max-w-7xl mx-auto w-full focus:outline-none">
           <motion.div
-            initial={{ opacity: 0, y: 6 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
             {children}
           </motion.div>
         </main>
       </div>
+
+      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.08] bg-[var(--surface)]/95 px-2 pt-2 backdrop-blur-xl dark:border-white/[0.1] md:hidden" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
+        <ul className="mx-auto flex max-w-lg items-stretch justify-around">
+          {[
+            { label: "Overview", href: "/overview", icon: LayoutDashboard },
+            { label: "Shipments", href: "/operations/orders", icon: Package },
+            { label: "Live", href: "/live-world", icon: Map },
+            { label: "Alerts", href: "/incidents", icon: Bell },
+          ].map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || (item.href === "/incidents" && pathname.startsWith("/notifications"));
+            const Icon = item.icon;
+            return (
+              <li key={item.href} className="flex-1">
+                <Link href={item.href} aria-current={active ? "page" : undefined} className={`mx-auto flex min-h-12 max-w-[88px] flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium transition-colors ${active ? "text-emerald-800 dark:text-emerald-300" : "text-[var(--on-surface-variant)]"}`}>
+                  <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+          <li className="flex-1">
+            <button type="button" onClick={() => setMobileNavOpen(true)} aria-label="More navigation" className="mx-auto flex min-h-12 max-w-[88px] flex-col items-center justify-center gap-1 rounded-xl text-[9px] font-medium text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]">
+              <MoreHorizontal size={18} strokeWidth={1.8} />
+              More
+            </button>
+          </li>
+        </ul>
+      </nav>
 
       {/* Global Command Search Menu (Cmd+K) */}
       <CommandMenu
@@ -148,11 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         />
       </Drawer>
 
-      {/* Voice Copilot Companion Widget */}
-      <VoiceCompanionWidget />
 
-      {/* Real-World Autonomous Operational Copilot */}
-      <OperationalCopilot />
 
       {/* Slide-Over Notification Center Drawer */}
       <Drawer

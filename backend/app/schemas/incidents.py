@@ -15,12 +15,12 @@ class IncidentBase(BaseModel):
 
     title: str
     summary: str
-    severity: str = "HIGH"  # LOW, MEDIUM, HIGH, CRITICAL
+    severity: str
     affected_entity_type: str = Field(..., alias="affectedEntityType")
     affected_entity_id: str = Field(..., alias="affectedEntityId")
     affected_entity_name: str = Field(..., alias="affectedEntityName")
-    delay_minutes: int = Field(0, alias="delayMinutes")
-    cost_estimate: float = Field(0.0, alias="costEstimate")
+    delay_minutes: int = Field(..., ge=0, alias="delayMinutes")
+    cost_estimate: float = Field(..., ge=0, alias="costEstimate")
     root_cause: Optional[str] = Field(None, alias="rootCause")
     ai_analysis: Optional[str] = Field(None, alias="aiAnalysis")
 
@@ -51,7 +51,7 @@ class IncidentTransitionRequest(BaseModel):
 
     status: str
     note: str = "State transitioned"
-    actor_name: str = Field("Sarah Chen", alias="actorName")
+    actor_name: Optional[str] = Field(None, alias="actorName")
 
 class IncidentRead(IncidentBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)

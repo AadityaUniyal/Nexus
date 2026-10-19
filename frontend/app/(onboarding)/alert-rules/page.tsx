@@ -1,98 +1,20 @@
-'use client';
-
-import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Avatar3D } from '@/components/avatar/Avatar3D';
+import { ArrowLeft, ArrowRight, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { ArrowRight, Bell, ShieldAlert, Radio } from 'lucide-react';
-import { FadeIn } from '@/components/motion';
 
-export default function OnboardingAlertRulesPage() {
-  const router = useRouter();
-  const [criticalPush, setCriticalPush] = React.useState(true);
-  const [simulationAlerts, setSimulationAlerts] = React.useState(true);
-  const [digestEmail, setDigestEmail] = React.useState(true);
-
-  const handleNext = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push('/complete');
-  };
-
+export default function OnboardingNotificationsPage() {
   return (
-    <div className="min-h-screen bg-nexus-surface flex flex-col items-center justify-center p-6 select-none">
-      <FadeIn className="w-full max-w-xl space-y-6">
-        <div className="flex items-center justify-between text-xs font-mono text-nexus-on-surface-variant px-2">
-          <span>ONBOARDING · STEP 5 OF 5</span>
-          <span>NOTIFICATION & ALERT RULES</span>
+    <main className="flex min-h-screen items-center justify-center bg-stone-50 px-5 py-12 text-stone-900 dark:bg-stone-950 dark:text-white">
+      <section className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white p-7 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-10">
+        <p className="text-xs font-medium text-stone-500">Workspace setup · Final step</p>
+        <span className="mt-6 flex h-11 w-11 items-center justify-center rounded-xl bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300"><Bell className="h-5 w-5" aria-hidden="true" /></span>
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight">Notification preferences</h1>
+        <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-400">Notification delivery preferences are not available to configure here yet. This step will not create alert rules or subscribe you to a live event stream.</p>
+        <div className="mt-8 flex items-center justify-between">
+          <Link href="/role" className="inline-flex items-center gap-2 text-sm text-stone-600 hover:underline dark:text-stone-400"><ArrowLeft className="h-4 w-4" />Back</Link>
+          <Link href="/complete"><Button variant="primary">Finish setup<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
         </div>
-
-        <div className="flex justify-center -mb-2">
-          <Avatar3D mood="WELCOME" size="lg" />
-        </div>
-
-        <Card className="shadow-tactile-lg">
-          <CardHeader>
-            <CardTitle>Configure Notification Dispatch</CardTitle>
-            <CardDescription>
-              Control alert thresholds and real-time streaming preferences for your profile.
-            </CardDescription>
-          </CardHeader>
-
-          <form onSubmit={handleNext}>
-            <CardContent className="space-y-4">
-              <label className="p-4 rounded-xl border border-nexus-surface-container-high bg-white/70 flex items-center justify-between cursor-pointer hover:bg-nexus-surface-container/40 transition-colors">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-bold text-nexus-on-surface">Critical Operational Alerts</span>
-                  <p className="text-xs text-nexus-on-surface-variant">Immediate SSE toasts for route blocks and SLA breaches</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={criticalPush}
-                  onChange={(e) => setCriticalPush(e.target.checked)}
-                  className="h-4 w-4 rounded text-nexus-secondary focus:ring-nexus-secondary"
-                />
-              </label>
-
-              <label className="p-4 rounded-xl border border-nexus-surface-container-high bg-white/70 flex items-center justify-between cursor-pointer hover:bg-nexus-surface-container/40 transition-colors">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-bold text-nexus-on-surface">Simulation Decision Notifications</span>
-                  <p className="text-xs text-nexus-on-surface-variant">Alert when what-if scenarios complete execution</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={simulationAlerts}
-                  onChange={(e) => setSimulationAlerts(e.target.checked)}
-                  className="h-4 w-4 rounded text-nexus-secondary focus:ring-nexus-secondary"
-                />
-              </label>
-
-              <label className="p-4 rounded-xl border border-nexus-surface-container-high bg-white/70 flex items-center justify-between cursor-pointer hover:bg-nexus-surface-container/40 transition-colors">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-bold text-nexus-on-surface">Daily Operational Digest</span>
-                  <p className="text-xs text-nexus-on-surface-variant">Automated daily summary of fleet uptime and throughput</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={digestEmail}
-                  onChange={(e) => setDigestEmail(e.target.checked)}
-                  className="h-4 w-4 rounded text-nexus-secondary focus:ring-nexus-secondary"
-                />
-              </label>
-            </CardContent>
-
-            <CardFooter className="flex justify-between items-center pt-2">
-              <Link href="/role" className="text-xs text-nexus-on-surface-variant hover:text-nexus-primary">
-                Back
-              </Link>
-              <Button type="submit" variant="primary" className="font-mono text-xs gap-1">
-                Finalize & Provision Hub <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-      </FadeIn>
-    </div>
+      </section>
+    </main>
   );
 }

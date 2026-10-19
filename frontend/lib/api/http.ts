@@ -1,22 +1,16 @@
-/**
- * Thin fetch wrapper for /api/v1 calls that attaches the authenticated
- * session token and active workspace header.
- */
-const demoModeEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
-
+/** Shared transport for API requests. Authentication and tenant hints are added here once. */
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers || {});
   if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (typeof window !== "undefined") {
-    // 1. Check verified local JWT access token
-    const localToken = localStorage.getItem("nexus_access_token");
-    if (localToken && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${localToken}`);
-    }
 
-    // 2. Check Clerk session token if available
+  if (!headers.has("X-Request-ID") && typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    headers.set("X-Request-ID", crypto.randomUUID());
+  }
+
+  if (typeof window !== "undefined") {
+    // Clerk sessions may use bearer tokens; Nexus password sessions use an HttpOnly cookie.
     if (!headers.has("Authorization")) {
       try {
         const clerk = (window as unknown as { Clerk?: { session?: { getToken: () => Promise<string | null> } } }).Clerk;
@@ -27,18 +21,19 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
       }
     }
 
-    // 3. Optional isolated demo mode strictly in non-production environments
-    const isProd = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
-    if (demoModeEnabled && !isProd && !headers.has("Authorization")) {
-      const demoUser = localStorage.getItem("nexus_demo_user");
-      if (demoUser || document.cookie.includes("nexus_demo_session")) {
-        headers.set("Authorization", "Bearer demo-operator-token");
-      }
+    try {
+      const ws = localStorage.getItem("nexus_active_workspace_id");
+      if (ws && !headers.has("X-Workspace-ID")) headers.set("X-Workspace-ID", ws);
+    } catch {
+      /* Workspace selection is optional; the server still resolves the default membership. */
     }
-    const ws = localStorage.getItem("nexus_active_workspace_id");
-    if (ws && !headers.has("X-Workspace-ID")) headers.set("X-Workspace-ID", ws);
   }
-  return fetch(path, { ...init, headers, credentials: 'include' });
+
+  const apiBase = typeof window === "undefined"
+    ? (process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000")
+    : "";
+  const url = /^https?:\/\//i.test(path) ? path : `${apiBase}${path}`;
+  return fetch(url, { ...init, headers, credentials: "include" });
 }
 
 export async function apiJson<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {

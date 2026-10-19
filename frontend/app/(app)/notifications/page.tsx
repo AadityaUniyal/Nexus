@@ -17,7 +17,6 @@ import {
   Sparkles,
   RefreshCw,
   BellOff,
-  X,
   Truck,
   Building2,
   GitBranch,
@@ -54,104 +53,33 @@ const PRIORITY_COLOR: Record<NotifPriority, string> = {
   CRITICAL: "text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400",
 };
 
-// Realistic mock notifications (used when API returns empty or fails)
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "notif-001",
-    type: "INCIDENT",
-    priority: "CRITICAL",
-    title: "Critical SLA Breach Detected",
-    message: "Vehicle NX-TRK-104 is 3h behind schedule on RT-CHI-DEN-01. Immediate rerouting recommended.",
-    isRead: false,
-    createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-    entityId: "inc-001",
-    entityType: "INCIDENT",
-  },
-  {
-    id: "notif-002",
-    type: "AI",
-    priority: "HIGH",
-    title: "AI Rerouting Recommendation Ready",
-    message: "Simulation SIM-8821 completed with 94% confidence. Suggested I-70 South detour saves 135 minutes.",
-    isRead: false,
-    createdAt: new Date(Date.now() - 18 * 60_000).toISOString(),
-    entityId: "sim-001",
-    entityType: "SIMULATION",
-  },
-  {
-    id: "notif-003",
-    type: "FLEET",
-    priority: "MEDIUM",
-    title: "Fleet Maintenance Alert",
-    message: "NX-TRK-211 is due for scheduled brake inspection. Last service: 42 days ago.",
-    isRead: false,
-    createdAt: new Date(Date.now() - 45 * 60_000).toISOString(),
-  },
-  {
-    id: "notif-004",
-    type: "SYSTEM",
-    priority: "LOW",
-    title: "Platform Health — All Systems Normal",
-    message: "Database latency: 8ms. API response time: 42ms. Telemetry stream active.",
-    isRead: true,
-    createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
-  },
-  {
-    id: "notif-005",
-    type: "SIMULATION",
-    priority: "MEDIUM",
-    title: "Simulation Applied to Live Operations",
-    message: "Decision SIM-8801 was approved and applied by Operations Manager. ACID transaction committed.",
-    isRead: true,
-    createdAt: new Date(Date.now() - 4 * 3600_000).toISOString(),
-    entityId: "sim-001",
-    entityType: "SIMULATION",
-  },
-  {
-    id: "notif-006",
-    type: "INCIDENT",
-    priority: "HIGH",
-    title: "Weather Advisory — Northeast Corridor",
-    message: "Heavy snowfall expected on I-80. 8 vehicles on affected routes. Review routing posture.",
-    isRead: true,
-    createdAt: new Date(Date.now() - 6 * 3600_000).toISOString(),
-  },
-];
-
 export default function NotificationsPage() {
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [filter, setFilter] = React.useState<"ALL" | "UNREAD">("ALL");
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const fetchNotifications = React.useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await apiFetch("/api/v1/notifications");
-      if (res.ok) {
-        const json = await res.json();
-        const list = Array.isArray(json) ? json : json?.data && Array.isArray(json.data) ? json.data : [];
-        if (list.length > 0) {
-          setNotifications(
-            list.map((n: any) => ({
-              id: n.id,
-              type: (n.type || "SYSTEM") as NotifType,
-              priority: (n.priority || "LOW") as NotifPriority,
-              title: n.title,
-              message: n.message || n.body || "",
-              isRead: n.is_read ?? n.isRead ?? false,
-              createdAt: n.created_at || n.createdAt || new Date().toISOString(),
-              entityId: n.entity_id || n.entityId,
-              entityType: n.entity_type || n.entityType,
-            }))
-          );
-          return;
-        }
-      }
-    } catch {
-      // Use mock data as fallback
+      if (!res.ok) throw new Error("Notification service is unavailable.");
+      const list = await res.json();
+      if (!Array.isArray(list)) throw new Error("Notification service returned an invalid response.");
+      setNotifications(list.map((n: any) => ({
+        id: n.id, type: (n.type || "SYSTEM") as NotifType,
+        priority: (n.priority || (n.type === "CRITICAL" ? "CRITICAL" : "LOW")) as NotifPriority,
+        title: n.title, message: n.message, isRead: n.read,
+        createdAt: n.created_at ?? n.createdAt ?? "", entityId: n.entity_id ?? n.entityId,
+        entityType: n.entity_type ?? n.entityType,
+      })));
+    } catch (error) {
+      setNotifications([]);
+      setLoadError(error instanceof Error ? error.message : "Notifications could not be loaded.");
+    } finally {
+      setIsLoading(false);
     }
-    setNotifications(MOCK_NOTIFICATIONS);
-    setIsLoading(false);
   }, []);
 
   React.useEffect(() => {
@@ -159,25 +87,15 @@ export default function NotificationsPage() {
   }, [fetchNotifications]);
 
   const markAllRead = async () => {
-    try {
-      await apiFetch("/api/v1/notifications/mark-all-read", { method: "POST" });
-    } catch {
-      // Optimistic update only
-    }
+    const response = await apiFetch("/api/v1/notifications/read-all", { method: "POST" });
+    if (!response.ok) return;
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
   const markRead = async (id: string) => {
-    try {
-      await apiFetch(`/api/v1/notifications/${id}/read`, { method: "PATCH" });
-    } catch {
-      // Optimistic update only
-    }
+    const response = await apiFetch(`/api/v1/notifications/${id}/read`, { method: "PATCH" });
+    if (!response.ok) return;
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
-  };
-
-  const dismiss = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const displayed = filter === "UNREAD" ? notifications.filter((n) => !n.isRead) : notifications;
@@ -189,7 +107,7 @@ export default function NotificationsPage() {
         <PageHeader
           eyebrow="Operations Center"
           title="Notifications"
-          description="Real-time alerts, AI insights, and fleet events from your operational network."
+          description="Notifications saved to your workspace. Delivery timing depends on the notification source."
           actions={
             <div className="flex items-center gap-2">
               <Button
@@ -216,6 +134,8 @@ export default function NotificationsPage() {
             </div>
           }
         />
+
+        {loadError && <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/[0.05] p-4 text-sm">{loadError}</div>}
 
         {/* Filter pills */}
         <motion.div
@@ -285,7 +205,7 @@ export default function NotificationsPage() {
                 <p className="text-xs text-stone-500 mt-1">
                   {filter === "UNREAD"
                     ? "You've read all your notifications."
-                    : "Operational alerts and AI insights will appear here."}
+                    : "Notifications will appear here when an enabled workflow creates one."}
                 </p>
               </div>
             </motion.div>
@@ -363,20 +283,10 @@ export default function NotificationsPage() {
                                 {notif.message}
                               </p>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                dismiss(notif.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-stone-600 shrink-0"
-                              aria-label="Dismiss"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
                           </div>
                           <div className="mt-2 flex items-center gap-2">
                             <span className="text-[10px] font-mono text-stone-400">
-                              {formatRelativeTime(notif.createdAt)}
+                              {notif.createdAt ? formatRelativeTime(notif.createdAt) : "Time unavailable"}
                             </span>
                             <span className="text-[10px] text-stone-300 dark:text-stone-600">·</span>
                             <Badge

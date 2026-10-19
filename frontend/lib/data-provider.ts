@@ -1,27 +1,8 @@
-import {
-  INITIAL_WAREHOUSES,
-  INITIAL_VEHICLES,
-  INITIAL_ROUTES,
-  INITIAL_ORDERS,
-  INITIAL_INCIDENTS,
-  INITIAL_SIMULATIONS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_EVENTS,
-  INITIAL_AUDIT_LOGS,
-  INITIAL_USERS,
-  INITIAL_PIPELINE,
-  WarehouseItem,
-  VehicleItem,
-  RouteItem,
-  OrderItem,
-  IncidentItem,
-  SimulationItem,
-  NotificationItem,
-  OperationalEventItem,
-  AuditLogItem,
-  UserItem,
-  PipelineHealthItem,
+import type {
+  WarehouseItem, VehicleItem, RouteItem, OrderItem, IncidentItem, SimulationItem,
+  NotificationItem, OperationalEventItem, AuditLogItem, UserItem, PipelineHealthItem,
 } from "./mock-data";
+import { apiFetch } from "@/lib/api/http";
 
 export interface OverviewStats {
   totalVehicles: number;
@@ -30,9 +11,9 @@ export interface OverviewStats {
   activeIncidents: number;
   totalOrders: number;
   delayedOrders: number;
-  slaCompliance: number;
-  fleetUtilization: number;
-  networkEfficiency: number;
+  slaCompliance: number | null;
+  fleetUtilization: number | null;
+  networkEfficiency: number | null;
   activeSimulations: number;
   unreadNotifications: number;
 }
@@ -83,75 +64,13 @@ export interface NexusDataProvider {
   updateSettings(data: any): Promise<any>;
 }
 
-const BACKEND_URL =
-  typeof window !== "undefined"
-    ? ""
-    : (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000");
-const demoModeEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE === "true";
-
 /**
  * Authoritative API Data Provider connected directly to FastAPI & PostgreSQL.
  * Errors propagate without silent mock fallbacks so callers handle genuine operational states.
  */
 export class ApiNexusDataProvider implements NexusDataProvider {
   private async fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
-    const headers = new Headers(options.headers || {});
-    if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
-      headers.set("Content-Type", "application/json");
-    }
-
-    if (typeof window !== "undefined") {
-      if (!headers.has("Authorization")) {
-        // 1. Check verified local JWT access token
-        const accessToken = localStorage.getItem("nexus_access_token");
-        if (accessToken && accessToken.length > 10) {
-          headers.set("Authorization", `Bearer ${accessToken}`);
-        } else {
-          // 2. Check Clerk session token if initialized
-          try {
-            const clerk = (window as any).Clerk;
-            if (clerk?.session) {
-              const token = await clerk.session.getToken();
-              if (token) {
-                headers.set("Authorization", `Bearer ${token}`);
-              }
-            }
-          } catch (e) {
-            // Clerk session token unavailable or not initialized yet
-          }
-        }
-
-        // 3. Optional isolated demo fallback strictly in non-production environments
-        const isProd = process.env.NODE_ENV === "production" || process.env.APP_ENV === "production";
-        if (demoModeEnabled && !isProd && !headers.has("Authorization")) {
-          const demoUserRaw = localStorage.getItem("nexus_demo_user");
-          if (demoUserRaw) {
-            try {
-              const demoUser = JSON.parse(demoUserRaw);
-              const role = (demoUser.role || "OPERATIONS_MANAGER").toUpperCase();
-              if (role === "ADMINISTRATOR") {
-                headers.set("Authorization", "Bearer demo-admin-token");
-              } else if (role === "VIEWER") {
-                headers.set("Authorization", "Bearer demo-viewer-token");
-              } else {
-                headers.set("Authorization", "Bearer demo-operator-token");
-              }
-            } catch {
-              headers.set("Authorization", "Bearer demo-operator-token");
-            }
-          } else if (document.cookie.includes("nexus_demo_session")) {
-            headers.set("Authorization", "Bearer demo-operator-token");
-          }
-        }
-      }
-      const workspaceId = localStorage.getItem("nexus_active_workspace_id");
-      if (workspaceId && !headers.has("X-Workspace-ID")) {
-        headers.set("X-Workspace-ID", workspaceId);
-      }
-    }
-
-    const res = await fetch(url, { ...options, headers });
+    const res = await apiFetch(path, options);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err?.error?.message || err?.detail || `HTTP_${res.status}`);
@@ -164,133 +83,53 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async getOverviewStats(): Promise<OverviewStats> {
-    const [vehicles, warehouses, incidents, orders, sims, notifs] = await Promise.all([
-      this.getVehicles(),
-      this.getWarehouses(),
-      this.getIncidents(),
-      this.getOrders(),
-      this.getSimulations(),
-      this.getNotifications(),
-    ]);
-
-    const totalVehicles = vehicles.length;
-    const activeVehicles = vehicles.filter((v) => v.status === "IN_TRANSIT").length;
-    const totalWarehouses = warehouses.length;
-    const activeIncidents = incidents.filter((i) => i.status !== "RESOLVED" && i.status !== "ARCHIVED").length;
-    const delayedOrders = orders.filter((o) => o.status === "DELAYED").length;
-    const totalOrders = orders.length;
-    const slaCompliance = Math.round(((totalOrders - delayedOrders) / Math.max(1, totalOrders)) * 100);
-    const fleetUtilization = Math.round((activeVehicles / Math.max(1, totalVehicles)) * 100);
-
-    const incidentPenalty = Math.min(30, activeIncidents * 4);
-    const networkEfficiency = Math.max(50, Math.min(100, Math.round((slaCompliance * 0.6 + fleetUtilization * 0.4) - incidentPenalty)));
-
+    const response = await this.fetchApi<{ stats?: Record<string, number | null> }>("/api/v1/overview");
+    const stats = response?.stats;
+    if (!stats) throw new Error("Overview service returned an invalid response.");
     return {
-      totalVehicles,
-      activeVehicles,
-      totalWarehouses,
-      activeIncidents,
-      totalOrders,
-      delayedOrders,
-      slaCompliance,
-      fleetUtilization,
-      networkEfficiency,
-      activeSimulations: sims.length,
-      unreadNotifications: notifs.filter((n) => !n.read).length,
+      totalVehicles: stats.totalVehicles ?? 0,
+      activeVehicles: stats.activeVehicles ?? 0,
+      totalWarehouses: stats.totalWarehouses ?? 0,
+      activeIncidents: stats.activeIncidents ?? 0,
+      totalOrders: stats.totalOrders ?? 0,
+      delayedOrders: stats.delayedOrders ?? 0,
+      slaCompliance: stats.slaCompliance ?? null,
+      fleetUtilization: stats.fleetUtilization ?? null,
+      networkEfficiency: stats.networkEfficiency ?? null,
+      activeSimulations: stats.activeSimulations ?? 0,
+      unreadNotifications: stats.unreadNotifications ?? 0,
     };
   }
 
   async getVehicles(): Promise<VehicleItem[]> {
-    let customVehicles: VehicleItem[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_vehicles");
-        if (raw) customVehicles = JSON.parse(raw);
-      } catch {}
-    }
-
-    try {
-      const data = await this.fetchApi<any[]>("/api/v1/operations/vehicles");
-      if (Array.isArray(data)) {
-        const apiVehicles = data.map((v) => ({
-          id: v.id,
-          code: v.code,
-          name: v.name,
-          model: v.model || "Class-8 EV Hauler",
-          driverName: v.driver_name || "Fleet Pilot",
-          driverPhone: "+1 (555) 019-2834",
-          capacityKg: 22000,
-          currentLoadKg: 17800,
-          status: (v.status as any) || "IN_TRANSIT",
-          lat: v.current_lat || 30.3165,
-          lng: v.current_lng || 78.0322,
-          heading: 90,
-          speedKmh: v.speed_kmh || 68.5,
-          batteryPct: v.battery_pct || 78,
-          healthScore: v.health_score || 94,
-          currentRouteId: v.current_route_id || null,
-          currentRouteName: v.current_route_name || "Active Corridor",
-        }));
-        return apiVehicles;
-      }
-    } catch {
-      // Fall through to custom vehicles only on network error
-    }
-    return customVehicles;
+    const rows = await this.fetchApi<any[]>("/api/v1/operations/vehicles");
+    if (!Array.isArray(rows)) throw new Error("Vehicle service returned an invalid response.");
+    return rows.map((v) => ({
+      id: v.id, code: v.code, name: v.name, model: v.model ?? "",
+      driverName: v.driver_name ?? "", driverPhone: v.driver_phone ?? "",
+      capacityKg: v.capacity_kg ?? null, currentLoadKg: v.current_load_kg ?? null,
+      status: v.status, lat: v.current_lat ?? null, lng: v.current_lng ?? null,
+      heading: v.heading ?? null, speedKmh: v.speed_kmh ?? null,
+      batteryPct: v.battery_pct ?? null, healthScore: v.health_score ?? null,
+      currentRouteId: v.current_route_id ?? null, currentRouteName: v.current_route_name ?? "",
+    } as VehicleItem));
   }
-
   async createVehicle(data: Partial<VehicleItem>): Promise<VehicleItem> {
-    const newVehicle: VehicleItem = {
-      id: data.id || `v-${Date.now()}`,
-      code: data.code || `NX-${Math.floor(100 + Math.random() * 900)}`,
-      name: data.name || "Freightliner eCascadia",
-      model: data.model || "Class-8 EV Hauler",
-      driverName: data.driverName || "Fleet Pilot",
-      driverPhone: data.driverPhone || "+1 (555) 019-2834",
-      capacityKg: data.capacityKg || 22000,
-      currentLoadKg: data.currentLoadKg || 15000,
-      status: (data.status as any) || "IN_TRANSIT",
-      lat: data.lat ?? 30.3165,
-      lng: data.lng ?? 78.0322,
-      heading: data.heading || 90,
-      speedKmh: data.speedKmh ?? 65.0,
-      batteryPct: data.batteryPct ?? 88,
-      healthScore: data.healthScore ?? 96,
-      currentRouteId: data.currentRouteId || null,
-      currentRouteName: data.currentRouteName || "Active Regional Corridor",
-    };
-
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_vehicles");
-        const list = raw ? JSON.parse(raw) : [];
-        localStorage.setItem("nexus_custom_vehicles", JSON.stringify([newVehicle, ...list.filter((v: any) => v.id !== newVehicle.id)]));
-      } catch {}
+    if (!data.code?.trim() || !data.name?.trim() || !data.model?.trim() || !data.driverName?.trim() || data.lat == null || data.lng == null) {
+      throw new Error("Vehicle code, name, model, driver, and current coordinates are required.");
     }
-
-    try {
-      await this.fetchApi("/api/v1/operations/vehicles", {
-        method: "POST",
-        body: JSON.stringify({
-          code: newVehicle.code,
-          name: newVehicle.name,
-          model: newVehicle.model,
-          driver_name: newVehicle.driverName,
-          current_lat: newVehicle.lat,
-          current_lng: newVehicle.lng,
-          speed_kmh: newVehicle.speedKmh,
-          battery_pct: newVehicle.batteryPct,
-          health_score: newVehicle.healthScore,
-          status: newVehicle.status,
-        }),
-      });
-    } catch (err) {
-      console.warn("Backend vehicle persistence fallback to local cache:", err);
-    }
-
-    return newVehicle;
+    const row = await this.fetchApi<any>("/api/v1/operations/vehicles", { method: "POST", body: JSON.stringify({
+      code: data.code, name: data.name, model: data.model, driver_name: data.driverName,
+      current_lat: data.lat, current_lng: data.lng, speed_kmh: data.speedKmh,
+      battery_pct: data.batteryPct, health_score: data.healthScore, status: data.status,
+      current_route_id: data.currentRouteId, current_route_name: data.currentRouteName,
+    }) });
+    return { id: row.id, code: row.code, name: row.name, model: row.model, driverName: row.driver_name,
+      driverPhone: "", capacityKg: null as any, currentLoadKg: null as any, status: row.status,
+      lat: row.current_lat, lng: row.current_lng, heading: null as any, speedKmh: row.speed_kmh,
+      batteryPct: row.battery_pct, healthScore: row.health_score, currentRouteId: row.current_route_id,
+      currentRouteName: row.current_route_name ?? "" };
   }
-
   async updateVehicle(id: string, data: Partial<VehicleItem>): Promise<VehicleItem> {
     const list = await this.getVehicles();
     const existing = list.find((v) => v.id === id || v.code === id);
@@ -301,16 +140,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
       code: data.code || existing?.code || id,
     };
 
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_vehicles");
-        const custom = raw ? JSON.parse(raw) : [];
-        localStorage.setItem(
-          "nexus_custom_vehicles",
-          JSON.stringify([updated, ...custom.filter((v: any) => v.id !== id && v.code !== id)])
-        );
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/vehicles/${encodeURIComponent(id)}`, {
@@ -329,32 +159,21 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         }),
       });
     } catch (err) {
-      console.warn("Backend vehicle update fallback:", err);
+      throw err;
     }
 
     return updated;
   }
 
   async deleteVehicle(id: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_vehicles");
-        if (raw) {
-          const custom = JSON.parse(raw);
-          localStorage.setItem(
-            "nexus_custom_vehicles",
-            JSON.stringify(custom.filter((v: any) => v.id !== id && v.code !== id))
-          );
-        }
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/vehicles/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
     } catch (err) {
-      console.warn("Backend vehicle delete fallback:", err);
+      throw err;
     }
   }
 
@@ -364,92 +183,29 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async getWarehouses(): Promise<WarehouseItem[]> {
-    let customWarehouses: WarehouseItem[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_warehouses");
-        if (raw) customWarehouses = JSON.parse(raw);
-      } catch {}
-    }
-
-    try {
-      const data = await this.fetchApi<any[]>("/api/v1/operations/warehouses");
-      if (Array.isArray(data)) {
-        const apiWarehouses = data.map((w) => ({
-          id: w.id,
-          code: w.code,
-          name: w.name,
-          city: w.city,
-          state: w.state,
-          lat: w.lat,
-          lng: w.lng,
-          capacityUnits: w.capacity_units,
-          currentUnits: w.current_units,
-          dockCount: w.dock_count,
-          activeDocks: w.active_docks,
-          efficiencyPct: w.efficiency_pct,
-          status: (w.status as any) || "OPERATIONAL",
-          createdAt: w.created_at || new Date().toISOString(),
-        }));
-        return apiWarehouses;
-      }
-    } catch {
-      // Fall through to custom only on network error
-    }
-    return customWarehouses;
+    const rows = await this.fetchApi<any[]>("/api/v1/operations/warehouses");
+    if (!Array.isArray(rows)) throw new Error("Warehouse service returned an invalid response.");
+    return rows.map((w) => ({
+      id: w.id, code: w.code, name: w.name, city: w.city, state: w.state,
+      lat: w.lat ?? null, lng: w.lng ?? null, capacityUnits: w.capacity_units ?? null,
+      currentUnits: w.current_units ?? null, dockCount: w.dock_count ?? null,
+      activeDocks: w.active_docks ?? null, efficiencyPct: w.efficiency_pct ?? null,
+      status: w.status, createdAt: w.created_at ?? null,
+    } as WarehouseItem));
   }
-
   async createWarehouse(data: Partial<WarehouseItem>): Promise<WarehouseItem> {
-    const newWh: WarehouseItem = {
-      id: data.id || `wh-${Date.now()}`,
-      code: data.code || `WH-${(data.city || "HUB").substring(0, 3).toUpperCase()}-01`,
-      name: data.name || `${data.city || "Regional"} Logistics Center`,
-      city: data.city || "Dehradun",
-      state: data.state || "Uttarakhand",
-      lat: data.lat ?? 30.3165,
-      lng: data.lng ?? 78.0322,
-      capacityUnits: data.capacityUnits || 50000,
-      currentUnits: data.currentUnits || 32000,
-      dockCount: data.dockCount || 12,
-      activeDocks: data.activeDocks || 6,
-      efficiencyPct: data.efficiencyPct || 94,
-      status: (data.status as any) || "OPERATIONAL",
-      createdAt: new Date().toISOString(),
-    };
-
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_warehouses");
-        const list = raw ? JSON.parse(raw) : [];
-        localStorage.setItem("nexus_custom_warehouses", JSON.stringify([newWh, ...list.filter((w: any) => w.id !== newWh.id)]));
-      } catch {}
+    if (!data.code?.trim() || !data.name?.trim() || !data.city?.trim() || !data.state?.trim() || data.lat == null || data.lng == null || data.capacityUnits == null || data.currentUnits == null || data.dockCount == null || data.activeDocks == null || data.efficiencyPct == null) {
+      throw new Error("Complete location, capacity, inventory, dock, and measured efficiency fields before saving.");
     }
-
-    try {
-      await this.fetchApi("/api/v1/operations/warehouses", {
-        method: "POST",
-        body: JSON.stringify({
-          code: newWh.code,
-          name: newWh.name,
-          city: newWh.city,
-          state: newWh.state,
-          lat: newWh.lat,
-          lng: newWh.lng,
-          capacity_units: newWh.capacityUnits,
-          current_units: newWh.currentUnits,
-          dock_count: newWh.dockCount,
-          active_docks: newWh.activeDocks,
-          efficiency_pct: newWh.efficiencyPct,
-          status: newWh.status,
-        }),
-      });
-    } catch (err) {
-      console.warn("Backend warehouse persistence fallback:", err);
-    }
-
-    return newWh;
+    const row = await this.fetchApi<any>("/api/v1/operations/warehouses", { method: "POST", body: JSON.stringify({
+      code: data.code, name: data.name, city: data.city, state: data.state, lat: data.lat, lng: data.lng,
+      capacity_units: data.capacityUnits, current_units: data.currentUnits, dock_count: data.dockCount,
+      active_docks: data.activeDocks, efficiency_pct: data.efficiencyPct, status: data.status,
+    }) });
+    return { id: row.id, code: row.code, name: row.name, city: row.city, state: row.state, lat: row.lat,
+      lng: row.lng, capacityUnits: row.capacity_units, currentUnits: row.current_units, dockCount: row.dock_count,
+      activeDocks: row.active_docks, efficiencyPct: row.efficiency_pct, status: row.status, createdAt: row.created_at };
   }
-
   async updateWarehouse(id: string, data: Partial<WarehouseItem>): Promise<WarehouseItem> {
     const list = await this.getWarehouses();
     const existing = list.find((w) => w.id === id || w.code === id);
@@ -460,16 +216,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
       code: data.code || existing?.code || id,
     };
 
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_warehouses");
-        const custom = raw ? JSON.parse(raw) : [];
-        localStorage.setItem(
-          "nexus_custom_warehouses",
-          JSON.stringify([updated, ...custom.filter((w: any) => w.id !== id && w.code !== id)])
-        );
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/warehouses/${encodeURIComponent(id)}`, {
@@ -490,82 +237,39 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         }),
       });
     } catch (err) {
-      console.warn("Backend warehouse update fallback:", err);
+      throw err;
     }
 
     return updated;
   }
 
   async deleteWarehouse(id: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_warehouses");
-        if (raw) {
-          const custom = JSON.parse(raw);
-          localStorage.setItem(
-            "nexus_custom_warehouses",
-            JSON.stringify(custom.filter((w: any) => w.id !== id && w.code !== id))
-          );
-        }
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/warehouses/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
     } catch (err) {
-      console.warn("Backend warehouse delete fallback:", err);
+      throw err;
     }
   }
 
   async createRoute(data: Partial<RouteItem>): Promise<RouteItem> {
-    const newRoute: RouteItem = {
-      id: data.id || `route-${Date.now()}`,
-      code: data.code || `RT-${Date.now()}`,
-      name: data.name || "Regional Express Route",
-      originWarehouseId: data.originWarehouseId || "wh-1",
-      originWarehouseName: data.originWarehouseName || "Origin Hub",
-      destWarehouseId: data.destWarehouseId || "wh-2",
-      destWarehouseName: data.destWarehouseName || "Destination Hub",
-      distanceKm: data.distanceKm || 250,
-      avgDurationMins: data.avgDurationMins || 210,
-      riskScore: data.riskScore || 10,
-      trafficCondition: (data.trafficCondition as any) || "CLEAR",
-      waypoints: data.waypoints || [],
-    };
-
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_routes");
-        const list = raw ? JSON.parse(raw) : [];
-        localStorage.setItem("nexus_custom_routes", JSON.stringify([newRoute, ...list.filter((r: any) => r.id !== newRoute.id)]));
-      } catch {}
+    if (!data.code?.trim() || !data.name?.trim() || !data.originWarehouseId || !data.destWarehouseId || !data.originWarehouseName || !data.destWarehouseName || data.distanceKm == null || data.avgDurationMins == null) {
+      throw new Error("Route identifiers, both workspace locations, distance, and duration are required.");
     }
-
-    try {
-      await this.fetchApi("/api/v1/operations/routes", {
-        method: "POST",
-        body: JSON.stringify({
-          code: newRoute.code,
-          name: newRoute.name,
-          origin_warehouse_id: newRoute.originWarehouseId,
-          origin_warehouse_name: newRoute.originWarehouseName,
-          dest_warehouse_id: newRoute.destWarehouseId,
-          dest_warehouse_name: newRoute.destWarehouseName,
-          distance_km: newRoute.distanceKm,
-          avg_duration_mins: newRoute.avgDurationMins,
-          traffic_condition: newRoute.trafficCondition,
-          waypoints: newRoute.waypoints,
-        }),
-      });
-    } catch (err) {
-      console.warn("Backend route persistence fallback:", err);
-    }
-
-    return newRoute;
+    const row = await this.fetchApi<any>("/api/v1/operations/routes", { method: "POST", body: JSON.stringify({
+      code: data.code, name: data.name, origin_warehouse_id: data.originWarehouseId,
+      origin_warehouse_name: data.originWarehouseName, dest_warehouse_id: data.destWarehouseId,
+      dest_warehouse_name: data.destWarehouseName, distance_km: data.distanceKm,
+      avg_duration_mins: data.avgDurationMins, traffic_condition: data.trafficCondition, waypoints: data.waypoints ?? [],
+    }) });
+    return { id: row.id, code: row.code, name: row.name, originWarehouseId: row.origin_warehouse_id,
+      originWarehouseName: row.origin_warehouse_name, destWarehouseId: row.dest_warehouse_id,
+      destWarehouseName: row.dest_warehouse_name, distanceKm: row.distance_km, avgDurationMins: row.avg_duration_mins,
+      riskScore: row.risk_score ?? null as any, trafficCondition: row.traffic_condition, waypoints: row.waypoints ?? [] };
   }
-
   async updateRoute(id: string, data: Partial<RouteItem>): Promise<RouteItem> {
     const list = await this.getRoutes();
     const existing = list.find((r) => r.id === id || r.code === id);
@@ -576,16 +280,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
       code: data.code || existing?.code || id,
     };
 
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_routes");
-        const custom = raw ? JSON.parse(raw) : [];
-        localStorage.setItem(
-          "nexus_custom_routes",
-          JSON.stringify([updated, ...custom.filter((r: any) => r.id !== id && r.code !== id)])
-        );
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/routes/${encodeURIComponent(id)}`, {
@@ -604,343 +299,39 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         }),
       });
     } catch (err) {
-      console.warn("Backend route update fallback:", err);
+      throw err;
     }
 
     return updated;
   }
 
   async deleteRoute(id: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_routes");
-        if (raw) {
-          const custom = JSON.parse(raw);
-          localStorage.setItem(
-            "nexus_custom_routes",
-            JSON.stringify(custom.filter((r: any) => r.id !== id && r.code !== id))
-          );
-        }
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/routes/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
     } catch (err) {
-      console.warn("Backend route delete fallback:", err);
+      throw err;
     }
   }
 
-  async provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }> {
-    let presetWarehouses: WarehouseItem[] = [];
-    let presetVehicles: VehicleItem[] = [];
-
-    if (presetKey === "dehradun") {
-      presetWarehouses = [
-        {
-          id: "wh-ded-01",
-          code: "WH-DED-01",
-          name: "Dehradun Intermodal Terminal",
-          city: "Dehradun",
-          state: "Uttarakhand",
-          lat: 30.3165,
-          lng: 78.0322,
-          capacityUnits: 65000,
-          currentUnits: 42000,
-          dockCount: 16,
-          activeDocks: 10,
-          efficiencyPct: 96,
-          status: "OPERATIONAL",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "wh-hwd-02",
-          code: "WH-HWD-02",
-          name: "Haridwar Industrial Gateway",
-          city: "Haridwar",
-          state: "Uttarakhand",
-          lat: 29.9457,
-          lng: 78.1642,
-          capacityUnits: 50000,
-          currentUnits: 31000,
-          dockCount: 12,
-          activeDocks: 7,
-          efficiencyPct: 93,
-          status: "OPERATIONAL",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "wh-del-03",
-          code: "WH-DEL-03",
-          name: "Delhi NCR Superhub",
-          city: "Delhi",
-          state: "Delhi",
-          lat: 28.6139,
-          lng: 77.2090,
-          capacityUnits: 120000,
-          currentUnits: 98000,
-          dockCount: 32,
-          activeDocks: 24,
-          efficiencyPct: 95,
-          status: "OPERATIONAL",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-
-      presetVehicles = [
-        {
-          id: "v-ded-101",
-          code: "NX-DED-101",
-          name: "Himalayan Express EV Hauler",
-          model: "Class-8 Heavy Hauler",
-          driverName: "Aarav Sharma",
-          driverPhone: "+91 98765 43210",
-          capacityKg: 24000,
-          currentLoadKg: 18500,
-          status: "IN_TRANSIT",
-          lat: 30.2450,
-          lng: 78.0900,
-          heading: 145,
-          speedKmh: 64.0,
-          batteryPct: 82,
-          healthScore: 97,
-          currentRouteId: "rt-ded-hwd",
-          currentRouteName: "Dehradun - Haridwar NH-7 Corridor",
-        },
-        {
-          id: "v-ded-102",
-          code: "NX-DED-102",
-          name: "Doog Valley Rapid Hauler",
-          model: "Electric Prime Mover",
-          driverName: "Vikram Negi",
-          driverPhone: "+91 98123 45678",
-          capacityKg: 20000,
-          currentLoadKg: 14200,
-          status: "IN_TRANSIT",
-          lat: 29.9800,
-          lng: 78.1400,
-          heading: 180,
-          speedKmh: 71.5,
-          batteryPct: 76,
-          healthScore: 94,
-          currentRouteId: "rt-hwd-del",
-          currentRouteName: "Haridwar - Meerut Expressway",
-        },
-        {
-          id: "v-ded-103",
-          code: "NX-DED-103",
-          name: "Garhwal Heavy Transporter",
-          model: "Class-8 EV Rig",
-          driverName: "Pooja Rawat",
-          driverPhone: "+91 98999 11223",
-          capacityKg: 26000,
-          currentLoadKg: 21000,
-          status: "LOADING",
-          lat: 30.3165,
-          lng: 78.0322,
-          heading: 0,
-          speedKmh: 0,
-          batteryPct: 98,
-          healthScore: 99,
-          currentRouteId: null,
-          currentRouteName: "Dehradun Terminal Dock 4",
-        },
-      ];
-    } else if (presetKey === "delhi") {
-      presetWarehouses = [
-        {
-          id: "wh-del-01",
-          code: "WH-DEL-01",
-          name: "Delhi Central Logistics Hub",
-          city: "Delhi",
-          state: "Delhi",
-          lat: 28.6139,
-          lng: 77.2090,
-          capacityUnits: 140000,
-          currentUnits: 110000,
-          dockCount: 36,
-          activeDocks: 28,
-          efficiencyPct: 97,
-          status: "OPERATIONAL",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "wh-noida-02",
-          code: "WH-NOI-02",
-          name: "Noida Greater Expressway Depot",
-          city: "Noida",
-          state: "Uttar Pradesh",
-          lat: 28.5355,
-          lng: 77.3910,
-          capacityUnits: 80000,
-          currentUnits: 62000,
-          dockCount: 20,
-          activeDocks: 15,
-          efficiencyPct: 94,
-          status: "OPERATIONAL",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      presetVehicles = [
-        {
-          id: "v-del-101",
-          code: "NX-DEL-101",
-          name: "NCR Rapid Transit 1",
-          model: "Class-8 EV Hauler",
-          driverName: "Rajesh Kumar",
-          driverPhone: "+91 98111 22334",
-          capacityKg: 22000,
-          currentLoadKg: 18000,
-          status: "IN_TRANSIT",
-          lat: 28.5800,
-          lng: 77.3100,
-          heading: 120,
-          speedKmh: 68.0,
-          batteryPct: 84,
-          healthScore: 95,
-          currentRouteId: "rt-del-noi",
-          currentRouteName: "DND Flyway Corridor",
-        },
-      ];
-    } else if (presetKey === "london") {
-      presetWarehouses = [
-        {
-          id: "wh-lon-01",
-          code: "WH-LON-01",
-          name: "London Thames Superhub",
-          city: "London",
-          state: "Greater London",
-          lat: 51.5074,
-          lng: -0.1278,
-          capacityUnits: 95000,
-          currentUnits: 72000,
-          dockCount: 24,
-          activeDocks: 18,
-          efficiencyPct: 95,
-          status: "OPERATIONAL",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      presetVehicles = [
-        {
-          id: "v-lon-101",
-          code: "NX-LON-101",
-          name: "EuroHaul Electric Prime",
-          model: "Class-8 EV Hauler",
-          driverName: "Oliver Smith",
-          driverPhone: "+44 7700 900077",
-          capacityKg: 24000,
-          currentLoadKg: 19000,
-          status: "IN_TRANSIT",
-          lat: 51.5200,
-          lng: -0.1100,
-          heading: 90,
-          speedKmh: 58.0,
-          batteryPct: 90,
-          healthScore: 96,
-          currentRouteId: "rt-m25",
-          currentRouteName: "M25 Orbital Freight Route",
-        },
-      ];
-    } else if (presetKey === "tokyo") {
-      presetWarehouses = [
-        {
-          id: "wh-tky-01",
-          code: "WH-TKY-01",
-          name: "Tokyo Bay Coastal Terminal",
-          city: "Tokyo",
-          state: "Kanto",
-          lat: 35.6762,
-          lng: 139.6503,
-          capacityUnits: 110000,
-          currentUnits: 88000,
-          dockCount: 28,
-          activeDocks: 22,
-          efficiencyPct: 98,
-          status: "OPERATIONAL",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      presetVehicles = [
-        {
-          id: "v-tky-101",
-          code: "NX-TKY-101",
-          name: "Shinkansen Freight Rig",
-          model: "Class-8 EV Hauler",
-          driverName: "Kenji Sato",
-          driverPhone: "+81 90 1234 5678",
-          capacityKg: 22000,
-          currentLoadKg: 17000,
-          status: "IN_TRANSIT",
-          lat: 35.6500,
-          lng: 139.7000,
-          heading: 45,
-          speedKmh: 66.0,
-          batteryPct: 88,
-          healthScore: 98,
-          currentRouteId: "rt-shuto",
-          currentRouteName: "Shuto Expressway B-Line",
-        },
-      ];
-    } else {
-      presetWarehouses = [...INITIAL_WAREHOUSES];
-      presetVehicles = [...INITIAL_VEHICLES];
-    }
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_custom_warehouses", JSON.stringify(presetWarehouses));
-      localStorage.setItem("nexus_custom_vehicles", JSON.stringify(presetVehicles));
-      if (presetWarehouses.length > 0) {
-        localStorage.setItem(
-          "nexus_workspace_location",
-          JSON.stringify({
-            name: `${presetWarehouses[0].name}, ${presetWarehouses[0].city}`,
-            lat: presetWarehouses[0].lat,
-            lng: presetWarehouses[0].lng,
-          })
-        );
-      }
-    }
-
-    return { warehouses: presetWarehouses, vehicles: presetVehicles };
+  async provisionPreset(): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }> {
+    throw new Error("Preset records are not available. Import or enter your workspace's real operational data.");
   }
 
   async getRoutes(): Promise<RouteItem[]> {
-    let customRoutes: RouteItem[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_routes");
-        if (raw) customRoutes = JSON.parse(raw);
-      } catch {}
-    }
-
-    try {
-      const data = await this.fetchApi<any[]>("/api/v1/operations/routes");
-      if (Array.isArray(data)) {
-        const apiRoutes = data.map((r) => ({
-          id: r.id,
-          code: r.code,
-          name: r.name,
-          originWarehouseId: r.origin_warehouse_id,
-          originWarehouseName: r.origin_warehouse_name,
-          destWarehouseId: r.dest_warehouse_id,
-          destWarehouseName: r.dest_warehouse_name,
-          distanceKm: r.distance_km,
-          avgDurationMins: r.avg_duration_mins,
-          riskScore: r.risk_score || 12,
-          trafficCondition: (r.traffic_condition as any) || "CLEAR",
-          waypoints: r.waypoints || [],
-        }));
-        return apiRoutes;
-      }
-    } catch {
-      // Fall through to custom routes only on network error
-    }
-    return customRoutes;
+    const rows = await this.fetchApi<any[]>("/api/v1/operations/routes");
+    if (!Array.isArray(rows)) throw new Error("Route service returned an invalid response.");
+    return rows.map((r) => ({
+      id: r.id, code: r.code, name: r.name, originWarehouseId: r.origin_warehouse_id,
+      originWarehouseName: r.origin_warehouse_name ?? "", destWarehouseId: r.dest_warehouse_id,
+      destWarehouseName: r.dest_warehouse_name ?? "", distanceKm: r.distance_km ?? null,
+      avgDurationMins: r.avg_duration_mins ?? null, riskScore: r.risk_score ?? null,
+      trafficCondition: r.traffic_condition ?? null, waypoints: r.waypoints ?? [],
+    } as RouteItem));
   }
-
   async getRoute(id: string): Promise<RouteItem | null> {
     try {
       const r = await this.fetchApi<any>(`/api/v1/operations/routes/${id}`);
@@ -955,8 +346,8 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         destWarehouseName: r.dest_warehouse_name,
         distanceKm: r.distance_km,
         avgDurationMins: r.avg_duration_mins,
-        riskScore: r.risk_score || 12,
-        trafficCondition: (r.traffic_condition as any) || "CLEAR",
+        riskScore: r.risk_score ?? null,
+        trafficCondition: (r.traffic_condition as any) || null,
         waypoints: r.waypoints || [],
       };
     } catch (err: any) {
@@ -968,44 +359,19 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async getOrders(): Promise<OrderItem[]> {
-    let customOrders: OrderItem[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_orders");
-        if (raw) customOrders = JSON.parse(raw);
-      } catch {}
-    }
-
-    try {
-      const data = await this.fetchApi<any[]>("/api/v1/operations/orders");
-      if (Array.isArray(data)) {
-        const apiOrders = data.map((o) => ({
-          id: o.id,
-          orderNumber: o.order_number,
-          customerName: o.customer_name,
-          destination: o.destination,
-          priority: (o.priority as any) || "NORMAL",
-          status: (o.status as any) || "ASSIGNED",
-          warehouseId: o.warehouse_id || null,
-          warehouseName: o.warehouse_name || "Regional Hub",
-          routeId: o.route_id || null,
-          routeName: o.route_name || "Direct Corridor",
-          vehicleId: o.vehicle_id || null,
-          vehicleCode: o.vehicle_code || "Unassigned",
-          deadline: o.deadline,
-          estimatedEta: o.estimated_eta || o.deadline,
-          itemsCount: o.items_count || 12,
-          totalCost: o.total_cost || 1200,
-          slaCompliant: o.status !== "DELAYED",
-        }));
-        return apiOrders;
-      }
-    } catch {
-      // Fall through to custom orders only on network error
-    }
-    return customOrders;
+    const rows = await this.fetchApi<any[]>("/api/v1/operations/orders");
+    if (!Array.isArray(rows)) throw new Error("Order service returned an invalid response.");
+    return rows.map((o) => ({
+      id: o.id, orderNumber: o.order_number, customerName: o.customer_name,
+      destination: o.destination, priority: o.priority, status: o.status,
+      warehouseId: o.warehouse_id ?? null, warehouseName: o.warehouse_name ?? "",
+      routeId: o.route_id ?? null, routeName: o.route_name ?? "",
+      vehicleId: o.vehicle_id ?? null, vehicleCode: o.vehicle_code ?? "",
+      deadline: o.deadline ?? "", estimatedEta: o.estimated_eta ?? "",
+      itemsCount: o.items_count ?? null, totalCost: o.total_cost ?? null,
+      slaCompliant: o.sla_compliant ?? null,
+    } as OrderItem));
   }
-
   async getOrder(id: string): Promise<OrderItem | null> {
     try {
       const o = await this.fetchApi<any>(`/api/v1/operations/orders/${id}`);
@@ -1015,19 +381,19 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         orderNumber: o.order_number,
         customerName: o.customer_name,
         destination: o.destination,
-        priority: (o.priority as any) || "NORMAL",
-        status: (o.status as any) || "ASSIGNED",
+        priority: o.priority,
+        status: o.status,
         warehouseId: o.warehouse_id || null,
-        warehouseName: o.warehouse_name || "Regional Hub",
+        warehouseName: o.warehouse_name ?? "",
         routeId: o.route_id || null,
-        routeName: o.route_name || "Direct Corridor",
+        routeName: o.route_name ?? "",
         vehicleId: o.vehicle_id || null,
-        vehicleCode: o.vehicle_code || "Unassigned",
+        vehicleCode: o.vehicle_code ?? "",
         deadline: o.deadline,
-        estimatedEta: o.estimated_eta || o.deadline,
-        itemsCount: o.items_count || 12,
-        totalCost: o.total_cost || 1200,
-        slaCompliant: o.status !== "DELAYED",
+        estimatedEta: o.estimated_eta ?? "",
+        itemsCount: o.items_count ?? null,
+        totalCost: o.total_cost ?? null,
+        slaCompliant: o.sla_compliant ?? null,
       };
     } catch (err: any) {
       if (err.message?.includes("404") || err.message?.includes("NOT_FOUND")) {
@@ -1038,56 +404,21 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async createOrder(data: Partial<OrderItem>): Promise<OrderItem> {
-    const newOrder: OrderItem = {
-      id: data.id || `ord-${Date.now()}`,
-      orderNumber: data.orderNumber || `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
-      customerName: data.customerName || "Enterprise Client",
-      destination: data.destination || "Regional Distribution Center",
-      priority: (data.priority as any) || "NORMAL",
-      status: (data.status as any) || "ASSIGNED",
-      warehouseId: data.warehouseId || null,
-      warehouseName: data.warehouseName || "Origin Hub",
-      routeId: data.routeId || null,
-      routeName: data.routeName || "Express Corridor",
-      vehicleId: data.vehicleId || null,
-      vehicleCode: data.vehicleCode || undefined,
-      deadline: data.deadline || new Date(Date.now() + 86400000).toISOString(),
-      estimatedEta: data.estimatedEta || new Date(Date.now() + 86400000).toISOString(),
-      itemsCount: data.itemsCount || 12,
-      totalCost: data.totalCost || 1450,
-      slaCompliant: true,
-    };
-
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_orders");
-        const list = raw ? JSON.parse(raw) : [];
-        localStorage.setItem("nexus_custom_orders", JSON.stringify([newOrder, ...list.filter((o: any) => o.id !== newOrder.id)]));
-      } catch {}
+    if (!data.orderNumber?.trim() || !data.customerName?.trim() || !data.destination?.trim() || !data.deadline || data.totalCost == null) {
+      throw new Error("Order number, customer, destination, deadline, and declared cost are required.");
     }
-
-    try {
-      await this.fetchApi("/api/v1/operations/orders", {
-        method: "POST",
-        body: JSON.stringify({
-          order_number: newOrder.orderNumber,
-          customer_name: newOrder.customerName,
-          destination: newOrder.destination,
-          priority: newOrder.priority,
-          status: newOrder.status,
-          total_cost: newOrder.totalCost,
-          deadline: newOrder.deadline,
-          vehicle_id: newOrder.vehicleId,
-          vehicle_code: newOrder.vehicleCode,
-        }),
-      });
-    } catch (err) {
-      console.warn("Backend order persistence fallback:", err);
-    }
-
-    return newOrder;
+    const row = await this.fetchApi<any>("/api/v1/operations/orders", { method: "POST", body: JSON.stringify({
+      order_number: data.orderNumber, customer_name: data.customerName, destination: data.destination,
+      priority: data.priority, status: data.status, total_cost: data.totalCost, deadline: data.deadline,
+      warehouse_id: data.warehouseId, route_id: data.routeId,
+      vehicle_id: data.vehicleId, vehicle_code: data.vehicleCode,
+    }) });
+    return { id: row.id, orderNumber: row.order_number, customerName: row.customer_name, destination: row.destination,
+      priority: row.priority, status: row.status, warehouseId: row.warehouse_id ?? null, warehouseName: row.warehouse_name ?? "",
+      routeId: row.route_id ?? null, routeName: row.route_name ?? "", vehicleId: row.vehicle_id ?? null,
+      vehicleCode: row.vehicle_code ?? "", deadline: row.deadline, estimatedEta: row.estimated_eta ?? "",
+      itemsCount: row.items_count ?? null as any, totalCost: row.total_cost, slaCompliant: row.sla_compliant ?? null as any };
   }
-
   async updateOrder(id: string, data: Partial<OrderItem>): Promise<OrderItem> {
     const list = await this.getOrders();
     const existing = list.find((o) => o.id === id || o.orderNumber === id);
@@ -1098,16 +429,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
       orderNumber: data.orderNumber || existing?.orderNumber || id,
     };
 
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_orders");
-        const custom = raw ? JSON.parse(raw) : [];
-        localStorage.setItem(
-          "nexus_custom_orders",
-          JSON.stringify([updated, ...custom.filter((o: any) => o.id !== id && o.orderNumber !== id)])
-        );
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/orders/${encodeURIComponent(id)}`, {
@@ -1125,81 +447,41 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         }),
       });
     } catch (err) {
-      console.warn("Backend order update fallback:", err);
+      throw err;
     }
 
     return updated;
   }
 
   async deleteOrder(id: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_orders");
-        if (raw) {
-          const custom = JSON.parse(raw);
-          localStorage.setItem(
-            "nexus_custom_orders",
-            JSON.stringify(custom.filter((o: any) => o.id !== id && o.orderNumber !== id))
-          );
-        }
-      } catch {}
-    }
+
 
     try {
       await this.fetchApi(`/api/v1/operations/orders/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
     } catch (err) {
-      console.warn("Backend order delete fallback:", err);
+      throw err;
     }
   }
 
   async getIncidents(severity?: string): Promise<IncidentItem[]> {
-    let customIncidents: IncidentItem[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_incidents");
-        if (raw) customIncidents = JSON.parse(raw);
-      } catch {}
-    }
-
-    const query = severity && severity !== "ALL" ? `?severity=${severity}` : "";
-    try {
-      const data = await this.fetchApi<any[]>(`/api/v1/incidents${query}`);
-      if (Array.isArray(data)) {
-        const apiIncidents = data.map((i) => ({
-          id: i.id,
-          code: i.code,
-          title: i.title,
-          summary: i.summary,
-          severity: (i.severity as any) || "HIGH",
-          status: (i.status as any) || "DETECTED",
-          affectedEntityType: (i.affected_entity_type as any) || "VEHICLE",
-          affectedEntityId: i.affected_entity_id,
-          affectedEntityName: i.affected_entity_name,
-          rootCause: i.root_cause || "Corridor obstruction",
-          aiAnalysis: i.ai_analysis || "Reroute scenario available",
-          potentialImpact: "Delay risk on active corridor",
-          costEstimate: i.cost_estimate || 0,
-          ordersAffected: i.orders_affected ?? i.ordersAffected ?? 0,
-          delayMinutes: i.delay_minutes || 0,
-          createdAt: i.created_at || new Date().toISOString(),
-          timeline: (i.timeline || []).map((t: any) => ({
-            id: t.id,
-            status: t.status,
-            note: t.note,
-            actorName: t.actor_name,
-            createdAt: t.created_at,
-          })),
-        }));
-        return apiIncidents;
-      }
-    } catch {
-      // Fall through to custom incidents only on network error
-    }
-    return customIncidents;
+    const query = severity && severity !== "ALL" ? `?severity=${encodeURIComponent(severity)}` : "";
+    const rows = await this.fetchApi<any[]>(`/api/v1/incidents${query}`);
+    if (!Array.isArray(rows)) throw new Error("Incident service returned an invalid response.");
+    return rows.map((i) => ({
+      id: i.id, code: i.code, title: i.title, summary: i.summary, severity: i.severity,
+      status: i.status, affectedEntityType: i.affected_entity_type,
+      affectedEntityId: i.affected_entity_id, affectedEntityName: i.affected_entity_name,
+      rootCause: i.root_cause ?? "", aiAnalysis: i.ai_analysis ?? "",
+      potentialImpact: i.potential_impact ?? "", costEstimate: i.cost_estimate ?? null,
+      ordersAffected: i.orders_affected ?? i.ordersAffected ?? null,
+      delayMinutes: i.delay_minutes ?? null, createdAt: i.created_at ?? "",
+      timeline: (i.timeline ?? []).map((t: any) => ({
+        id: t.id, status: t.status, note: t.note, actorName: t.actor_name, createdAt: t.created_at,
+      })),
+    } as IncidentItem));
   }
-
   async getIncident(id: string): Promise<IncidentItem | null> {
     try {
       const i = await this.fetchApi<any>(`/api/v1/incidents/${id}`);
@@ -1209,18 +491,18 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         code: i.code,
         title: i.title,
         summary: i.summary,
-        severity: (i.severity as any) || "HIGH",
-        status: (i.status as any) || "DETECTED",
-        affectedEntityType: (i.affected_entity_type as any) || "VEHICLE",
+        severity: i.severity,
+        status: i.status,
+        affectedEntityType: i.affected_entity_type,
         affectedEntityId: i.affected_entity_id,
         affectedEntityName: i.affected_entity_name,
-        rootCause: i.root_cause || "Atmospheric corridor obstruction",
-        aiAnalysis: i.ai_analysis || "Reroute scenario available",
-        potentialImpact: "Delay risk on active corridor",
-        costEstimate: i.cost_estimate || 0,
-        ordersAffected: i.orders_affected ?? i.ordersAffected ?? 0,
-        delayMinutes: i.delay_minutes || 0,
-        createdAt: i.created_at || new Date().toISOString(),
+        rootCause: i.root_cause ?? "",
+        aiAnalysis: i.ai_analysis ?? "",
+        potentialImpact: "",
+        costEstimate: i.cost_estimate ?? null as any,
+        ordersAffected: i.orders_affected ?? i.ordersAffected ?? null as any,
+        delayMinutes: i.delay_minutes ?? null as any,
+        createdAt: i.created_at ?? "",
         timeline: (i.timeline || []).map((t: any) => ({
           id: t.id,
           status: t.status,
@@ -1238,64 +520,27 @@ export class ApiNexusDataProvider implements NexusDataProvider {
   }
 
   async createIncident(data: Partial<IncidentItem>): Promise<IncidentItem> {
-    const newInc: IncidentItem = {
-      id: data.id || `inc-${Date.now()}`,
-      code: data.code || `INC-${Math.floor(100 + Math.random() * 900)}`,
-      title: data.title || "Field Operational Incident",
-      summary: data.summary || "Incident reported via Operational Commander",
-      severity: (data.severity as any) || "HIGH",
-      status: (data.status as any) || "DETECTED",
-      affectedEntityType: (data.affectedEntityType as any) || "VEHICLE",
-      affectedEntityId: data.affectedEntityId || "v-101",
-      affectedEntityName: data.affectedEntityName || "Fleet Vehicle",
-      rootCause: data.rootCause || "Reported via Dispatcher UI",
-      aiAnalysis: data.aiAnalysis || "Pending automated telemetry analysis.",
-      potentialImpact: "Delay risk on corridor",
-      costEstimate: data.costEstimate || 0,
-      ordersAffected: data.ordersAffected || 0,
-      delayMinutes: data.delayMinutes || 0,
-      timeline: [],
-      createdAt: new Date().toISOString(),
-    };
-
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_incidents");
-        const list = raw ? JSON.parse(raw) : [];
-        localStorage.setItem("nexus_custom_incidents", JSON.stringify([newInc, ...list.filter((x: any) => x.id !== newInc.id)]));
-      } catch {}
+    if (!data.title?.trim() || !data.summary?.trim() || !data.affectedEntityType || !data.affectedEntityId?.trim() || !data.affectedEntityName?.trim()) {
+      throw new Error("Incident title, summary, affected asset type, ID, and name are required.");
     }
-
-    try {
-      const payload = {
-        title: newInc.title,
-        summary: newInc.summary,
-        severity: newInc.severity,
-        affected_entity_type: newInc.affectedEntityType,
-        affected_entity_id: newInc.affectedEntityId,
-        affected_entity_name: newInc.affectedEntityName,
-        delay_minutes: newInc.delayMinutes,
-        cost_estimate: newInc.costEstimate,
-        root_cause: newInc.rootCause,
-        ai_analysis: newInc.aiAnalysis,
-      };
-      const res = await this.fetchApi<any>("/api/v1/incidents", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      if (res && res.id) {
-        newInc.id = res.id;
-        newInc.code = res.code || newInc.code;
-      }
-    } catch {}
-
-    return newInc;
+    const row = await this.fetchApi<any>("/api/v1/incidents", { method: "POST", body: JSON.stringify({
+      title: data.title, summary: data.summary, severity: data.severity,
+      affected_entity_type: data.affectedEntityType, affected_entity_id: data.affectedEntityId,
+      affected_entity_name: data.affectedEntityName, delay_minutes: data.delayMinutes,
+      cost_estimate: data.costEstimate, root_cause: data.rootCause, ai_analysis: data.aiAnalysis,
+    }) });
+    return { id: row.id, code: row.code, title: row.title, summary: row.summary, severity: row.severity,
+      status: row.status, affectedEntityType: row.affected_entity_type, affectedEntityId: row.affected_entity_id,
+      affectedEntityName: row.affected_entity_name, rootCause: row.root_cause ?? "", aiAnalysis: row.ai_analysis ?? "",
+      potentialImpact: row.potential_impact ?? "", costEstimate: row.cost_estimate ?? null as any,
+      ordersAffected: row.orders_affected ?? null as any, delayMinutes: row.delay_minutes ?? null as any,
+      timeline: (row.timeline ?? []).map((t: any) => ({ id: t.id, status: t.status, note: t.note, actorName: t.actor_name, createdAt: t.created_at })),
+      createdAt: row.created_at };
   }
-
-  async transitionIncident(id: string, status: string, note: string, actorName = "Sarah Chen"): Promise<IncidentItem> {
+  async transitionIncident(id: string, status: string, note: string, actorName?: string): Promise<IncidentItem> {
     const res = await this.fetchApi<any>(`/api/v1/incidents/${id}/transition`, {
       method: "POST",
-      body: JSON.stringify({ status, note, actor_name: actorName }),
+      body: JSON.stringify({ status, note, ...(actorName ? { actor_name: actorName } : {}) }),
     });
     return {
       id: res.id,
@@ -1309,7 +554,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
       affectedEntityName: res.affected_entity_name,
       rootCause: res.root_cause,
       aiAnalysis: res.ai_analysis,
-      potentialImpact: "Delay risk",
+      potentialImpact: "",
       costEstimate: res.cost_estimate,
       ordersAffected: res.orders_affected ?? res.ordersAffected ?? 0,
       delayMinutes: res.delay_minutes,
@@ -1318,159 +563,59 @@ export class ApiNexusDataProvider implements NexusDataProvider {
     };
   }
 
-  async getSimulations(): Promise<SimulationItem[]> {
-    const data = await this.fetchApi<any[]>("/api/v1/simulations");
-    if (Array.isArray(data)) {
-      return data.map((s) => ({
-        id: s.id,
-        code: s.code,
-        title: s.title,
-        description: s.description,
-        incidentId: s.incident_id,
-        status: (s.status as any) || "COMPLETED",
-        variables: s.variables || {},
-        baselineMetrics: {
-          totalDistanceKm: s.baseline_metrics?.totalDistanceKm || 1620.0,
-          projectedDelayMins: s.baseline_metrics?.projectedDelayMins || s.baseline_metrics?.currentDelayMins || 180,
-          slaBreachRiskPct: s.baseline_metrics?.slaBreachRiskPct || 88.0,
-          totalCostUsd: s.baseline_metrics?.totalCostUsd || s.baseline_metrics?.baseCostUsd || 1450.0,
-        },
-        simulatedMetrics: {
-          totalDistanceKm: s.simulated_metrics?.totalDistanceKm || 1705.0,
-          projectedDelayMins: s.simulated_metrics?.projectedDelayMins || 45,
-          slaBreachRiskPct: s.simulated_metrics?.slaBreachRiskPct || 12.0,
-          totalCostUsd: s.simulated_metrics?.totalCostUsd || 1530.70,
-          netTimeSavedMins: s.simulated_metrics?.netTimeSavedMins || 135,
-          costDeltaUsd: s.simulated_metrics?.costDeltaUsd || 80.70,
-          recommendationScore: s.simulated_metrics?.recommendationScore || 94,
-          verdict: s.simulated_metrics?.verdict || "HIGHLY_RECOMMENDED",
-          insights: s.simulated_metrics?.insights || [],
-        },
-        aiBriefing: s.ai_briefing,
-        appliedAt: s.applied_at,
-        appliedBy: s.applied_by,
-        createdAt: s.created_at || new Date().toISOString(),
-      }));
-    }
-    return [];
+  private mapSimulation(s: any): SimulationItem {
+    const baseline = s.baseline_metrics ?? s.baselineMetrics ?? {};
+    const metrics = s.simulated_metrics ?? s.simulatedMetrics ?? {};
+    return {
+      id: s.id, code: s.code, title: s.title, description: s.description,
+      incidentId: s.incident_id ?? s.incidentId, status: s.status,
+      variables: s.variables ?? {},
+      baselineMetrics: {
+        totalDistanceKm: baseline.totalDistanceKm ?? baseline.total_distance_km,
+        projectedDelayMins: baseline.currentDelayMins ?? baseline.current_delay_mins ?? baseline.projectedDelayMins,
+        slaBreachRiskPct: baseline.slaBreachRiskPct ?? baseline.sla_breach_risk_pct,
+        totalCostUsd: baseline.baseCostUsd ?? baseline.base_cost_usd,
+      },
+      simulatedMetrics: {
+        totalDistanceKm: metrics.totalDistanceKm ?? metrics.total_distance_km,
+        projectedDelayMins: metrics.projectedDelayMins ?? metrics.projected_delay_mins,
+        slaBreachRiskPct: metrics.slaBreachRiskPct ?? metrics.sla_breach_risk_pct,
+        totalCostUsd: metrics.totalCostUsd ?? metrics.total_cost_usd,
+        netTimeSavedMins: metrics.netTimeSavedMins ?? metrics.net_time_saved_mins,
+        costDeltaUsd: metrics.costDeltaUsd ?? metrics.cost_delta_usd,
+        recommendationScore: metrics.recommendationScore ?? metrics.recommendation_score,
+        verdict: metrics.verdict,
+        insights: metrics.insights ?? [],
+      },
+      aiBriefing: s.ai_briefing ?? s.aiBriefing, appliedAt: s.applied_at ?? s.appliedAt,
+      appliedBy: s.applied_by ?? s.appliedBy, createdAt: s.created_at ?? s.createdAt ?? "",
+    };
   }
 
+  async getSimulations(): Promise<SimulationItem[]> {
+    const rows = await this.fetchApi<any[]>("/api/v1/simulations");
+    if (!Array.isArray(rows)) throw new Error("Simulation service returned an invalid response.");
+    return rows.map((row) => this.mapSimulation(row));
+  }
   async getSimulation(id: string): Promise<SimulationItem | null> {
     try {
-      const s = await this.fetchApi<any>(`/api/v1/simulations/${id}`);
-      if (!s) return null;
-      return {
-        id: s.id,
-        code: s.code,
-        title: s.title,
-        description: s.description,
-        incidentId: s.incident_id,
-        status: (s.status as any) || "COMPLETED",
-        variables: s.variables || {},
-        baselineMetrics: {
-          totalDistanceKm: s.baseline_metrics?.totalDistanceKm || 1620.0,
-          projectedDelayMins: s.baseline_metrics?.projectedDelayMins || s.baseline_metrics?.currentDelayMins || 180,
-          slaBreachRiskPct: s.baseline_metrics?.slaBreachRiskPct || 88.0,
-          totalCostUsd: s.baseline_metrics?.totalCostUsd || s.baseline_metrics?.baseCostUsd || 1450.0,
-        },
-        simulatedMetrics: {
-          totalDistanceKm: s.simulated_metrics?.totalDistanceKm || 1705.0,
-          projectedDelayMins: s.simulated_metrics?.projectedDelayMins || 45,
-          slaBreachRiskPct: s.simulated_metrics?.slaBreachRiskPct || 12.0,
-          totalCostUsd: s.simulated_metrics?.totalCostUsd || 1530.70,
-          netTimeSavedMins: s.simulated_metrics?.netTimeSavedMins || 135,
-          costDeltaUsd: s.simulated_metrics?.costDeltaUsd || 80.70,
-          recommendationScore: s.simulated_metrics?.recommendationScore || 94,
-          verdict: s.simulated_metrics?.verdict || "HIGHLY_RECOMMENDED",
-          insights: s.simulated_metrics?.insights || [],
-        },
-        aiBriefing: s.ai_briefing,
-        appliedAt: s.applied_at,
-        appliedBy: s.applied_by,
-        createdAt: s.created_at || new Date().toISOString(),
-      };
+      const row = await this.fetchApi<any>(`/api/v1/simulations/${encodeURIComponent(id)}`);
+      return row ? this.mapSimulation(row) : null;
     } catch (err: any) {
-      if (err.message?.includes("404") || err.message?.includes("NOT_FOUND")) {
-        return null;
-      }
+      if (err.message?.includes("404") || err.message?.includes("NOT_FOUND")) return null;
       throw err;
     }
   }
-
   async createSimulation(data: any): Promise<SimulationItem> {
-    const res = await this.fetchApi<any>("/api/v1/simulations", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-    return {
-      id: res.id,
-      code: res.code,
-      title: res.title,
-      description: res.description,
-      incidentId: res.incident_id,
-      status: (res.status as any) || "COMPLETED",
-      variables: res.variables || {},
-      baselineMetrics: {
-        totalDistanceKm: res.baseline_metrics?.totalDistanceKm || 1620.0,
-        projectedDelayMins: res.baseline_metrics?.projectedDelayMins || 180,
-        slaBreachRiskPct: res.baseline_metrics?.slaBreachRiskPct || 88.0,
-        totalCostUsd: res.baseline_metrics?.totalCostUsd || 1450.0,
-      },
-      simulatedMetrics: {
-        totalDistanceKm: res.simulated_metrics?.totalDistanceKm || 1705.0,
-        projectedDelayMins: res.simulated_metrics?.projectedDelayMins || 45,
-        slaBreachRiskPct: res.simulated_metrics?.slaBreachRiskPct || 12.0,
-        totalCostUsd: res.simulated_metrics?.totalCostUsd || 1530.70,
-        netTimeSavedMins: res.simulated_metrics?.netTimeSavedMins || 135,
-        costDeltaUsd: res.simulated_metrics?.costDeltaUsd || 80.70,
-        recommendationScore: res.simulated_metrics?.recommendationScore || 94,
-        verdict: res.simulated_metrics?.verdict || "HIGHLY_RECOMMENDED",
-        insights: res.simulated_metrics?.insights || [],
-      },
-      aiBriefing: res.ai_briefing,
-      appliedAt: res.applied_at,
-      appliedBy: res.applied_by,
-      createdAt: res.created_at || new Date().toISOString(),
-    };
+    const row = await this.fetchApi<any>("/api/v1/simulations", { method: "POST", body: JSON.stringify(data) });
+    return this.mapSimulation(row);
   }
-
-  async applyDecision(simId: string, actorName = "Sarah Chen"): Promise<SimulationItem> {
-    const res = await this.fetchApi<any>(`/api/v1/simulations/${simId}/apply-decision`, {
-      method: "POST",
-      body: JSON.stringify({ actor_name: actorName }),
+  async applyDecision(simId: string, actorName?: string): Promise<SimulationItem> {
+    const row = await this.fetchApi<any>(`/api/v1/simulations/${encodeURIComponent(simId)}/apply-decision`, {
+      method: "POST", body: JSON.stringify(actorName ? { actor_name: actorName } : {}),
     });
-    return {
-      id: res.id,
-      code: res.code,
-      title: res.title,
-      description: res.description,
-      incidentId: res.incident_id,
-      status: (res.status as any) || "APPLIED",
-      variables: res.variables || {},
-      baselineMetrics: {
-        totalDistanceKm: res.baseline_metrics?.totalDistanceKm || 1620.0,
-        projectedDelayMins: res.baseline_metrics?.projectedDelayMins || 180,
-        slaBreachRiskPct: res.baseline_metrics?.slaBreachRiskPct || 88.0,
-        totalCostUsd: res.baseline_metrics?.totalCostUsd || 1450.0,
-      },
-      simulatedMetrics: {
-        totalDistanceKm: res.simulated_metrics?.totalDistanceKm || 1705.0,
-        projectedDelayMins: res.simulated_metrics?.projectedDelayMins || 45,
-        slaBreachRiskPct: res.simulated_metrics?.slaBreachRiskPct || 12.0,
-        totalCostUsd: res.simulated_metrics?.totalCostUsd || 1530.70,
-        netTimeSavedMins: res.simulated_metrics?.netTimeSavedMins || 135,
-        costDeltaUsd: res.simulated_metrics?.costDeltaUsd || 80.70,
-        recommendationScore: res.simulated_metrics?.recommendationScore || 94,
-        verdict: res.simulated_metrics?.verdict || "HIGHLY_RECOMMENDED",
-        insights: res.simulated_metrics?.insights || [],
-      },
-      aiBriefing: res.ai_briefing,
-      appliedAt: res.applied_at,
-      appliedBy: res.applied_by,
-      createdAt: res.created_at || new Date().toISOString(),
-    };
+    return this.mapSimulation(row);
   }
-
   async getNotifications(): Promise<NotificationItem[]> {
     const data = await this.fetchApi<any[]>("/api/v1/notifications");
     if (Array.isArray(data)) {
@@ -1484,7 +629,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         createdAt: n.created_at,
       }));
     }
-    return [];
+    throw new Error("Notification service returned an invalid response.");
   }
 
   async markNotificationRead(id: string): Promise<NotificationItem> {
@@ -1513,7 +658,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         createdAt: a.created_at,
       }));
     }
-    return [];
+    throw new Error("Audit service returned an invalid response.");
   }
 
   async getPipelineHealth(): Promise<PipelineHealthItem[]> {
@@ -1528,10 +673,10 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         throughputPerSec: p.throughput_per_sec,
         recordsToday: p.records_today,
         errorCount: p.error_count || 0,
-        lastSyncAt: p.last_sync_at || new Date().toISOString(),
+        lastSyncAt: p.last_sync_at ?? null,
       }));
     }
-    return [];
+    throw new Error("Pipeline service returned an invalid response.");
   }
 
   async getUsers(): Promise<UserItem[]> {
@@ -1542,12 +687,12 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         name: u.name,
         email: u.email,
         role: u.role,
-        department: u.department || "Operations",
-        active: u.status ? u.status === "ACTIVE" : true,
-        lastActive: u.last_login_at || u.updated_at || new Date().toISOString(),
+        department: u.department || "Not set",
+        active: u.is_active ?? u.isActive ?? false,
+        lastActive: u.last_login_at ?? u.updated_at ?? null,
       }));
     }
-    return [];
+    throw new Error("User service returned an invalid response.");
   }
 
   async getUser(id: string): Promise<UserItem | null> {
@@ -1559,9 +704,9 @@ export class ApiNexusDataProvider implements NexusDataProvider {
         name: u.name,
         email: u.email,
         role: u.role,
-        department: u.department || "Operations",
-        active: u.status ? u.status === "ACTIVE" : true,
-        lastActive: u.last_login_at || u.updated_at || new Date().toISOString(),
+        department: u.department || "Not set",
+        active: u.is_active ?? u.isActive ?? false,
+        lastActive: u.last_login_at ?? u.updated_at ?? null,
       };
     } catch (err: any) {
       if (err.message?.includes("404") || err.message?.includes("NOT_FOUND")) {
@@ -1581,30 +726,20 @@ export class ApiNexusDataProvider implements NexusDataProvider {
       name: u.name,
       email: u.email,
       role: u.role,
-      department: u.department || "Operations",
-      active: u.status ? u.status === "ACTIVE" : true,
-      lastActive: u.last_login_at || u.updated_at || new Date().toISOString(),
+      department: u.department || "Not set",
+      active: u.is_active ?? u.isActive ?? false,
+      lastActive: u.last_login_at ?? u.updated_at ?? null,
     };
   }
 
   async getEvents(): Promise<OperationalEventItem[]> {
-    try {
-      const data = await this.fetchApi<any[]>("/api/v1/intelligence/events");
-      if (Array.isArray(data)) {
-        return data.map((e) => ({
-          id: e.id,
-          eventType: e.eventType || e.event_type,
-          entityType: e.entityType || e.entity_type,
-          entityId: e.entityId || e.entity_id,
-          severity: e.severity || "INFO",
-          message: e.message,
-          occurredAt: e.occurredAt || e.occurred_at || new Date().toISOString(),
-        }));
-      }
-    } catch {
-      // Return empty array if events endpoint is unreachable
-    }
-    return [];
+    const data = await this.fetchApi<any[]>("/api/v1/intelligence/events");
+    if (!Array.isArray(data)) throw new Error("Event service returned an invalid response.");
+    return data.map((e) => ({
+      id: e.id, eventType: e.eventType ?? e.event_type, entityType: e.entityType ?? e.entity_type,
+      entityId: e.entityId ?? e.entity_id, severity: e.severity, message: e.message,
+      occurredAt: e.occurredAt ?? e.occurred_at ?? null,
+    }));
   }
 
   async submitContact(data: any): Promise<void> {
@@ -1645,399 +780,7 @@ export class ApiNexusDataProvider implements NexusDataProvider {
 }
 
 /**
- * Isolated mock provider implementation for testing and demo modes.
- * Kept completely isolated from production ApiNexusDataProvider.
- */
-export class MockNexusDataProvider implements NexusDataProvider {
-  async getOverviewStats(): Promise<OverviewStats> {
-    const totalVehicles = INITIAL_VEHICLES.length;
-    const activeVehicles = INITIAL_VEHICLES.filter((v) => v.status === "IN_TRANSIT").length;
-    const totalWarehouses = INITIAL_WAREHOUSES.length;
-    const activeIncidents = INITIAL_INCIDENTS.filter((i) => i.status !== "RESOLVED" && i.status !== "ARCHIVED").length;
-    const delayedOrders = INITIAL_ORDERS.filter((o) => o.status === "DELAYED").length;
-    const totalOrders = INITIAL_ORDERS.length;
-    const slaCompliance = Math.round(((totalOrders - delayedOrders) / Math.max(1, totalOrders)) * 100);
-    const fleetUtilization = Math.round((activeVehicles / Math.max(1, totalVehicles)) * 100);
-    return {
-      totalVehicles,
-      activeVehicles,
-      totalWarehouses,
-      activeIncidents,
-      totalOrders,
-      delayedOrders,
-      slaCompliance,
-      fleetUtilization,
-      networkEfficiency: 92,
-      activeSimulations: INITIAL_SIMULATIONS.length,
-      unreadNotifications: INITIAL_NOTIFICATIONS.filter((n) => !n.read).length,
-    };
-  }
-
-  async getVehicles(): Promise<VehicleItem[]> {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_vehicles");
-        if (raw) return JSON.parse(raw);
-      } catch {}
-    }
-    return [...INITIAL_VEHICLES];
-  }
-
-  async getVehicle(id: string): Promise<VehicleItem | null> {
-    const list = await this.getVehicles();
-    return list.find((v) => v.id === id || v.code === id) || null;
-  }
-
-  async createVehicle(data: Partial<VehicleItem>): Promise<VehicleItem> {
-    const v: VehicleItem = {
-      id: data.id || `v-${Date.now()}`,
-      code: data.code || `NX-${Math.floor(100 + Math.random() * 900)}`,
-      name: data.name || "Freightliner eCascadia",
-      model: data.model || "Class-8 EV Hauler",
-      driverName: data.driverName || "Fleet Pilot",
-      driverPhone: data.driverPhone || "+1 (555) 019-2834",
-      capacityKg: data.capacityKg || 22000,
-      currentLoadKg: data.currentLoadKg || 15000,
-      status: (data.status as any) || "IN_TRANSIT",
-      lat: data.lat ?? 30.3165,
-      lng: data.lng ?? 78.0322,
-      heading: data.heading || 90,
-      speedKmh: data.speedKmh ?? 65.0,
-      batteryPct: data.batteryPct ?? 88,
-      healthScore: data.healthScore ?? 96,
-      currentRouteId: data.currentRouteId || null,
-      currentRouteName: data.currentRouteName || "Active Regional Corridor",
-    };
-    if (typeof window !== "undefined") {
-      const current = await this.getVehicles();
-      localStorage.setItem("nexus_custom_vehicles", JSON.stringify([v, ...current.filter((x) => x.id !== v.id)]));
-    }
-    return v;
-  }
-
-  async updateVehicle(id: string, data: Partial<VehicleItem>): Promise<VehicleItem> {
-    const list = await this.getVehicles();
-    const existing = list.find((v) => v.id === id || v.code === id);
-    const updated: VehicleItem = {
-      ...(existing || {} as VehicleItem),
-      ...data,
-      id: existing?.id || id,
-      code: data.code || existing?.code || id,
-    };
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_custom_vehicles", JSON.stringify([updated, ...list.filter((x) => x.id !== id && x.code !== id)]));
-    }
-    return updated;
-  }
-
-  async deleteVehicle(id: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      const list = await this.getVehicles();
-      localStorage.setItem("nexus_custom_vehicles", JSON.stringify(list.filter((x) => x.id !== id && x.code !== id)));
-    }
-  }
-
-  async getWarehouses(): Promise<WarehouseItem[]> {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_warehouses");
-        if (raw) return JSON.parse(raw);
-      } catch {}
-    }
-    return [...INITIAL_WAREHOUSES];
-  }
-
-  async createWarehouse(data: Partial<WarehouseItem>): Promise<WarehouseItem> {
-    const wh: WarehouseItem = {
-      id: data.id || `wh-${Date.now()}`,
-      code: data.code || `WH-${(data.city || "HUB").substring(0, 3).toUpperCase()}-01`,
-      name: data.name || `${data.city || "Regional"} Logistics Center`,
-      city: data.city || "Dehradun",
-      state: data.state || "Uttarakhand",
-      lat: data.lat ?? 30.3165,
-      lng: data.lng ?? 78.0322,
-      capacityUnits: data.capacityUnits || 50000,
-      currentUnits: data.currentUnits || 32000,
-      dockCount: data.dockCount || 12,
-      activeDocks: data.activeDocks || 6,
-      efficiencyPct: data.efficiencyPct || 94,
-      status: (data.status as any) || "OPERATIONAL",
-      createdAt: new Date().toISOString(),
-    };
-    if (typeof window !== "undefined") {
-      const current = await this.getWarehouses();
-      localStorage.setItem("nexus_custom_warehouses", JSON.stringify([wh, ...current.filter((x) => x.id !== wh.id)]));
-    }
-    return wh;
-  }
-
-  async updateWarehouse(id: string, data: Partial<WarehouseItem>): Promise<WarehouseItem> {
-    const list = await this.getWarehouses();
-    const existing = list.find((w) => w.id === id || w.code === id);
-    const updated: WarehouseItem = {
-      ...(existing || {} as WarehouseItem),
-      ...data,
-      id: existing?.id || id,
-      code: data.code || existing?.code || id,
-    };
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_custom_warehouses", JSON.stringify([updated, ...list.filter((x) => x.id !== id && x.code !== id)]));
-    }
-    return updated;
-  }
-
-  async deleteWarehouse(id: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      const list = await this.getWarehouses();
-      localStorage.setItem("nexus_custom_warehouses", JSON.stringify(list.filter((x) => x.id !== id && x.code !== id)));
-    }
-  }
-
-  async createRoute(data: Partial<RouteItem>): Promise<RouteItem> {
-    return {
-      id: data.id || `route-${Date.now()}`,
-      code: data.code || `RT-${Date.now()}`,
-      name: data.name || "Regional Express Route",
-      originWarehouseId: data.originWarehouseId || "wh-1",
-      originWarehouseName: data.originWarehouseName || "Origin Hub",
-      destWarehouseId: data.destWarehouseId || "wh-2",
-      destWarehouseName: data.destWarehouseName || "Destination Hub",
-      distanceKm: data.distanceKm || 250,
-      avgDurationMins: data.avgDurationMins || 210,
-      riskScore: data.riskScore || 10,
-      trafficCondition: (data.trafficCondition as any) || "CLEAR",
-      waypoints: data.waypoints || [],
-    };
-  }
-
-  async updateRoute(id: string, data: Partial<RouteItem>): Promise<RouteItem> {
-    const list = await this.getRoutes();
-    const existing = list.find((r) => r.id === id || r.code === id);
-    return {
-      ...(existing || {} as RouteItem),
-      ...data,
-      id: existing?.id || id,
-    };
-  }
-
-  async deleteRoute(id: string): Promise<void> {
-    // In-memory mock no-op
-  }
-
-  async provisionPreset(presetKey: "dehradun" | "delhi" | "london" | "tokyo" | "chicago"): Promise<{ warehouses: WarehouseItem[]; vehicles: VehicleItem[] }> {
-    const apiProvider = new ApiNexusDataProvider();
-    return apiProvider.provisionPreset(presetKey);
-  }
-
-  async getRoutes(): Promise<RouteItem[]> {
-    return [...INITIAL_ROUTES];
-  }
-
-  async getRoute(id: string): Promise<RouteItem | null> {
-    return INITIAL_ROUTES.find((r) => r.id === id) || null;
-  }
-
-  async getOrders(): Promise<OrderItem[]> {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_orders");
-        if (raw) return JSON.parse(raw);
-      } catch {}
-    }
-    return [...INITIAL_ORDERS];
-  }
-
-  async getOrder(id: string): Promise<OrderItem | null> {
-    const list = await this.getOrders();
-    return list.find((o) => o.id === id || o.orderNumber === id) || null;
-  }
-
-  async createOrder(data: Partial<OrderItem>): Promise<OrderItem> {
-    const o: OrderItem = {
-      id: data.id || `ord-${Date.now()}`,
-      orderNumber: data.orderNumber || `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
-      customerName: data.customerName || "Enterprise Client",
-      destination: data.destination || "Regional Distribution Center",
-      priority: (data.priority as any) || "NORMAL",
-      status: (data.status as any) || "ASSIGNED",
-      warehouseId: data.warehouseId || null,
-      warehouseName: data.warehouseName || "Origin Hub",
-      routeId: data.routeId || null,
-      routeName: data.routeName || "Express Corridor",
-      vehicleId: data.vehicleId || null,
-      vehicleCode: data.vehicleCode || undefined,
-      deadline: data.deadline || new Date(Date.now() + 86400000).toISOString(),
-      estimatedEta: data.estimatedEta || new Date(Date.now() + 86400000).toISOString(),
-      itemsCount: data.itemsCount || 12,
-      totalCost: data.totalCost || 1450,
-      slaCompliant: true,
-    };
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("nexus_custom_orders");
-        const list = raw ? JSON.parse(raw) : [];
-        localStorage.setItem("nexus_custom_orders", JSON.stringify([o, ...list.filter((x: any) => x.id !== o.id)]));
-      } catch {}
-    }
-    return o;
-  }
-
-  async updateOrder(id: string, data: Partial<OrderItem>): Promise<OrderItem> {
-    const list = await this.getOrders();
-    const existing = list.find((o) => o.id === id || o.orderNumber === id);
-    const updated: OrderItem = {
-      ...(existing || {} as OrderItem),
-      ...data,
-      id: existing?.id || id,
-      orderNumber: data.orderNumber || existing?.orderNumber || id,
-    };
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nexus_custom_orders", JSON.stringify([updated, ...list.filter((x) => x.id !== id && x.orderNumber !== id)]));
-    }
-    return updated;
-  }
-
-  async deleteOrder(id: string): Promise<void> {
-    if (typeof window !== "undefined") {
-      const list = await this.getOrders();
-      localStorage.setItem("nexus_custom_orders", JSON.stringify(list.filter((x) => x.id !== id && x.orderNumber !== id)));
-    }
-  }
-
-  async getIncidents(severity?: string): Promise<IncidentItem[]> {
-    if (severity && severity !== "ALL") {
-      return INITIAL_INCIDENTS.filter((i) => i.severity === severity);
-    }
-    return [...INITIAL_INCIDENTS];
-  }
-
-  async getIncident(id: string): Promise<IncidentItem | null> {
-    return INITIAL_INCIDENTS.find((i) => i.id === id || i.code === id) || null;
-  }
-
-  async createIncident(data: Partial<IncidentItem>): Promise<IncidentItem> {
-    const inc: IncidentItem = {
-      id: `inc-${Date.now()}`,
-      code: `INC-${Date.now()}`,
-      title: data.title || "Incident",
-      summary: data.summary || "Operational incident detected in transit corridor",
-      severity: data.severity || "MEDIUM",
-      status: data.status || "DETECTED",
-      affectedEntityType: data.affectedEntityType || "VEHICLE",
-      affectedEntityId: data.affectedEntityId || "v-101",
-      affectedEntityName: data.affectedEntityName || "Fleet Vehicle",
-      rootCause: data.rootCause || "Adverse weather and corridor obstruction",
-      aiAnalysis: data.aiAnalysis || "Deterministic recovery simulation recommended.",
-      potentialImpact: data.potentialImpact || "Minor delivery schedule variance",
-      ordersAffected: data.ordersAffected || 1,
-      costEstimate: data.costEstimate || 1000,
-      delayMinutes: data.delayMinutes || 30,
-      createdAt: new Date().toISOString(),
-      timeline: [],
-    };
-    return inc;
-  }
-
-  async transitionIncident(id: string, status: string, note: string, actorName = "Sarah Chen"): Promise<IncidentItem> {
-    const inc = INITIAL_INCIDENTS.find((i) => i.id === id) || INITIAL_INCIDENTS[0];
-    return { ...inc, status: status as any };
-  }
-
-  async getSimulations(): Promise<SimulationItem[]> {
-    return [...INITIAL_SIMULATIONS];
-  }
-
-  async getSimulation(id: string): Promise<SimulationItem | null> {
-    return INITIAL_SIMULATIONS.find((s) => s.id === id || s.code === id) || null;
-  }
-
-  async createSimulation(data: any): Promise<SimulationItem> {
-    return {
-      id: `sim-${Date.now()}`,
-      code: `SIM-${Date.now()}`,
-      title: data.title || "Simulation",
-      description: data.description || "",
-      status: "COMPLETED",
-      incidentId: data.incident_id || data.incidentId,
-      variables: data.variables || {},
-      baselineMetrics: { totalDistanceKm: 1620, projectedDelayMins: 180, slaBreachRiskPct: 88, totalCostUsd: 1450 },
-      simulatedMetrics: { totalDistanceKm: 1705, projectedDelayMins: 45, netTimeSavedMins: 135, totalCostUsd: 1530.7, costDeltaUsd: 80.7, slaBreachRiskPct: 12, recommendationScore: 94, verdict: "HIGHLY_RECOMMENDED", insights: [] },
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  async applyDecision(simId: string, actorName = "Sarah Chen"): Promise<SimulationItem> {
-    const s = INITIAL_SIMULATIONS.find((sim) => sim.id === simId) || INITIAL_SIMULATIONS[0];
-    return { ...s, status: "APPLIED", appliedAt: new Date().toISOString(), appliedBy: actorName };
-  }
-
-  async getNotifications(): Promise<NotificationItem[]> {
-    return [...INITIAL_NOTIFICATIONS];
-  }
-
-  async markNotificationRead(id: string): Promise<NotificationItem> {
-    const n = INITIAL_NOTIFICATIONS.find((notif) => notif.id === id) || INITIAL_NOTIFICATIONS[0];
-    return { ...n, read: true };
-  }
-
-  async getAuditLogs(): Promise<AuditLogItem[]> {
-    return [...INITIAL_AUDIT_LOGS];
-  }
-
-  async getPipelineHealth(): Promise<PipelineHealthItem[]> {
-    return [...INITIAL_PIPELINE];
-  }
-
-  async getUsers(): Promise<UserItem[]> {
-    return [...INITIAL_USERS];
-  }
-
-  async getUser(id: string): Promise<UserItem | null> {
-    return INITIAL_USERS.find((u) => u.id === id) || null;
-  }
-
-  async updateUserRole(id: string, role: string): Promise<UserItem> {
-    const user = INITIAL_USERS.find((u) => u.id === id);
-    if (user) {
-      user.role = role as any;
-      return { ...user };
-    }
-    throw new Error("User not found");
-  }
-
-  async getEvents(): Promise<OperationalEventItem[]> {
-    return [...INITIAL_EVENTS];
-  }
-
-  async submitContact(data: any): Promise<void> {
-    return Promise.resolve();
-  }
-
-  async submitFeedback(data: any): Promise<void> {
-    return Promise.resolve();
-  }
-
-  async getProfile(): Promise<any> {
-    return Promise.resolve({ name: "User", department: "Ops" });
-  }
-
-  async updateProfile(data: any): Promise<any> {
-    return Promise.resolve(data);
-  }
-
-  async getSettings(): Promise<any> {
-    return Promise.resolve({ theme: "industrial", notifications: true });
-  }
-
-  async updateSettings(data: any): Promise<any> {
-    return Promise.resolve(data);
-  }
-}
-
-/**
- * Authoritative singleton instance configured by NEXT_PUBLIC_DATA_PROVIDER.
+ * Authoritative singleton instance.
  * Defaults strictly to ApiNexusDataProvider.
  */
-const providerMode = process.env.NEXT_PUBLIC_DATA_PROVIDER;
-export const dataProvider: NexusDataProvider =
-  providerMode === "mock" ? new MockNexusDataProvider() : new ApiNexusDataProvider();
+export const dataProvider: NexusDataProvider = new ApiNexusDataProvider();

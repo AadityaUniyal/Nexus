@@ -3,11 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapControls } from './MapControls';
-import { syncHazardLayers, WeatherHazard, DEMO_HAZARDS } from './HazardLayer';
+import { syncHazardLayers, WeatherHazard } from './HazardLayer';
 import { ResolvedLocation, RouteResult } from '@/lib/api/endpoints/location';
 import { api } from '@/lib/api/client';
 import { useAvatarStore } from '@/lib/avatar-store';
 import { tactileAudio } from '@/lib/sound-effects';
+import { createSafeMapMarkerElement } from './safe-map-dom';
 
 export interface MapVehicle {
   id: string;
@@ -58,7 +59,7 @@ export function NexusMap({
   vehicles = [],
   warehouses = [],
   incidents = [],
-  hazards = DEMO_HAZARDS,
+  hazards = [],
   showHazards = true,
   routePreview,
   isSimulationMode = false,
@@ -84,25 +85,12 @@ export function NexusMap({
 
       if (!isMounted || !mapContainerRef.current) return;
 
-      let customCenter: [number, number] = [-87.6298, 41.8781];
-      let customZoom = 5;
+      let customCenter: [number, number] = [0, 20];
+      let customZoom = 2;
 
       if (centerLocation) {
         customCenter = [centerLocation.longitude, centerLocation.latitude];
         customZoom = 12;
-      } else if (typeof window !== 'undefined') {
-        try {
-          const stored = localStorage.getItem('nexus_workspace_location');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed.longitude && parsed.latitude) {
-              customCenter = [parsed.longitude, parsed.latitude];
-              customZoom = 11;
-            }
-          }
-        } catch {
-          // fallback to default
-        }
       }
 
       const initialCenter: [number, number] = customCenter;
@@ -309,16 +297,7 @@ export function NexusMap({
 
       // 1. Warehouses Markers
       warehouses.forEach((wh) => {
-        const el = document.createElement('div');
-        el.className = 'group relative cursor-pointer';
-        el.innerHTML = `
-          <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-800 text-white shadow-lg border-2 border-white transform transition-transform group-hover:scale-110">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-          </div>
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded bg-zinc-900 text-white text-[10px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-            ${wh.name} (${wh.code})
-          </div>
-        `;
+        const el = createSafeMapMarkerElement(document, 'warehouse', `${wh.name} (${wh.code})`);
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([wh.lng, wh.lat])
           .addTo(map);
@@ -327,17 +306,8 @@ export function NexusMap({
 
       // 2. Vehicles Markers
       vehicles.forEach((v) => {
-        const el = document.createElement('div');
-        el.className = 'group relative cursor-pointer';
-        const heading = v.heading || 0;
-        el.innerHTML = `
-          <div class="flex items-center justify-center w-7 h-7 rounded-full bg-nexus-primary text-white shadow-md border-2 border-white transform transition-transform group-hover:scale-110" style="transform: rotate(${heading}deg);">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-          </div>
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded bg-zinc-900 text-white text-[10px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-            ${v.name} · ${v.speedKmh ? `${v.speedKmh} km/h` : 'Active'}
-          </div>
-        `;
+        const label = `${v.name} · ${v.speedKmh ? `${v.speedKmh} km/h` : 'Active'}`;
+        const el = createSafeMapMarkerElement(document, 'vehicle', label, v.heading || 0);
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([v.lng, v.lat])
           .addTo(map);
@@ -346,16 +316,7 @@ export function NexusMap({
 
       // 3. Incidents Markers
       incidents.forEach((inc) => {
-        const el = document.createElement('div');
-        el.className = 'group relative cursor-pointer';
-        el.innerHTML = `
-          <div class="relative flex items-center justify-center w-8 h-8 rounded-full bg-red-600 text-white shadow-lg border-2 border-white animate-pulse">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-          </div>
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded bg-red-950 text-white text-[10px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-            [${inc.severity}] ${inc.title}
-          </div>
-        `;
+        const el = createSafeMapMarkerElement(document, 'incident', `[${inc.severity}] ${inc.title}`);
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([inc.lng, inc.lat])
           .addTo(map);
@@ -364,12 +325,7 @@ export function NexusMap({
 
       // 4. Center Selected Location Marker
       if (centerLocation) {
-        const el = document.createElement('div');
-        el.className = 'relative flex items-center justify-center';
-        el.innerHTML = `
-          <span class="absolute w-10 h-10 rounded-full bg-emerald-500/30 animate-ping"></span>
-          <span class="w-4 h-4 rounded-full bg-emerald-600 border-2 border-white shadow-md"></span>
-        `;
+        const el = createSafeMapMarkerElement(document, 'location', centerLocation.display_name);
         const marker = new maplibregl.Marker({ element: el })
           .setLngLat([centerLocation.longitude, centerLocation.latitude])
           .addTo(map);

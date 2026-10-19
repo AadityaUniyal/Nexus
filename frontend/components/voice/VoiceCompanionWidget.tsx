@@ -85,7 +85,8 @@ export function VoiceCompanionWidget({ className = '' }: { className?: string })
         body: JSON.stringify({ transcript: query }),
       });
       const data = await res.json();
-      const reply = data.speech_response || 'Command acknowledged.';
+      if (!res.ok) throw new Error(data?.detail || 'Voice service is unavailable.');
+      const reply = data.speech_response || 'No response was returned.';
       setLastResponse(reply);
 
       // Trigger Avatar Speaking State
@@ -110,28 +111,8 @@ export function VoiceCompanionWidget({ className = '' }: { className?: string })
         }, 3000);
       }
 
-      // Broadcast voice action to active UI components (Map, Fleet Filters, Simulation Visualizer)
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('nexus:voice-action', { detail: data }));
-      }
-
-      if (data.action_type === 'MAP_FLY_TO') {
-        tactileAudio.playTelemetryPing();
-        toast({
-          title: 'Map Viewport Repositioned',
-          message: data.action_payload?.speech || `Navigated to ${data.action_payload?.location_name}`,
-          type: 'info',
-        });
-      } else if (data.action_type === 'RUN_SIMULATION') {
-        tactileAudio.playSuccessChord();
-        toast({
-          title: 'Simulation Run Completed',
-          message: `Calculated recovery of +${data.action_payload?.time_saved_mins} mins (${data.action_payload?.route_type || 'Detour'}).`,
-          type: 'simulation',
-        });
-      }
-    } catch {
-      setLastResponse('Operational network standing by.');
+    } catch (error) {
+      setLastResponse(error instanceof Error ? error.message : 'Voice service is unavailable.');
       setIsSpeaking(false);
     }
   };

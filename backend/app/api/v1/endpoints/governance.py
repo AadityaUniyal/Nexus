@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from app.db.session import get_db
-from app.auth.dependencies import require_authenticated, require_workspace, require_permission
+from app.auth.dependencies import require_workspace, require_permission
 from app.auth.principal import RequestPrincipal, PermissionEnum
 from app.models.governance import Approval, ActionExecution, AuditEvent
 from app.models.operations import Vehicle
 from app.models.incidents import Incident, IncidentTimeline
-from app.core.errors import EntityNotFoundException, ForbiddenException
+from app.core.errors import EntityNotFoundException, NexusException
 from app.realtime.sse import broadcaster
 
 router = APIRouter(prefix="/governance", tags=["Governance, Human-in-the-Loop & Audit"])
@@ -71,7 +71,7 @@ async def list_approvals(
 async def process_approval_action(
     approval_id: str,
     req: ApprovalActionRequest,
-    principal: RequestPrincipal = Depends(require_workspace),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.APPLY_DECISION)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -82,15 +82,70 @@ async def process_approval_action(
     stmt = select(Approval).where(
         Approval.id == approval_id,
         Approval.workspace_id == principal.workspace_id
-    )
+    ).with_for_update()
     res = await db.execute(stmt)
     appr = res.scalar_one_or_none()
     if not appr:
         raise EntityNotFoundException("Approval", approval_id)
 
+    decision = req.decision.upper()
+    if decision not in {"APPROVE", "REJECT"}:
+        raise NexusException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code="INVALID_APPROVAL_DECISION",
+            message="Decision must be APPROVE or REJECT.",
+        )
+    if appr.status != "PENDING":
+        raise NexusException(
+            status_code=status.HTTP_409_CONFLICT,
+            code="APPROVAL_ALREADY_PROCESSED",
+            message="This approval is no longer pending.",
+        )
+
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    if req.decision.upper() == "APPROVE":
+    if decision == "APPROVE":
+        if appr.action_type != "REROUTE_VEHICLE":
+            raise NexusException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                code="UNSUPPORTED_APPROVAL_ACTION",
+                message=f"Action type '{appr.action_type}' cannot be executed by this endpoint.",
+            )
+        changes = appr.proposed_changes_json or {}
+        vehicle_code = changes.get("vehicle_code")
+        new_route_name = changes.get("new_route_name")
+        if not vehicle_code:
+            raise NexusException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                code="APPROVAL_TARGET_MISSING",
+                message="The approval does not identify a vehicle.",
+            )
+        if not isinstance(new_route_name, str) or not new_route_name.strip():
+            raise NexusException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                code="APPROVAL_ROUTE_MISSING",
+                message="The approval does not specify a target route.",
+            )
+        v_stmt = select(Vehicle).where(
+            Vehicle.workspace_id == principal.workspace_id,
+            Vehicle.code == vehicle_code,
+        )
+        v_res = await db.execute(v_stmt)
+        vehicle = v_res.scalar_one_or_none()
+        if not vehicle:
+            raise EntityNotFoundException("Vehicle", vehicle_code)
+
+        incident = None
+        if appr.incident_id:
+            inc_stmt = select(Incident).where(
+                Incident.id == appr.incident_id,
+                Incident.workspace_id == principal.workspace_id,
+            )
+            inc_res = await db.execute(inc_stmt)
+            incident = inc_res.scalar_one_or_none()
+            if not incident:
+                raise EntityNotFoundException("Incident", appr.incident_id)
+
         appr.status = "APPROVED"
         appr.approved_by = principal.display_name
         appr.approved_at = now_iso
@@ -100,42 +155,26 @@ async def process_approval_action(
             approval_id=appr.id,
             action_type=appr.action_type,
             target_entity_type="VEHICLE",
-            target_entity_id=appr.proposed_changes_json.get("vehicle_code", "NX-104"),
+            target_entity_id=vehicle.code,
             parameters_json=appr.proposed_changes_json,
             status="SUCCESS",
-            result_summary=f"Successfully executed {appr.action_type}: {appr.impact_summary}",
+            result_summary=f"Nexus dispatch record updated for {vehicle.code}: {appr.impact_summary}",
             executed_by=principal.display_name,
             executed_at=now_iso,
             workspace_id=principal.workspace_id,
         )
         db.add(execution)
 
-        # Update Incident if linked
-        if appr.incident_id:
-            inc_stmt = select(Incident).where(Incident.id == appr.incident_id)
-            inc_res = await db.execute(inc_stmt)
-            inc = inc_res.scalar_one_or_none()
-            if inc:
-                inc.status = "ACTION_APPLIED"
-                tl = IncidentTimeline(
-                    incident_id=inc.id,
-                    status="ACTION_APPLIED",
-                    note=f"Approved action executed by {principal.display_name}: {appr.impact_summary}",
-                    actor_name=principal.display_name,
-                )
-                db.add(tl)
+        if incident:
+            incident.status = "ACTION_APPLIED"
+            db.add(IncidentTimeline(
+                incident_id=incident.id,
+                status="ACTION_APPLIED",
+                note=f"Approval recorded by {principal.display_name}: {appr.impact_summary}",
+                actor_name=principal.display_name,
+            ))
 
-        # Update Vehicle route if vehicle specified
-        v_code = appr.proposed_changes_json.get("vehicle_code")
-        if v_code:
-            v_stmt = select(Vehicle).where(
-                Vehicle.workspace_id == principal.workspace_id,
-                Vehicle.code == v_code
-            )
-            v_res = await db.execute(v_stmt)
-            veh = v_res.scalar_one_or_none()
-            if veh:
-                veh.current_route_name = appr.proposed_changes_json.get("new_route_name", "Detour Route")
+        vehicle.current_route_name = new_route_name
 
         # Append-Only Audit Event
         audit = AuditEvent(

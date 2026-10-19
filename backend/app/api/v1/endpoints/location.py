@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.auth.dependencies import get_current_principal, require_authenticated, get_optional_principal
+from app.auth.dependencies import get_current_principal, require_authenticated, require_permission, require_workspace
 from app.auth.principal import RequestPrincipal, PermissionEnum
 from app.core.errors import ForbiddenException
 from app.db.session import get_db
@@ -143,9 +143,9 @@ async def get_place_details(
 async def get_workspace_locations(
     workspace_id: str,
     db: AsyncSession = Depends(get_db),
-    principal: RequestPrincipal = Depends(require_authenticated),
+    principal: RequestPrincipal = Depends(require_workspace),
 ):
-    if principal.workspace_id and principal.workspace_id != workspace_id:
+    if principal.workspace_id != workspace_id:
         raise ForbiddenException("Access to this workspace's locations is forbidden.")
     return await LocationService.get_workspace_locations(db, workspace_id)
 
@@ -154,9 +154,9 @@ async def set_workspace_location(
     workspace_id: str,
     req: SetWorkspaceLocationRequest,
     db: AsyncSession = Depends(get_db),
-    principal: RequestPrincipal = Depends(require_authenticated),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_ASSETS)),
 ):
-    if principal.workspace_id and principal.workspace_id != workspace_id:
+    if principal.workspace_id != workspace_id:
         raise ForbiddenException("Access to this workspace is forbidden.")
     return await LocationService.set_workspace_location(
         db=db,
@@ -174,11 +174,13 @@ async def set_workspace_location(
 async def get_active_locations(
     workspace_id: Optional[str] = Query(default=None),
     use_azure: bool = Query(default=False),
-    principal: Optional[RequestPrincipal] = Depends(get_optional_principal),
+    principal: RequestPrincipal = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve active vehicle and facility locations for the workspace."""
-    ws = (principal.workspace_id if principal and principal.workspace_id else None) or workspace_id or "ws-continental-fleet-01"
+    ws = principal.workspace_id
+    if workspace_id and workspace_id != ws:
+        raise ForbiddenException("Access to this workspace is forbidden.")
 
     # 1. Fetch active vehicles
     stmt = select(Vehicle).where(Vehicle.workspace_id == ws)
@@ -212,13 +214,5 @@ async def get_active_locations(
                 "name": loc.display_name,
                 "type": "facility",
             })
-
-    # 3. Default fallback fleet coordinates for clean rendering if DB empty
-    if not locations:
-        locations = [
-            {"id": "loc-veh-01", "latitude": 28.6139, "longitude": 77.2090, "name": "Fleet Alpha 01", "status": "IN_TRANSIT", "type": "vehicle"},
-            {"id": "loc-veh-02", "latitude": 19.0760, "longitude": 72.8777, "name": "Fleet Beta 02", "status": "IN_TRANSIT", "type": "vehicle"},
-            {"id": "loc-veh-03", "latitude": 12.9716, "longitude": 77.5946, "name": "Fleet Gamma 03", "status": "IN_TRANSIT", "type": "vehicle"},
-        ]
 
     return locations

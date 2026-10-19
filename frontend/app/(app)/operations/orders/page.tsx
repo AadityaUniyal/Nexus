@@ -67,8 +67,8 @@ export default function OrdersListPage() {
       <FadeIn className="space-y-6">
         <PageHeader
           eyebrow="Operations · Shipments Manifest"
-          title="Consignments & SLA Monitor"
-          description="Real-time freight custody, scheduled delivery windows, and destination SLAs across active corridors."
+          title="Shipments"
+          description="Search and review shipment records and the status details available in this workspace. Source freshness depends on the data provided."
           actions={
             <div className="flex items-center gap-2 flex-wrap">
               <Button

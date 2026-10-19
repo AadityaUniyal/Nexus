@@ -54,24 +54,7 @@ async def ingest_telemetry_packet(
     vehicle = result.scalar_one_or_none()
 
     if not vehicle:
-        # Create vehicle record dynamically if telematics discovery is active
-        vehicle_id = f"veh-{uuid.uuid4().hex[:8]}"
-        vehicle = Vehicle(
-            id=vehicle_id,
-            code=packet.vehicle_identifier,
-            name=f"Unit {packet.vehicle_identifier}",
-            model="Connected Fleet Unit",
-            driver_name="Automated Telemetry",
-            status="IN_TRANSIT" if packet.speed_kmh > 5 else "IDLE",
-            current_lat=packet.latitude,
-            current_lng=packet.longitude,
-            speed_kmh=packet.speed_kmh,
-            battery_pct=packet.battery_pct if packet.battery_pct is not None else 85,
-            health_score=95,
-            workspace_id=workspace_id,
-        )
-        db.add(vehicle)
-        await db.flush()
+        raise LookupError("Telemetry vehicle is not registered in this workspace.")
     else:
         # Update existing vehicle position and state
         vehicle.current_lat = packet.latitude
@@ -146,11 +129,11 @@ async def ingest_telemetry_packet(
             affected_entity_id=vehicle.id,
             affected_entity_name=vehicle.name,
             vehicle_id=vehicle.id,
-            delay_minutes=45,
-            cost_estimate=1200.0,
-            risk_score=92,
-            root_cause="Depleted energy reserve prior to corridor completion",
-            ai_analysis="Immediate detour to nearest high-speed megawatt charging crossdock recommended.",
+            delay_minutes=0,
+            cost_estimate=0.0,
+            risk_score=75,
+            root_cause="Reported battery state is below the configured critical threshold while the vehicle is moving.",
+            ai_analysis=None,
             workspace_id=workspace_id,
         )
         db.add(inc)
@@ -164,6 +147,25 @@ async def ingest_telemetry_packet(
         db.add(tl)
         detected_incidents.append(inc_code)
 
+    await db.flush()
+    if packet.source_provider == "AZURE_IOT":
+        try:
+            from app.integrations.azure_blob_storage import azure_blob_storage_client
+            archive = {
+                "event_id": telem_event.id,
+                "workspace_id": workspace_id,
+                "vehicle_id": vehicle.id,
+                "received_at": datetime.now(timezone.utc).isoformat(),
+                "packet": packet.model_dump(mode="json"),
+            }
+            day = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+            azure_blob_storage_client.upload_file(
+                "telemetry-bronze",
+                f"{workspace_id}/{day}/{telem_event.id}.json",
+                __import__("json").dumps(archive, separators=(",", ":")),
+            )
+        except Exception:
+            logger.exception("Could not archive Azure IoT telemetry event")
     await db.commit()
 
     # 5. Real-Time Broadcast to Frontend

@@ -9,40 +9,13 @@ export interface WeatherHazard {
   coordinates: number[][]; // Polygon ring [[lng, lat], ...]
 }
 
-export const DEMO_HAZARDS: WeatherHazard[] = [
-  {
-    id: 'hazard-i80-blizzard',
-    title: 'I-80 Nebraska Mountain Blizzard Impasse Zone',
-    severity: 'CRITICAL',
-    coordinates: [
-      [-96.5, 41.0],
-      [-95.0, 41.0],
-      [-95.0, 41.8],
-      [-96.5, 41.8],
-      [-96.5, 41.0],
-    ],
-  },
-  {
-    id: 'hazard-rockies-wind',
-    title: 'Rockies High Wind Velocity Corridor (65+ MPH)',
-    severity: 'WARNING',
-    coordinates: [
-      [-105.5, 39.2],
-      [-104.5, 39.2],
-      [-104.5, 40.2],
-      [-105.5, 40.2],
-      [-105.5, 39.2],
-    ],
-  },
-];
-
 interface HazardLayerProps {
   mapInstance: any;
   hazards?: WeatherHazard[];
   visible?: boolean;
 }
 
-export function syncHazardLayers(map: any, hazards: WeatherHazard[] = DEMO_HAZARDS, visible = true) {
+export function syncHazardLayers(map: any, hazards: WeatherHazard[] = [], visible = true) {
   if (!map) return;
 
   const sourceId = 'nexus-hazards-source';

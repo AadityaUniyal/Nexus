@@ -5,7 +5,8 @@ from sqlalchemy import select
 from app.db.session import get_db
 from app.auth.webhook_verifier import verify_clerk_webhook
 from app.models.system import ClerkWebhookEvent
-from app.models.user import User, Workspace
+from app.models.user import User, Workspace, WorkspaceMembership
+from app.models.organization import OrganizationMembership
 from app.services.audit_service import log_audit_action
 
 router = APIRouter()
@@ -25,7 +26,9 @@ async def handle_clerk_webhook(
     verify_clerk_webhook(headers, body_bytes)
 
     payload = json.loads(body_bytes.decode("utf-8"))
-    event_id = payload.get("data", {}).get("id") or payload.get("id") or f"clerk-evt-{hash(body_bytes)}"
+    event_id = request.headers.get("svix-id") or request.headers.get("webhook-id")
+    if not event_id:
+        raise HTTPException(status_code=400, detail="Missing webhook delivery ID")
     event_type = payload.get("type", "unknown")
 
     # 2. Check Idempotency Table
@@ -51,11 +54,15 @@ async def handle_clerk_webhook(
     display_name = f"{first_name} {last_name}".strip() or "NEXUS Operator"
 
     if event_type == "user.created" and primary_email:
-        # Check if default workspace exists
-        ws_stmt = select(Workspace).limit(1)
-        ws_res = await db.execute(ws_stmt)
-        ws = ws_res.scalars().first()
-        ws_id = ws.id if ws else "ws-continental-fleet-01"
+        # Identity events must carry an explicit, pre-provisioned workspace mapping.
+        workspace_id = (data.get("public_metadata") or {}).get("workspace_id")
+        if not workspace_id:
+            raise HTTPException(status_code=422, detail="Clerk user event has no provisioned workspace mapping.")
+        ws_stmt = select(Workspace).where(Workspace.id == workspace_id)
+        ws = (await db.execute(ws_stmt)).scalar_one_or_none()
+        if not ws:
+            raise HTTPException(status_code=422, detail="Clerk user event references an unknown workspace.")
+        ws_id = ws.id
 
         user = User(
             id=f"usr-{clerk_user_id[:8]}",
@@ -64,10 +71,23 @@ async def handle_clerk_webhook(
             name=display_name,
             role="OPERATOR",
             workspace_id=ws_id,
+            organization_id=ws.organization_id,
             onboarding_status="NOT_STARTED",
             is_active=True
         )
         db.add(user)
+        db.add(WorkspaceMembership(
+            workspace_id=ws_id,
+            user_id=user.id,
+            role="OPERATOR",
+        ))
+        if ws.organization_id:
+            db.add(OrganizationMembership(
+                organization_id=ws.organization_id,
+                user_id=user.id,
+                role="OPERATOR",
+                is_default=True,
+            ))
         await log_audit_action(
             db=db,
             workspace_id=ws_id,

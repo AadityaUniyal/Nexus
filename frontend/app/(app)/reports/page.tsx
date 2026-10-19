@@ -2,402 +2,104 @@
 
 import * as React from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  Download,
-  Sparkles,
-  Printer,
-  CheckCircle2,
-  ArrowRight,
-  History,
-  TrendingUp,
-  ShieldCheck,
-  MapPin,
-  Clock,
-  DollarSign,
-  Leaf,
-  Filter,
-} from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
-import { useToast } from "@/components/ui/toast";
-import { FadeIn, StaggerContainer, StaggerItem, TactileCard } from "@/components/ui/motion-animations";
-import { Tabs } from "@/components/ui/tabs";
-import { SkeletonTable, SkeletonMetricTile } from "@/components/ui/skeleton";
+import { FileText, Download, RefreshCw, Truck, Clock3 } from "lucide-react";
 
-interface HistoricalService {
-  id: string;
-  tracking_code: string;
-  origin: string;
-  destination: string;
-  distance_km: number;
-  sector: string;
-  status: string;
-  completed_at: string;
-  time_recovered_mins: number;
-  cost_saved_usd: number;
-  carbon_offset_kg: number;
-  on_time_sla_met: boolean;
-  cryptographic_proof: string;
-}
-
-interface HistoricalSummary {
-  time_range_days: number;
-  total_fulfilled_services: number;
-  sla_compliance_rate_pct: number;
-  total_cost_recovered_usd: number;
-  total_carbon_offset_kg: number;
-  avg_time_saved_per_trip_mins: number;
-}
+type SavedReport = { id: string; title: string; type: string; generatedAt: string; author: string; summary: string };
+type TripRecord = { id: string; tracking_code: string; origin?: string | null; destination?: string | null; distance_km?: number | null; status: string; completed_at?: string | null; on_time_sla_met?: boolean | null; cryptographic_proof?: string | null };
 
 export default function ReportsPage() {
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = React.useState<"briefings" | "past_services" | "trends">("briefings");
-  const [isGenerating, setIsGenerating] = React.useState(false);
-  const [loadingHistory, setLoadingHistory] = React.useState(false);
-  const [timeRangeDays, setTimeRangeDays] = React.useState(30);
+  const [tab, setTab] = React.useState<"reports" | "trips">("reports");
+  const [reports, setReports] = React.useState<SavedReport[]>([]);
+  const [trips, setTrips] = React.useState<TripRecord[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [days, setDays] = React.useState(30);
 
-  // Past Services data
-  const [pastServices, setPastServices] = React.useState<HistoricalService[]>([]);
-  const [historySummary, setHistorySummary] = React.useState<HistoricalSummary | null>(null);
-
-  const [reportsList, setReportsList] = React.useState([
-    {
-      id: "rep-1",
-      title: "Daily Operations Executive Briefing · Regional Hub",
-      date: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-      type: "EXECUTIVE_BRIEF",
-      summary: "80% fleet utilization with 98.2% SLA adherence. 1 critical weather detour evaluated and applied via simulation SIM-901.",
-      author: "Nexus Neural Engine™",
-    },
-    {
-      id: "rep-2",
-      title: "Incident INC-8041 Post-Mortem & Decision Impact",
-      date: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-      type: "INCIDENT_AUDIT",
-      summary: "Evaluated detour vs holding pattern. Decision applied transactionally: saved 135 minutes on high-value consignment.",
-      author: "Alex Rivera (COO)",
-    },
-    {
-      id: "rep-3",
-      title: "Weekly Cold-Chain Fleet Thermal Performance Audit",
-      date: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
-      type: "FLEET_AUDIT",
-      summary: "Biopharma transport integrity maintained at 99.8% compliance across multi-axle refrigerated units.",
-      author: "Sarah Chen (Regional Director)",
-    },
-  ]);
-
-  // Fetch past services from backend history endpoint
-  const fetchPastServices = React.useCallback(async (days: number) => {
-    setLoadingHistory(true);
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      let city = "Dehradun";
-      if (typeof window !== "undefined") {
-        const savedLoc = localStorage.getItem("nexus_workspace_location");
-        if (savedLoc) {
-          const parsed = JSON.parse(savedLoc);
-          if (parsed?.name) city = parsed.name;
-        }
+      const endpoint = tab === "reports" ? "/api/v1/reports" : `/api/v1/history/services?days=${days}`;
+      const response = await fetch(endpoint, { credentials: "include", cache: "no-store" });
+      if (!response.ok) throw new Error("Workspace records could not be loaded.");
+      const data = await response.json();
+      if (tab === "reports") {
+        if (!Array.isArray(data)) throw new Error("Report service returned an invalid response.");
+        setReports(data.map((row) => ({
+          id: row.id, title: row.title, type: row.type,
+          generatedAt: row.generatedAt ?? row.generated_at ?? "",
+          author: row.author ?? "Not recorded", summary: row.summary ?? "No summary was recorded.",
+        })));
+      } else {
+        if (!Array.isArray(data.services)) throw new Error("Trip history service returned an invalid response.");
+        setTrips(data.services);
       }
-
-      const res = await fetch(`/api/v1/history/services?days=${days}&city=${encodeURIComponent(city)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPastServices(data.services || []);
-        setHistorySummary(data.summary || null);
-      }
-    } catch {
-      // Fallback
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Workspace records could not be loaded.");
     } finally {
-      setLoadingHistory(false);
+      setLoading(false);
     }
-  }, []);
+  }, [tab, days]);
 
-  React.useEffect(() => {
-    if (activeTab === "past_services") {
-      fetchPastServices(timeRangeDays);
-    }
-  }, [activeTab, timeRangeDays, fetchPastServices]);
+  React.useEffect(() => { void load(); }, [load]);
 
-  const handleGenerateNewReport = async () => {
-    setIsGenerating(true);
+  const createReport = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/v1/briefing", { method: "POST" });
-      let summaryText = "Real-time fleet operations report synthesized from active IoT telemetry and simulation predictions.";
-      if (res.ok) {
-        const data = await res.json();
-        summaryText = data.briefing || summaryText;
-      }
-
-      const newReport = {
-        id: `rep-${Date.now()}`,
-        title: `Operations Command Synthesis · ${new Date().toLocaleDateString()}`,
-        date: new Date().toISOString(),
-        type: "EXECUTIVE_BRIEF",
-        summary: summaryText,
-        author: "Nexus Neural Engine™",
-      };
-
-      setReportsList((prev) => [newReport, ...prev]);
-
-      toast({
-        title: "Executive Report Compiled",
-        message: "Generated executive intelligence report from active telemetry.",
-        type: "ai",
+      const response = await fetch("/api/v1/reports", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: `Workspace operations snapshot · ${new Date().toLocaleDateString()}`, type: "OPERATIONS_SNAPSHOT" }),
       });
-    } catch {
-      toast({
-        title: "Executive Report Compiled",
-        message: "Generated deterministic operational report.",
-        type: "info",
-      });
-    } finally {
-      setIsGenerating(false);
+      if (!response.ok) throw new Error("The report could not be saved.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The report could not be saved.");
+      setLoading(false);
     }
   };
 
-  const handleDownloadReport = (rep: typeof reportsList[0]) => {
-    const markdownContent = `# ${rep.title}\n\n**Date:** ${new Date(rep.date).toLocaleString()}\n**Classification:** ${rep.type}\n**Author:** ${rep.author}\n\n## Executive Summary\n${rep.summary}\n\n---\n*Generated by NEXUS Autonomous Operations Intelligence Platform*`;
-    const blob = new Blob([markdownContent], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${rep.id}-${rep.type.toLowerCase()}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const exportReport = (report: SavedReport) => {
+    const content = `# ${report.title}\n\nCreated: ${report.generatedAt || "Not recorded"}\nCreated by: ${report.author}\nType: ${report.type}\n\n${report.summary}`;
+    const url = URL.createObjectURL(new Blob([content], { type: "text/markdown" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${report.id}.md`;
+    anchor.click();
     URL.revokeObjectURL(url);
-
-    toast({
-      title: "Report Exported",
-      message: `Downloaded ${rep.id} dossier.`,
-      type: "success",
-    });
   };
 
   return (
     <AppShell>
-      <FadeIn className="space-y-6 max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono-data text-nexus-on-surface-variant uppercase">
-              <span>Executive Intelligence & Audit Center</span>
-              <span>·</span>
-              <span>Past Services & Compliance Ledger</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-nexus-on-surface tracking-tight mt-1">
-              Command Briefings & Historical Services
-            </h1>
+      <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div><p className="text-sm text-nexus-on-surface-variant">Workspace records</p><h1 className="mt-1 text-3xl font-semibold tracking-tight text-nexus-on-surface">Reports & trip history</h1><p className="mt-2 text-sm text-nexus-on-surface-variant">Review saved operational snapshots and completed trips recorded by dispatch.</p></div>
+          <div className="flex gap-2">
+            {tab === "reports" && <Button onClick={() => void createReport()} disabled={loading}><FileText className="mr-2 h-4 w-4" /> Create snapshot</Button>}
+            <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh</Button>
           </div>
+        </header>
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="simulation"
-              size="sm"
-              onClick={handleGenerateNewReport}
-              isLoading={isGenerating}
-              className="font-mono-data text-xs shadow-tactile"
-            >
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              Compile Live Executive Briefing
-            </Button>
-          </div>
+        <div className="inline-flex rounded-xl border border-nexus-outline-variant/50 p-1">
+          <button onClick={() => setTab("reports")} className={`rounded-lg px-4 py-2 text-sm ${tab === "reports" ? "bg-nexus-surface-container font-medium" : "text-nexus-on-surface-variant"}`}>Saved reports</button>
+          <button onClick={() => setTab("trips")} className={`rounded-lg px-4 py-2 text-sm ${tab === "trips" ? "bg-nexus-surface-container font-medium" : "text-nexus-on-surface-variant"}`}>Completed trips</button>
         </div>
 
-        {/* Tab Switcher - Apple Segmented Control */}
-        <div className="w-fit">
-          <Tabs
-            tabs={[
-              {
-                id: "briefings",
-                label: "Executive Briefings",
-                icon: <FileText className="w-3.5 h-3.5" />,
-                count: reportsList.length,
-              },
-              {
-                id: "past_services",
-                label: "Past Services Ledger",
-                icon: <History className="w-3.5 h-3.5" />,
-                count: pastServices.length > 0 ? pastServices.length : undefined,
-              },
-            ]}
-            activeTab={activeTab}
-            onChange={(id) => setActiveTab(id as any)}
-            variant="segmented"
-            size="md"
-          />
-        </div>
+        {tab === "trips" && <label className="ml-3 text-sm text-nexus-on-surface-variant">Look back <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="ml-2 rounded-lg border border-nexus-outline-variant/50 bg-transparent px-2 py-1 text-nexus-on-surface"><option value={7}>7 days</option><option value={30}>30 days</option><option value={90}>90 days</option><option value={180}>180 days</option></select></label>}
+        {error && <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">{error}</div>}
 
-        {/* TAB 1: EXECUTIVE BRIEFINGS */}
-        {activeTab === "briefings" && (
-          <StaggerContainer className="space-y-4">
-            {reportsList.map((rep) => (
-              <StaggerItem key={rep.id}>
-                <TactileCard>
-                  <Card>
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <div className="p-3 rounded-xl bg-nexus-surface-container text-nexus-secondary shrink-0 mt-1">
-                          <FileText className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="healthy" size="sm">
-                              {rep.type}
-                            </Badge>
-                            <span className="text-xs text-nexus-on-surface-variant font-mono-data">
-                              {formatDateTime(rep.date)}
-                            </span>
-                          </div>
-                          <h3 className="text-base font-bold text-nexus-on-surface mt-1">{rep.title}</h3>
-                          <p className="text-xs text-nexus-on-surface-variant mt-1 max-w-2xl leading-relaxed">
-                            {rep.summary}
-                          </p>
-                          <p className="text-[11px] font-mono-data text-nexus-on-surface-variant/80 mt-2">
-                            Compiled by: {rep.author}
-                          </p>
-                        </div>
-                      </div>
+        {tab === "reports" && <section className="space-y-3" aria-label="Saved reports">
+          {!loading && !error && reports.length === 0 && <Card><CardContent className="p-10 text-center"><FileText className="mx-auto h-8 w-8 text-nexus-on-surface-variant" /><h2 className="mt-3 font-medium text-nexus-on-surface">No saved snapshots</h2><p className="mt-1 text-sm text-nexus-on-surface-variant">Create a snapshot to save a timestamped view of current workspace activity.</p></CardContent></Card>}
+          {reports.map((report) => <Card key={report.id}><CardContent className="flex flex-wrap items-start justify-between gap-4 p-5"><div className="flex gap-3"><FileText className="mt-1 h-5 w-5 text-nexus-primary" /><div><p className="font-medium text-nexus-on-surface">{report.title}</p><p className="mt-1 text-xs text-nexus-on-surface-variant">{report.type} · {report.generatedAt ? new Date(report.generatedAt).toLocaleString() : "Time not recorded"} · {report.author}</p><p className="mt-3 text-sm text-nexus-on-surface-variant">{report.summary}</p></div></div><Button variant="outline" size="sm" onClick={() => exportReport(report)}><Download className="mr-2 h-4 w-4" /> Export</Button></CardContent></Card>)}
+        </section>}
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleDownloadReport(rep)}
-                          className="text-xs font-mono-data"
-                        >
-                          <Download className="h-3.5 w-3.5 mr-1" />
-                          Export
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                </TactileCard>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        )}
-
-        {/* TAB 2: PAST SERVICES LEDGER */}
-        {activeTab === "past_services" && (
-          <div className="space-y-6">
-            {/* Top KPI Metrics Bar */}
-            {historySummary && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono">
-                <Card className="p-4 bg-nexus-surface-container/40 border-nexus-outline-variant/30">
-                  <span className="text-[10px] text-nexus-on-surface-variant uppercase block">Fulfilled Dispatches</span>
-                  <span className="text-2xl font-black text-nexus-on-surface mt-1 block">
-                    {historySummary.total_fulfilled_services}
-                  </span>
-                  <span className="text-[10px] text-emerald-400">Past {historySummary.time_range_days} Days Lookback</span>
-                </Card>
-
-                <Card className="p-4 bg-nexus-surface-container/40 border-nexus-outline-variant/30">
-                  <span className="text-[10px] text-nexus-on-surface-variant uppercase block">SLA Compliance</span>
-                  <span className="text-2xl font-black text-emerald-400 mt-1 block">
-                    {historySummary.sla_compliance_rate_pct}%
-                  </span>
-                  <span className="text-[10px] text-stone-500">On-Time Accuracy Benchmark</span>
-                </Card>
-
-                <Card className="p-4 bg-nexus-surface-container/40 border-nexus-outline-variant/30">
-                  <span className="text-[10px] text-nexus-on-surface-variant uppercase block">Cost Recovered</span>
-                  <span className="text-2xl font-black text-purple-400 mt-1 block">
-                    ${historySummary.total_cost_recovered_usd.toLocaleString()}
-                  </span>
-                  <span className="text-[10px] text-stone-500">Via Autonomous Reroutes</span>
-                </Card>
-
-                <Card className="p-4 bg-nexus-surface-container/40 border-nexus-outline-variant/30">
-                  <span className="text-[10px] text-nexus-on-surface-variant uppercase block">CO2 Offset</span>
-                  <span className="text-2xl font-black text-cyan-400 mt-1 block">
-                    {historySummary.total_carbon_offset_kg.toLocaleString()} kg
-                  </span>
-                  <span className="text-[10px] text-stone-500">Eco-Optimal Route Physics</span>
-                </Card>
-              </div>
-            )}
-
-            {/* Time Filter Buttons - Apple Segmented Control */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="w-fit">
-                <Tabs
-                  tabs={[
-                    { id: "7", label: "7 Days" },
-                    { id: "30", label: "30 Days" },
-                    { id: "90", label: "90 Days" },
-                    { id: "180", label: "180 Days" },
-                  ]}
-                  activeTab={String(timeRangeDays)}
-                  onChange={(id) => setTimeRangeDays(Number(id))}
-                  variant="segmented"
-                  size="sm"
-                />
-              </div>
-
-              <div className="text-xs font-mono text-nexus-on-surface-variant flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Aegis Cryptographic State Ledger</span>
-              </div>
-            </div>
-
-            {/* Services Table */}
-            {loadingHistory ? (
-              <SkeletonTable rows={5} />
-            ) : (
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left font-mono text-xs">
-                  <thead className="bg-nexus-surface-container/70 border-b border-nexus-outline-variant/30 text-[11px] text-nexus-on-surface-variant uppercase font-bold">
-                    <tr>
-                      <th className="p-3.5">Service Code</th>
-                      <th className="p-3.5">Corridor Route</th>
-                      <th className="p-3.5">Sector</th>
-                      <th className="p-3.5">Completed Date</th>
-                      <th className="p-3.5">Time Saved</th>
-                      <th className="p-3.5">Cost Saved</th>
-                      <th className="p-3.5">Status</th>
-                      <th className="p-3.5">Aegis Proof</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-nexus-outline-variant/20">
-                    {pastServices.map((svc) => (
-                      <tr key={svc.id} className="hover:bg-nexus-surface-container/30 transition-colors">
-                        <td className="p-3.5 font-bold text-nexus-on-surface">{svc.tracking_code}</td>
-                        <td className="p-3.5">
-                          <span className="text-nexus-on-surface block font-semibold">{svc.origin} → {svc.destination}</span>
-                          <span className="text-[10px] text-nexus-on-surface-variant">{svc.distance_km} km transit</span>
-                        </td>
-                        <td className="p-3.5 text-stone-300">{svc.sector}</td>
-                        <td className="p-3.5 text-nexus-on-surface-variant">{formatDateTime(svc.completed_at)}</td>
-                        <td className="p-3.5 font-bold text-emerald-400">+{svc.time_recovered_mins} mins</td>
-                        <td className="p-3.5 font-bold text-purple-400">+${svc.cost_saved_usd}</td>
-                        <td className="p-3.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            svc.on_time_sla_met
-                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                              : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                          }`}>
-                            {svc.status}
-                          </span>
-                        </td>
-                        <td className="p-3.5 font-mono text-[10px] text-stone-500 truncate max-w-[120px]" title={svc.cryptographic_proof}>
-                          {svc.cryptographic_proof.slice(0, 12)}...
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-            )}
-          </div>
-        )}
-      </FadeIn>
+        {tab === "trips" && <section className="space-y-3" aria-label="Completed trips">
+          {!loading && !error && trips.length === 0 && <Card><CardContent className="p-10 text-center"><Truck className="mx-auto h-8 w-8 text-nexus-on-surface-variant" /><h2 className="mt-3 font-medium text-nexus-on-surface">No completed trips recorded</h2><p className="mt-1 text-sm text-nexus-on-surface-variant">Completed trips will appear here when dispatch records them.</p></CardContent></Card>}
+          {trips.map((trip) => <Card key={trip.id}><CardContent className="grid gap-4 p-5 sm:grid-cols-5 sm:items-center"><div className="sm:col-span-2"><p className="font-medium text-nexus-on-surface">{trip.tracking_code}</p><p className="mt-1 text-sm text-nexus-on-surface-variant">{trip.origin || "Origin not recorded"} → {trip.destination || "Destination not recorded"}</p></div><div className="text-sm text-nexus-on-surface">{trip.distance_km == null ? "Distance not recorded" : `${trip.distance_km} km`}</div><div className="flex items-center gap-2 text-sm text-nexus-on-surface-variant"><Clock3 className="h-4 w-4" />{trip.completed_at ? new Date(trip.completed_at).toLocaleString() : "Completion time unavailable"}</div><div className="text-sm text-nexus-on-surface">{trip.on_time_sla_met == null ? "SLA not recorded" : trip.on_time_sla_met ? "On time" : "Delayed"}</div></CardContent></Card>)}
+        </section>}
+      </main>
     </AppShell>
   );
 }

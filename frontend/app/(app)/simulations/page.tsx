@@ -14,59 +14,21 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AppleCard, AppleCardContent } from "@/components/ui/AppleCard";
-import { apiFetch } from "@/lib/api/http";
+import { dataProvider } from "@/lib/data-provider";
 
 export default function SimulationsPage() {
   const [simulations, setSimulations] = React.useState<SimulationItem[]>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState("");
 
   const fetchSimulations = React.useCallback(async () => {
     setIsLoading(true);
+    setLoadError("");
     try {
-      const res = await apiFetch("/api/v1/simulations");
-      if (res.ok) {
-        const json = await res.json();
-        const list = Array.isArray(json) ? json : (json?.data && Array.isArray(json.data)) ? json.data : [];
-        if (list.length > 0) {
-          setSimulations(
-            list.map((s: any) => ({
-              id: s.id,
-              code: s.code || `SIM-${s.id.slice(-4)}`,
-              title: s.title || "Deterministic Reroute Scenario",
-              description: s.description || "Physics simulation evaluation",
-              incidentId: s.incident_id || s.incidentId,
-              status: s.status || "COMPLETED",
-              variables: s.variables || {
-                vehicleId: "v-104",
-                alternateRouteType: "I-70_SOUTH_DETOUR",
-                speedDeltaPct: 10,
-                fuelCostPerKm: 0.42,
-                priorityReordering: true,
-              },
-              baselineMetrics: s.baseline_metrics || s.baselineMetrics || {
-                totalDistanceKm: 1620.0,
-                projectedDelayMins: 180,
-                slaBreachRiskPct: 88.0,
-                totalCostUsd: 1450.0,
-              },
-              simulatedMetrics: {
-                totalDistanceKm: s.simulated_metrics?.totalDistanceKm || 1705.0,
-                projectedDelayMins: s.simulated_metrics?.projectedDelayMins || 45,
-                slaBreachRiskPct: s.simulated_metrics?.slaBreachRiskPct || 12.0,
-                totalCostUsd: s.simulated_metrics?.totalCostUsd || 1530.0,
-                netTimeSavedMins: s.simulated_metrics?.netTimeSavedMins || s.net_time_saved_mins || 135,
-                costDeltaUsd: s.simulated_metrics?.costDeltaUsd || s.cost_delta_usd || 80,
-                recommendationScore: s.simulated_metrics?.recommendationScore || s.recommendation_score || 94,
-                verdict: s.simulated_metrics?.verdict || s.verdict || "RECOMMENDED",
-                insights: s.simulated_metrics?.insights || ["Reroute avoids I-80 summit road icing."],
-              },
-              createdAt: s.created_at || s.createdAt || new Date().toISOString(),
-            }))
-          );
-        }
-      }
-    } catch {
-      // Fallback
+      setSimulations(await dataProvider.getSimulations());
+    } catch (error) {
+      setSimulations([]);
+      setLoadError(error instanceof Error ? error.message : "Could not load estimates.");
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +92,11 @@ export default function SimulationsPage() {
         </AppleCard>
 
         {/* Simulations List with Loading State */}
-        {isLoading ? (
+        {loadError && !isLoading ? (
+          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+            Estimates could not be loaded: {loadError}. <button className="ml-2 underline" onClick={() => void fetchSimulations()}>Retry</button>
+          </div>
+        ) : isLoading ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-xs font-mono text-stone-600 dark:text-stone-400">
               <RefreshCw className="h-3.5 w-3.5 animate-spin text-stone-500" />
@@ -141,8 +107,8 @@ export default function SimulationsPage() {
         ) : simulations.length === 0 ? (
           <EmptyState
             icon={Sparkles}
-            title="No decision simulations queued"
-            description="Run your first deterministic physics scenario to evaluate rerouting variables and time-saving metrics safely."
+            title="No planning estimates yet"
+            description="Estimates are based on a vehicle’s saved route and assumptions entered by your team."
             action={
               <Link href="/simulations/new">
                 <Button variant="simulation" size="sm" className="font-mono text-xs gap-1.5 shadow-tactile">
@@ -160,8 +126,7 @@ export default function SimulationsPage() {
                 <TableHead>Status</TableHead>
                 <TableHead>Time Recovery</TableHead>
                 <TableHead>Cost Delta</TableHead>
-                <TableHead>Confidence</TableHead>
-                <TableHead>Verdict</TableHead>
+            <TableHead>Estimate</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -182,23 +147,20 @@ export default function SimulationsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono-data text-xs font-bold text-emerald-700">
-                    +{sim.simulatedMetrics.netTimeSavedMins} mins
+                    {sim.simulatedMetrics.netTimeSavedMins == null ? "Unavailable" : `${sim.simulatedMetrics.netTimeSavedMins} mins`}
                   </TableCell>
                   <TableCell className="font-mono-data text-xs font-semibold">
-                    +${sim.simulatedMetrics.costDeltaUsd}
-                  </TableCell>
-                  <TableCell className="font-mono-data text-xs font-bold">
-                    {sim.simulatedMetrics.recommendationScore ?? 94}%
+                    {sim.simulatedMetrics.costDeltaUsd == null ? "Unavailable" : formatCurrency(sim.simulatedMetrics.costDeltaUsd)}
                   </TableCell>
                   <TableCell>
                     <Badge variant="simulation" size="sm">
-                      {sim.simulatedMetrics.verdict ?? "RECOMMENDED"}
+                      {sim.simulatedMetrics.verdict ?? "Estimate only"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <Link href={`/simulations/${sim.id}`}>
                       <Button variant="secondary" size="sm" className="font-mono-data text-xs">
-                        Compare & Apply <ArrowRight className="h-3 w-3 ml-1" />
+                        View estimate <ArrowRight className="h-3 w-3 ml-1" />
                       </Button>
                     </Link>
                   </TableCell>

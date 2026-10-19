@@ -10,11 +10,6 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  CheckCircle2,
-  Lock,
-  Mail,
-  Building,
-  User,
   Loader2,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/http";
@@ -35,8 +30,6 @@ export default function SignUpPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [userAlreadyExists, setUserAlreadyExists] = React.useState(false);
-  const [isTransitioning, setIsTransitioning] = React.useState(false);
-  const [createdUser, setCreatedUser] = React.useState<any>(null);
 
   const handleStep1Continue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,36 +67,21 @@ export default function SignUpPage() {
           name: name.trim(),
           email: email.trim(),
           password,
-          companyName: companyName.trim(),
+          workspaceName: companyName.trim(),
         }),
       });
 
       if (resp.ok) {
         const data = await resp.json();
         const user = data.user;
-        const token = data.access_token || data.accessToken;
-
-        if (token) {
-          const isSecure = window.location.protocol === "https:";
-          document.cookie = `nexus_session_token=${token}; path=/; max-age=86400; SameSite=Lax${
-            isSecure ? "; Secure" : ""
-          }`;
-          localStorage.setItem("nexus_access_token", token);
-        }
+        localStorage.removeItem("nexus_access_token");
 
         if (user) {
-          localStorage.setItem("nexus_active_workspace_id", user.workspace_id || "ws-continental-fleet-01");
-          localStorage.setItem("nexus_demo_user", JSON.stringify(user));
-          localStorage.setItem("nexus_user_role", user.role);
+          if (user.workspace_id) localStorage.setItem("nexus_active_workspace_id", user.workspace_id);
+          localStorage.removeItem("nexus_demo_user");
         }
 
-        setCreatedUser(user);
-        setIsTransitioning(true);
-        router.prefetch("/overview");
-
-        setTimeout(() => {
-          router.push("/overview");
-        }, 750);
+        router.replace("/overview");
       } else {
         const errJson = await resp.json().catch(() => ({}));
         if (resp.status === 409 || errJson.detail?.toLowerCase().includes("exist")) {
@@ -156,7 +134,7 @@ export default function SignUpPage() {
               Create Workspace
             </h1>
             <p className="text-xs font-mono text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
-              Initialize your logistics enterprise partition and operator accounts.
+              Create a workspace for your operations team.
             </p>
           </div>
 
@@ -264,7 +242,7 @@ export default function SignUpPage() {
                   </div>
 
                   <label htmlFor="company-name" className="block text-stone-600 dark:text-stone-300 font-bold uppercase tracking-wider text-[10px] pt-2">
-                    Organization / Fleet Enterprise Name
+                    Workspace name
                   </label>
                   <input
                     id="company-name"
@@ -273,13 +251,13 @@ export default function SignUpPage() {
                     autoFocus
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Continental Freight Logistics"
+                    placeholder="e.g. Northstar Logistics"
                     className="w-full h-11 px-3.5 rounded-xl bg-[#F1EEE6] dark:bg-[#1C1C22] border border-[#CFCBBF] dark:border-[#3A3836] text-sm text-[#11120F] dark:text-[#F4F2EC] placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#7F5200] dark:focus:ring-[#FFC400] font-mono transition-all"
                   />
                 </div>
 
                 <p className="text-[11px] font-mono text-stone-500 leading-relaxed">
-                  By clicking Create Workspace, you agree to the Nexus Terms of Service and data isolation policies.
+                  You can connect operational data after your workspace is created.
                 </p>
 
                 <button
@@ -311,30 +289,6 @@ export default function SignUpPage() {
           </div>
         </motion.div>
       </main>
-
-      {/* Transition Overlay */}
-      {isTransitioning && (
-        <div className="fixed inset-0 z-50 bg-[#F6F4EE]/95 dark:bg-[#0B0B0D]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="w-full max-w-sm mx-auto text-center space-y-5 font-mono">
-            <div className="h-14 w-14 mx-auto rounded-2xl bg-white dark:bg-[#121216] border border-[#CFCBBF] dark:border-[#3A3836] shadow-tactile flex items-center justify-center">
-              <LogoMark size={28} />
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-base font-bold tracking-tight text-[#11120F] dark:text-white">
-                Preparing {companyName} Workspace
-              </h3>
-              <p className="text-xs text-stone-500">
-                Initializing logistics infrastructure for {name || "your team"}
-              </p>
-            </div>
-
-            <div className="w-40 mx-auto h-1 bg-stone-200 dark:bg-stone-800 rounded-full overflow-hidden">
-              <div className="h-full bg-amber-500 rounded-full animate-pulse w-full" />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className="border-t border-[#CFCBBF] dark:border-[#3A3836] py-5 px-6 lg:px-12 text-[11px] font-mono text-stone-500 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">

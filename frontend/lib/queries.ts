@@ -1,10 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ApiNexusDataProvider, MockNexusDataProvider } from './data-provider';
+import { ApiNexusDataProvider } from './data-provider';
 
 // Create a single instance of the data provider
-const dataProvider = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true'
-  ? new MockNexusDataProvider()
-  : new ApiNexusDataProvider();
+const dataProvider = new ApiNexusDataProvider();
 
 export function useOverviewStats() {
   return useQuery({ queryKey: ['overview-stats'], queryFn: () => dataProvider.getOverviewStats() });

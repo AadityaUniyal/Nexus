@@ -66,18 +66,18 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
   const [syncStatus, setSyncStatus] = React.useState<SyncStatusData | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [companyName, setCompanyName] = React.useState("Continental Logistics Global");
-  const [hubName, setHubName] = React.useState("Dehradun Hub");
+  const [syncError, setSyncError] = React.useState<string | null>(null);
+  const [companyName, setCompanyName] = React.useState("Your workspace");
+  const [hubName, setHubName] = React.useState("No location configured");
 
   const fetchSyncStatus = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/admin/sync-status");
-      if (res.ok) {
-        const data = await res.json();
-        setSyncStatus(data);
-      }
-    } catch {
-      // Fallback
+      const res = await fetch("/api/v1/admin/sync-status", { credentials: "include", cache: "no-store" });
+      if (!res.ok) throw new Error("System status is unavailable for this account.");
+      setSyncStatus(await res.json());
+      setSyncError(null);
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : "System status could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -87,33 +87,20 @@ export default function AdminDashboardPage() {
     fetchSyncStatus();
     const interval = setInterval(fetchSyncStatus, 5000);
 
-    if (typeof window !== "undefined") {
-      try {
-        const savedCompany = localStorage.getItem("nexus_company_name");
-        if (savedCompany) setCompanyName(savedCompany);
-        const savedLoc = localStorage.getItem("nexus_workspace_location");
-        if (savedLoc) {
-          const parsed = JSON.parse(savedLoc);
-          if (parsed?.name) setHubName(`${parsed.name} Hub`);
-        }
-      } catch {
-        // fallback
-      }
-    }
+    setCompanyName(user?.workspace_name || "Your workspace");
 
     return () => clearInterval(interval);
-  }, [fetchSyncStatus]);
+  }, [fetchSyncStatus, user?.workspace_name]);
 
   const handleManualSync = async () => {
     tactileAudio.playClick();
     setLoading(true);
     await fetchSyncStatus();
-    tactileAudio.playSuccess();
-    toast({
-      title: "State Synchronized",
-      message: "Database connections, memory cache, and Aegis ledger verified.",
-      type: "success",
-    });
+    if (syncError) {
+      toast({ title: "System status unavailable", message: syncError, type: "critical" });
+    } else {
+      toast({ title: "System status refreshed", message: "Showing the latest measurements reported by this service.", type: "success" });
+    }
   };
 
   return (
@@ -161,11 +148,11 @@ export default function AdminDashboardPage() {
               <StatusLed status={syncStatus?.database?.status === "CONNECTED" ? "HEALTHY" : "WARNING"} size="sm" />
             </div>
             <span className="text-2xl font-black text-emerald-400 mt-1 block">
-              {syncStatus?.database?.status || "CONNECTED"}
+              {syncStatus?.database?.status ?? "Unavailable"}
             </span>
             <div className="flex items-center justify-between text-[10px] text-stone-500 mt-1">
-              <span>Latency: {syncStatus?.database?.latencyMs || 0.4}ms</span>
-              <span>SSL: {syncStatus?.database?.sslMode || "require"}</span>
+              <span>Latency: {syncStatus?.database?.latencyMs ?? "Unavailable"}ms</span>
+              <span>SSL: {syncStatus?.database?.sslMode ?? "Unavailable"}</span>
             </div>
           </Card>
 
@@ -175,11 +162,11 @@ export default function AdminDashboardPage() {
               <Cpu className="w-3.5 h-3.5 text-cyan-400" />
             </div>
             <span className="text-2xl font-black text-cyan-400 mt-1 block">
-              {syncStatus?.cache?.hit_ratio_pct ?? 48.5}%
+              {syncStatus?.cache?.hit_ratio_pct == null ? "Unavailable" : `${syncStatus.cache.hit_ratio_pct}%`}
             </span>
             <div className="flex items-center justify-between text-[10px] text-stone-500 mt-1">
-              <span>Entries: {syncStatus?.cache?.cached_entries || 24}</span>
-              <span>Hits: {syncStatus?.cache?.hits || 12}</span>
+              <span>Entries: {syncStatus?.cache?.cached_entries ?? "Unavailable"}</span>
+              <span>Hits: {syncStatus?.cache?.hits ?? "Unavailable"}</span>
             </div>
           </Card>
 
@@ -189,11 +176,10 @@ export default function AdminDashboardPage() {
               <Lock className="w-3.5 h-3.5 text-purple-400" />
             </div>
             <span className="text-2xl font-black text-purple-300 mt-1 block">
-              CONSENSUS
+              Not configured
             </span>
             <div className="flex items-center justify-between text-[10px] text-stone-500 mt-1">
-              <span>ACID Ledger: Locked</span>
-              <span>SHA-256 Validated</span>
+              <span>Cryptographic ledger unavailable</span>
             </div>
           </Card>
 
@@ -203,11 +189,11 @@ export default function AdminDashboardPage() {
               <Zap className="w-3.5 h-3.5 text-amber-400" />
             </div>
             <span className="text-2xl font-black text-amber-300 mt-1 block">
-              {syncStatus?.taskQueue?.active_workers ?? 8} Workers
+              {syncStatus?.taskQueue?.active_workers ?? "Unavailable"} Workers
             </span>
             <div className="flex items-center justify-between text-[10px] text-stone-500 mt-1">
-              <span>Queue Depth: {syncStatus?.taskQueue?.queue_depth || 0}</span>
-              <span>Non-Blocking I/O</span>
+              <span>Queue Depth: {syncStatus?.taskQueue?.queue_depth ?? "Unavailable"}</span>
+              <span>Reported by this service</span>
             </div>
           </Card>
         </div>

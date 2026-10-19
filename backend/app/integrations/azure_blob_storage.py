@@ -20,7 +20,9 @@ class AzureBlobStorageClient:
         self.connection_string = settings.AZURE_STORAGE_CONNECTION_STRING
         self.blob_service_client = None
         self.local_fallback_dir = Path(os.getcwd()) / "local_storage"
-        self._ensure_local_dirs()
+        self.allow_local_fallback = settings.APP_ENV.lower() != "production"
+        if self.allow_local_fallback:
+            self._ensure_local_dirs()
 
         if self.enabled:
             try:
@@ -30,7 +32,7 @@ class AzureBlobStorageClient:
                 self.blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
                 logger.info("[Storage] Connected to Azure Blob Storage service")
             except Exception as e:
-                logger.warning(f"[Storage] Could not initialize Azure BlobServiceClient: {e}. Falling back to local storage.")
+                logger.exception("[Storage] Azure Blob Storage could not be initialized")
                 self.enabled = False
 
     def _ensure_local_dirs(self):
@@ -55,8 +57,14 @@ class AzureBlobStorageClient:
                 blob_client.upload_blob(data, overwrite=True)
                 logger.debug(f"[Storage] Uploaded {blob_name} to Azure container {container}")
                 return True
-            except Exception as e:
-                logger.error(f"[Storage] Azure upload failed for {blob_name}: {e}. Falling back to local.")
+            except Exception:
+                logger.exception("[Storage] Azure upload failed for container %s", container)
+                if not self.allow_local_fallback:
+                    return False
+
+        elif not self.allow_local_fallback:
+            logger.error("[Storage] Azure Blob Storage is not configured; production upload rejected")
+            return False
 
         try:
             file_path = self.local_fallback_dir / container / blob_name
@@ -76,8 +84,12 @@ class AzureBlobStorageClient:
                 blob_client = self.blob_service_client.get_blob_client(container=container, blob=blob_name)
                 if blob_client.exists():
                     return blob_client.download_blob().readall()
-            except Exception as e:
-                logger.error(f"[Storage] Azure download failed for {blob_name}: {e}. Checking local.")
+            except Exception:
+                logger.exception("[Storage] Azure download failed for container %s", container)
+                if not self.allow_local_fallback:
+                    return None
+        elif not self.allow_local_fallback:
+            return None
 
         try:
             file_path = self.local_fallback_dir / container / blob_name
@@ -99,6 +111,14 @@ class AzureBlobStorageClient:
 
     def list_blobs(self, container: str, prefix: Optional[str] = None) -> List[str]:
         """Lists files in the local container directory, optionally filtered by prefix."""
+        if self.enabled and self.blob_service_client:
+            try:
+                return [blob.name for blob in self.blob_service_client.get_container_client(container).list_blobs(name_starts_with=prefix)]
+            except Exception:
+                logger.exception("[Storage] Could not list Azure container %s", container)
+                return []
+        if not self.allow_local_fallback:
+            return []
         blobs = []
         try:
             container_dir = self.local_fallback_dir / container
@@ -116,7 +136,7 @@ class AzureBlobStorageClient:
         """Returns the local URI path for a specific day's telemetry archive."""
         container = f"telemetry-{tier}" if tier in ["bronze", "silver"] else "analytics-gold"
         prefix = date_str.replace("-", "/")
-        return f"local://{container}/{prefix}"
+        return f"azure://{container}/{prefix}" if self.enabled else f"local://{container}/{prefix}"
 
 
 azure_blob_storage_client = AzureBlobStorageClient()

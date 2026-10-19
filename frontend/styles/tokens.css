@@ -93,21 +93,13 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --apple-spring-snappy: cubic-bezier(0.25, 1, 0.5, 1);
-
-  /* Apple Typographic Tracking */
+  /* Typographic tracking */
   --tracking-hero: -0.038em;
   --tracking-display: -0.032em;
   --tracking-title: -0.024em;
   --tracking-headline: -0.016em;
   --tracking-body: -0.005em;
   --tracking-eyebrow: 0.12em;
-
-  /* Apple Glass & Materiality */
-  --apple-card-light: rgba(246, 244, 238, 0.85);
-  --apple-card-dark: rgba(18, 18, 22, 0.88);
-  --apple-border-light: rgba(0, 0, 0, 0.09);
-  --apple-border-dark: rgba(255, 255, 255, 0.09);
 
   /* Motion spring presets */
   --spring-snappy: cubic-bezier(0.25, 1, 0.5, 1);
