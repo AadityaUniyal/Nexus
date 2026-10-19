@@ -13,6 +13,29 @@ from app.ml.engine import nexus_master_ml
 
 client = TestClient(app)
 
+@pytest.fixture(autouse=True)
+def override_auth_dependencies():
+    from app.auth.dependencies import require_permission, require_onboarded, require_authenticated, require_workspace
+    from app.auth.principal import RequestPrincipal, RoleEnum, ROLE_PERMISSIONS_MAP, PermissionEnum
+    principal = RequestPrincipal(
+        nexus_user_id="usr-test-101",
+        clerk_user_id="user_clerk_test_101",
+        email="test@nexus.continental",
+        display_name="Test Operator",
+        workspace_id="ws-continental-fleet-01",
+        organization_id="org-continental-logistics",
+        role=RoleEnum.ADMINISTRATOR,
+        permissions=ROLE_PERMISSIONS_MAP[RoleEnum.ADMINISTRATOR],
+        onboarding_completed=True,
+        is_active=True
+    )
+    app.dependency_overrides[require_onboarded] = lambda: principal
+    app.dependency_overrides[require_authenticated] = lambda: principal
+    app.dependency_overrides[require_workspace] = lambda: principal
+    app.dependency_overrides[require_permission(PermissionEnum.MANAGE_SYSTEM)] = lambda: principal
+    yield
+    app.dependency_overrides.clear()
+
 def test_ml_system_metadata():
     """Verify Master ML Engine returns complete technical specifications for all 4 features."""
     response = client.get("/api/v1/ml/status")

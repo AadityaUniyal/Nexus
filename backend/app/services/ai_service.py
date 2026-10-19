@@ -267,6 +267,8 @@ def _deterministic_insights(metrics: Dict[str, Any]) -> str:
     if sla is not None:
         tone = "healthy" if sla >= 95 else "below the 95% target"
         lines.append(f"- SLA compliance is **{sla}%**, {tone}.")
+    else:
+        lines.append("- SLA compliance baseline: Monitoring network targets (95% standard).")
     tat = metrics.get("avgTurnaroundMins")
     if tat is not None:
         lines.append(f"- Average turnaround is **{tat} min**.")

@@ -229,6 +229,7 @@ async def azure_health():
     from app.integrations.azure_monitor import _configured
     return {
         "status": "ok",
+        "platform": "Azure Free Tier",
         "services": {
             "applicationInsights": "CONFIGURED" if _configured else "NOT_CONFIGURED",
             "blobStorage": "CONNECTED" if azure_blob_storage_client.enabled and azure_blob_storage_client.blob_service_client else "NOT_CONFIGURED",

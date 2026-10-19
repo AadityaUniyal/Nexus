@@ -21,6 +21,7 @@ mock_principal = RequestPrincipal(
     email="test@nexus.continental",
     display_name="Test Operator",
     workspace_id="ws-continental-fleet-01",
+    organization_id="org-continental-logistics",
     role=RoleEnum.ADMINISTRATOR,
     permissions=ROLE_PERMISSIONS_MAP[RoleEnum.ADMINISTRATOR],
     onboarding_completed=True,

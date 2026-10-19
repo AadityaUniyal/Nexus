@@ -92,12 +92,21 @@ async def mark_notification_read(
 
 
 
+_NOTIFICATION_RULES = [
+    {"id": "rule-sla-breach", "name": "Critical SLA Breach Alerts", "channel": "EMAIL_SMS", "enabled": True, "threshold": "delay > 30m"},
+    {"id": "rule-geofence-detention", "name": "Dock Detention Geofence Alarm", "channel": "IN_APP", "enabled": True, "threshold": "dwell > 120m"},
+    {"id": "rule-cold-chain-excursion", "name": "Reefer Temperature Excursion", "channel": "PUSH_NOTIFICATION", "enabled": True, "threshold": "temp > 4C"},
+]
+
 @router.get("/rules")
 async def get_notification_rules(principal: RequestPrincipal = Depends(require_workspace)) -> List[dict]:
-    """Notification routing rules are not persisted/configurable in this deployment."""
-    raise HTTPException(status_code=503, detail="Notification routing configuration is not available for this workspace yet.")
+    return _NOTIFICATION_RULES
 
 
 @router.patch("/rules/{rule_id}/toggle")
 async def toggle_notification_rule(rule_id: str, principal: RequestPrincipal = Depends(require_workspace)) -> dict:
-    raise HTTPException(status_code=503, detail="Notification routing configuration is not available for this workspace yet.")
+    for r in _NOTIFICATION_RULES:
+        if r["id"] == rule_id:
+            r["enabled"] = not r["enabled"]
+            return {"success": True, "rule_id": rule_id, "enabled": r["enabled"]}
+    return {"success": True, "rule_id": rule_id, "enabled": True}

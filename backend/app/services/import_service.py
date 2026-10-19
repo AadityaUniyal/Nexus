@@ -20,8 +20,8 @@ MAX_IMPORT_ROWS = 10_000
 
 ENTITY_FIELDS = {
     "VEHICLES": {
-        "required": ["code", "name", "model", "driver_name", "status", "lat", "lng", "speed_kmh", "heading", "battery_pct", "health_score"],
-        "optional": [],
+        "required": ["code", "name"],
+        "optional": ["model", "driver_name", "status", "lat", "lng", "speed_kmh", "heading", "battery_pct", "health_score"],
         "aliases": {
             "code": ["code", "id", "vin", "registration", "registration_number", "registrationnumber", "reg_no", "license_plate", "truck_id", "vehicle_id", "unit_no"],
             "name": ["name", "vehicle_name", "unit_name", "truck_name", "truckname", "title"],
