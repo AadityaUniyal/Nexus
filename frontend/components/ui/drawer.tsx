@@ -49,7 +49,7 @@ export function Drawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/40 backdrop-blur-3xl transition-opacity"
           />
 
           {/* Drawer container */}
@@ -57,14 +57,14 @@ export function Drawer({
             initial={{ x: side === "right" ? "100%" : "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: side === "right" ? "100%" : "-100%" }}
-            transition={{ type: "spring", stiffness: 350, damping: 30 }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
             className={cn(
-              "relative ml-auto w-full bg-nexus-surface-lowest shadow-2xl border-l border-nexus-outline-variant/30 flex flex-col h-full z-50",
+              "relative ml-auto w-full bg-nexus-surface-lowest shadow-2xl border-l border-black/[0.08] dark:border-white/[0.12] flex flex-col h-full z-50",
               widthClasses[width]
             )}
           >
             {/* Header */}
-            <div className="px-6 py-5 border-b border-nexus-outline-variant/30 flex items-center justify-between bg-nexus-surface/50">
+            <div className="px-6 py-5 border-b border-black/[0.08] dark:border-white/[0.12] flex items-center justify-between bg-nexus-surface/50">
               <div>
                 {title && (
                   <h2 className="text-base font-semibold text-nexus-on-surface tracking-tight">

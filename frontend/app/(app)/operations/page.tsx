@@ -29,6 +29,7 @@ import {
   OrderItem,
 } from "@/lib/mock-data";
 import { dataProvider } from "@/lib/data-provider";
+import { eventBus } from "@/lib/event-bus";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
@@ -87,6 +88,140 @@ export default function OperationsPage() {
 
   React.useEffect(() => {
     loadData();
+
+    // Reactive subscriptions for real-time fleet, hub, order, and trip updates
+    const unsubTelemetry = eventBus.subscribe("vehicle_telemetry_updated", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setVehicles((prev) =>
+        prev.map((v) =>
+          v.id === data.vehicle_id || v.code === data.vehicle_code
+            ? {
+                ...v,
+                lat: data.lat ?? v.lat,
+                lng: data.lng ?? v.lng,
+                speedKmh: data.speed_kmh ?? v.speedKmh,
+                heading: data.heading ?? v.heading,
+                batteryPct: data.battery_pct ?? v.batteryPct,
+                status: data.status ?? v.status,
+              }
+            : v
+        )
+      );
+    });
+
+    const unsubVehicleUpdated = eventBus.subscribe("vehicle_updated", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setVehicles((prev) =>
+        prev.map((v) =>
+          v.id === data.id || v.code === data.code
+            ? {
+                ...v,
+                name: data.name ?? v.name,
+                model: data.model ?? v.model,
+                driverName: data.driver_name ?? data.driverName ?? v.driverName,
+                status: data.status ?? v.status,
+                speedKmh: data.speed_kmh ?? data.speedKmh ?? v.speedKmh,
+                batteryPct: data.battery_pct ?? data.batteryPct ?? v.batteryPct,
+                healthScore: data.health_score ?? data.healthScore ?? v.healthScore,
+              }
+            : v
+        )
+      );
+    });
+
+    const unsubVehicleCreated = eventBus.subscribe("vehicle_created", () => {
+      loadData();
+    });
+
+    const unsubWarehouseCreated = eventBus.subscribe("warehouse_created", () => {
+      loadData();
+    });
+
+    const unsubWarehouseUpdated = eventBus.subscribe("warehouse_updated", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setWarehouses((prev) =>
+        prev.map((w) =>
+          vMatch(w, data)
+            ? {
+                ...w,
+                name: data.name ?? w.name,
+                status: data.status ?? w.status,
+                currentUnits: data.current_units ?? data.currentUnits ?? w.currentUnits,
+                capacityUnits: data.capacity_units ?? data.capacityUnits ?? w.capacityUnits,
+                activeDocks: data.active_docks ?? data.activeDocks ?? w.activeDocks,
+                efficiencyPct: data.efficiency_pct ?? data.efficiencyPct ?? w.efficiencyPct,
+              }
+            : w
+        )
+      );
+    });
+
+    function vMatch(w: WarehouseItem, data: any) {
+      return w.id === data.id || w.code === data.code;
+    }
+
+    const unsubOrderCreated = eventBus.subscribe("order_created", () => {
+      loadData();
+    });
+
+    const unsubOrderUpdated = eventBus.subscribe("order_updated", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === data.id || o.orderNumber === data.order_number
+            ? {
+                ...o,
+                status: data.status ?? o.status,
+                vehicleId: data.vehicle_id ?? o.vehicleId,
+                vehicleCode: data.vehicle_code ?? o.vehicleCode,
+              }
+            : o
+        )
+      );
+    });
+
+    const unsubTripDispatched = eventBus.subscribe("trip_dispatched", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setVehicles((prev) =>
+        prev.map((v) =>
+          v.id === data.vehicle_id || v.code === data.vehicle_code
+            ? { ...v, status: "IN_TRANSIT" as const }
+            : v
+        )
+      );
+      loadData();
+    });
+
+    const unsubDockArrival = eventBus.subscribe("dock_arrival_detected", () => {
+      loadData();
+    });
+
+    const unsubDockDwell = eventBus.subscribe("dock_dwell_warning", () => {
+      loadData();
+    });
+
+    const unsubDetention = eventBus.subscribe("detention_accruing", () => {
+      loadData();
+    });
+
+    return () => {
+      unsubTelemetry();
+      unsubVehicleUpdated();
+      unsubVehicleCreated();
+      unsubWarehouseCreated();
+      unsubWarehouseUpdated();
+      unsubOrderCreated();
+      unsubOrderUpdated();
+      unsubTripDispatched();
+      unsubDockArrival();
+      unsubDockDwell();
+      unsubDetention();
+    };
   }, [loadData]);
 
   // Submit new Hub
@@ -274,9 +409,14 @@ export default function OperationsPage() {
                         .map((v) => (
                           <TableRow key={v.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/40 transition-colors">
                             <TableCell className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100">
-                              <span className="px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                                {v.code}
-                              </span>
+                              <Link
+                                href={`/live-world?entityType=VEHICLE&id=${encodeURIComponent(v.code)}`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:border-nexus-primary transition-colors text-stone-900 dark:text-stone-100 hover:text-nexus-primary"
+                                title="Inspect vehicle on live map"
+                              >
+                                <span>{v.code}</span>
+                                <ArrowUpRight className="w-3 h-3 text-stone-400" />
+                              </Link>
                             </TableCell>
                             <TableCell>
                               <div className="font-semibold text-xs text-stone-900 dark:text-stone-100">{v.name}</div>
@@ -386,9 +526,14 @@ export default function OperationsPage() {
                         .map((w) => (
                           <TableRow key={w.id} className="hover:bg-stone-50/80 dark:hover:bg-stone-800/40 transition-colors">
                             <TableCell className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100">
-                              <span className="px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                                {w.code}
-                              </span>
+                              <Link
+                                href={`/live-world?entityType=WAREHOUSE&id=${encodeURIComponent(w.code)}`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:border-nexus-primary transition-colors text-stone-900 dark:text-stone-100 hover:text-nexus-primary"
+                                title="Inspect hub on live map"
+                              >
+                                <span>{w.code}</span>
+                                <ArrowUpRight className="w-3 h-3 text-stone-400" />
+                              </Link>
                             </TableCell>
                             <TableCell className="text-xs font-semibold text-stone-900 dark:text-stone-100">{w.name}</TableCell>
                             <TableCell className="text-xs">{w.city}, {w.state}</TableCell>

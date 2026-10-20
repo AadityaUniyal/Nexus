@@ -191,7 +191,15 @@ async def create_trip(
 
     await db.commit()
     await db.refresh(trip)
-    await broadcaster.broadcast("TRIP_CREATED", {"id": trip.id, "trip_number": trip.trip_number})
+    await broadcaster.broadcast("TRIP_CREATED", {
+        "id": trip.id,
+        "trip_number": trip.trip_number,
+        "vehicle_id": trip.vehicle_id,
+        "origin_warehouse_id": trip.origin_warehouse_id,
+        "dest_warehouse_id": trip.dest_warehouse_id,
+        "status": trip.status,
+        "workspace_id": ws,
+    }, workspace_id=ws)
     return trip
 
 
@@ -257,8 +265,15 @@ async def dispatch_trip(
     await broadcaster.broadcast("TRIP_DISPATCHED", {
         "id": trip.id,
         "trip_number": trip.trip_number,
+        "vehicle_id": trip.vehicle_id,
         "vehicle_code": veh_code,
-    })
+        "driver_name": driver_name,
+        "origin_warehouse_id": trip.origin_warehouse_id,
+        "dest_warehouse_id": trip.dest_warehouse_id,
+        "status": trip.status,
+        "actual_departure": now_iso,
+        "workspace_id": ws,
+    }, workspace_id=ws)
 
     return TripDispatchResponse(
         trip_id=trip.id,

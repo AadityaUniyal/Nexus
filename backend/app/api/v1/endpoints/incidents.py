@@ -206,7 +206,10 @@ async def create_incident(
         "severity": new_inc.severity,
         "status": new_inc.status,
         "affectedEntity": new_inc.affected_entity_name,
-    })
+        "lat": new_inc.lat,
+        "lng": new_inc.lng,
+        "workspace_id": ws_id,
+    }, workspace_id=ws_id)
 
     return IncidentRead(
         id=new_inc.id,
@@ -319,7 +322,10 @@ async def update_incident(
         "status": inc.status,
         "note": note,
         "actor": actor,
-    })
+        "lat": inc.lat,
+        "lng": inc.lng,
+        "workspace_id": inc.workspace_id,
+    }, workspace_id=inc.workspace_id)
 
     return IncidentRead(
         id=inc.id,
@@ -466,7 +472,10 @@ async def transition_incident_state(
         "status": inc.status,
         "note": req.note,
         "actor": req.actor_name,
-    })
+        "lat": inc.lat,
+        "lng": inc.lng,
+        "workspace_id": inc.workspace_id,
+    }, workspace_id=inc.workspace_id)
 
     return IncidentRead(
         id=inc.id,

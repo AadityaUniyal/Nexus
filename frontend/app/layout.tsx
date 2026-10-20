@@ -49,7 +49,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body className="bg-nexus-surface text-nexus-on-surface antialiased selection:bg-brand-200 selection:text-brand-900">
+      <body className="bg-nexus-surface text-nexus-on-surface antialiased selection:bg-brand-200 selection:text-brand-900 font-sans">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-md focus:bg-nexus-surface-lowest focus:px-3 focus:py-2 focus:text-sm focus:shadow-tactile-lg"

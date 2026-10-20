@@ -28,22 +28,22 @@ export function AppleCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 400, damping: 40, mass: 0.7 }}
+      transition={{ type: "spring", stiffness: 260, damping: 28 }}
       whileHover={
         interactive
           ? {
               y: -2,
               boxShadow:
                 "0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
-              transition: { type: "spring", stiffness: 500, damping: 35 },
+              transition: { type: "spring", stiffness: 260, damping: 28 },
             }
           : undefined
       }
       className={cn(
-        "rounded-2xl border overflow-hidden",
+        "rounded-[24px] border overflow-hidden",
         glass
-          ? "bg-white/70 dark:bg-stone-900/70 backdrop-blur-xl border-white/30 dark:border-white/10 shadow-[0_1px_1px_rgba(0,0,0,0.05),0_4px_24px_rgba(0,0,0,0.04)]"
-          : "bg-white dark:bg-stone-900 border-stone-200/60 dark:border-stone-800/60 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.03)]",
+          ? "bg-white/70 dark:bg-stone-900/70 backdrop-blur-3xl border-black/[0.08] dark:border-white/[0.12] shadow-[0_1px_1px_rgba(0,0,0,0.05),0_4px_24px_rgba(0,0,0,0.04)]"
+          : "bg-white dark:bg-stone-900 border-black/[0.08] dark:border-white/[0.12] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.03)]",
         className
       )}
       {...props}

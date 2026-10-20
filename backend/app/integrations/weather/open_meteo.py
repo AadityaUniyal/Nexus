@@ -2,6 +2,7 @@ import time
 import httpx
 from typing import Dict, Any, Optional
 from app.core.config import settings
+from app.core.resilience import weather_circuit
 
 class OpenMeteoWeatherProvider:
     """
@@ -33,10 +34,25 @@ class OpenMeteoWeatherProvider:
             "timezone": "auto",
         }
 
+        def _fallback_weather() -> Dict[str, Any]:
+            return {
+                "latitude": latitude,
+                "longitude": longitude,
+                "temperature_c": 18.0,
+                "wind_speed_kmh": 12.0,
+                "wind_gusts_kmh": 18.0,
+                "snowfall_cm": 0.0,
+                "hazard_level": "NORMAL",
+                "hazard_notes": "Estimated baseline conditions (weather circuit active).",
+                "provider": "open-meteo-fallback",
+            }
+
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                res = await client.get(self.BASE_URL, params=params)
-                if res.status_code == 200:
+            async def _do_fetch():
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    res = await client.get(self.BASE_URL, params=params)
+                    if res.status_code >= 400 or res.status_code != 200:
+                        raise RuntimeError(f"Open-Meteo HTTP {res.status_code}")
                     data = res.json()
                     curr = data.get("current", {})
                     required = ("wind_speed_10m", "wind_gusts_10m", "snowfall", "temperature_2m")
@@ -73,9 +89,9 @@ class OpenMeteoWeatherProvider:
                     # Store in memory cache
                     self._memory_cache[cache_key] = {"data": result, "cached_at": now}
                     return result
-        except Exception:
-            pass
 
-        raise RuntimeError("Weather provider did not return a valid observation")
+            return await weather_circuit.call(_do_fetch, fallback_func=_fallback_weather)
+        except Exception:
+            return _fallback_weather()
 
 open_meteo_provider = OpenMeteoWeatherProvider()

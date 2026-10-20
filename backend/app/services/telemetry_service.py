@@ -7,9 +7,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
-from app.models.operations import Vehicle
+from app.models.operations import Vehicle, Warehouse
+from app.models.logistics import Trip
 from app.models.telemetry import TelemetryEvent, VehicleStatus
 from app.models.incidents import Incident, IncidentTimeline
+from app.services.detention_service import DetentionService
 from app.realtime.sse import broadcaster
 
 logger = logging.getLogger("nexus.telemetry")
@@ -162,6 +164,96 @@ async def ingest_telemetry_packet(
         db.add(tl)
         detected_incidents.append(inc_code)
 
+    # 4b. Proactive Dock Detention Live Event Pipeline
+    dock_events = []
+    trip_stmt = select(Trip).where(
+        Trip.workspace_id == workspace_id,
+        or_(Trip.vehicle_id == vehicle.id, Trip.vehicle_id == vehicle.code),
+        Trip.status.in_(["DISPATCHED", "IN_TRANSIT", "DELAYED", "ARRIVED"]),
+    )
+    trip_res = await db.execute(trip_stmt)
+    active_trip = trip_res.scalars().first()
+
+    if active_trip and active_trip.dest_warehouse_id:
+        wh_stmt = select(Warehouse).where(
+            Warehouse.workspace_id == workspace_id,
+            or_(Warehouse.id == active_trip.dest_warehouse_id, Warehouse.code == active_trip.dest_warehouse_id),
+        )
+        wh_res = await db.execute(wh_stmt)
+        dest_wh = wh_res.scalars().first()
+
+        if dest_wh and dest_wh.lat is not None and dest_wh.lng is not None:
+            is_inside, dist_m = DetentionService.check_geofence(
+                packet.latitude, packet.longitude,
+                dest_wh.lat, dest_wh.lng,
+                threshold_meters=500.0,
+            )
+
+            now_iso = datetime.now(timezone.utc).isoformat()
+
+            if is_inside:
+                if not active_trip.actual_arrival:
+                    active_trip.actual_arrival = now_iso
+                    active_trip.status = "ARRIVED"
+                    dock_events.append(("DOCK_ARRIVAL_DETECTED", {
+                        "trip_id": active_trip.id,
+                        "trip_number": active_trip.trip_number,
+                        "vehicle_id": vehicle.id,
+                        "vehicle_code": vehicle.code,
+                        "warehouse_id": dest_wh.id,
+                        "warehouse_name": dest_wh.name,
+                        "distance_meters": dist_m,
+                        "arrival_time": now_iso,
+                        "wait_minutes": 0,
+                        "detention_status": "FREE_WINDOW",
+                        "workspace_id": workspace_id,
+                    }))
+                else:
+                    try:
+                        arr_dt = datetime.fromisoformat(active_trip.actual_arrival.replace("Z", "+00:00"))
+                        now_dt = datetime.now(timezone.utc)
+                        if arr_dt.tzinfo is None:
+                            arr_dt = arr_dt.replace(tzinfo=timezone.utc)
+                        elapsed_mins = max(0, int((now_dt - arr_dt).total_seconds() // 60))
+                    except Exception:
+                        elapsed_mins = 0
+
+                    if elapsed_mins > 120:
+                        billable = elapsed_mins - 120
+                        dock_events.append(("DETENTION_ACCRUING", {
+                            "trip_id": active_trip.id,
+                            "trip_number": active_trip.trip_number,
+                            "vehicle_id": vehicle.id,
+                            "vehicle_code": vehicle.code,
+                            "warehouse_id": dest_wh.id,
+                            "warehouse_name": dest_wh.name,
+                            "arrival_time": active_trip.actual_arrival,
+                            "wait_minutes": elapsed_mins,
+                            "dwell_minutes": elapsed_mins,
+                            "detention_minutes": billable,
+                            "billable_hours": round(billable / 60.0, 2),
+                            "hourly_rate_inr": 500.0,
+                            "estimated_charge_inr": round((billable / 60.0) * 500.0, 2),
+                            "accrued_demurrage_usd": round((billable / 60.0) * 75.0, 2),
+                            "status": "DETENTION_ACCRUING",
+                            "workspace_id": workspace_id,
+                        }))
+                    elif elapsed_mins > 90:
+                        dock_events.append(("DOCK_DWELL_WARNING", {
+                            "trip_id": active_trip.id,
+                            "trip_number": active_trip.trip_number,
+                            "vehicle_id": vehicle.id,
+                            "vehicle_code": vehicle.code,
+                            "warehouse_id": dest_wh.id,
+                            "warehouse_name": dest_wh.name,
+                            "arrival_time": active_trip.actual_arrival,
+                            "wait_minutes": elapsed_mins,
+                            "dwell_minutes": elapsed_mins,
+                            "remaining_free_minutes": max(0, 120 - elapsed_mins),
+                            "status": "DWELL_WARNING",
+                            "workspace_id": workspace_id,
+                        }))
+
     await db.flush()
     if packet.source_provider == "AZURE_IOT":
         try:
@@ -197,14 +289,17 @@ async def ingest_telemetry_packet(
         "timestamp": packet.timestamp,
         "workspace_id": workspace_id,
     }
-    await broadcaster.broadcast("VEHICLE_TELEMETRY_UPDATED", payload)
+    await broadcaster.broadcast("VEHICLE_TELEMETRY_UPDATED", payload, workspace_id=workspace_id)
 
     if detected_incidents:
         await broadcaster.broadcast("INCIDENT_DETECTED", {
             "vehicle_id": vehicle.id,
             "incident_codes": detected_incidents,
             "workspace_id": workspace_id,
-        })
+        }, workspace_id=workspace_id)
+
+    for event_type, event_payload in dock_events:
+        await broadcaster.broadcast(event_type, event_payload, workspace_id=workspace_id)
 
     return {
         "status": "PROCESSED",

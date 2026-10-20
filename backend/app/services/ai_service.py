@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from app.core.config import settings
+from app.core.resilience import ai_circuit
 
 logger = logging.getLogger("nexus.ai")
 
@@ -117,6 +118,7 @@ class AIService:
                 "gemini": {"configured": bool(self.gemini_key), "model": self.gemini_model},
             },
             "chain": self.active_providers + ["deterministic"],
+            "circuit": ai_circuit.get_status(),
             "usage": {k: v.as_dict() for k, v in self.stats.providers.items()},
         }
 
@@ -185,10 +187,14 @@ class AIService:
             started = time.perf_counter()
             try:
                 if provider == "groq":
-                    text = await self._call_groq(system_prompt, user_prompt, temperature, max_tokens)
+                    text = await ai_circuit.call(
+                        lambda: self._call_groq(system_prompt, user_prompt, temperature, max_tokens)
+                    )
                     model = self.groq_model
                 else:
-                    text = await self._call_gemini(system_prompt, user_prompt, temperature, max_tokens)
+                    text = await ai_circuit.call(
+                        lambda: self._call_gemini(system_prompt, user_prompt, temperature, max_tokens)
+                    )
                     model = self.gemini_model
                 latency = (time.perf_counter() - started) * 1000
                 stats.calls += 1

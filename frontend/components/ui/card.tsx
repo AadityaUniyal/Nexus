@@ -10,7 +10,7 @@ export function Card({ className, variant = "default", children, ...props }: Car
     default: "tactile-card",
     interactive: "tactile-card tactile-card-interactive cursor-pointer",
     simulation: "tactile-card simulation-layer",
-    subtle: "bg-nexus-surface-container/60 border border-nexus-outline-variant/40 rounded-xl",
+    subtle: "bg-nexus-surface-container/60 border border-black/[0.08] dark:border-white/[0.12] rounded-[24px] backdrop-blur-3xl",
   };
 
   return (
@@ -22,7 +22,7 @@ export function Card({ className, variant = "default", children, ...props }: Car
 
 export function CardHeader({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("flex items-center justify-between pb-3 border-b border-nexus-outline-variant/30 mb-4", className)} {...props}>
+    <div className={cn("flex items-center justify-between pb-3 border-b border-black/[0.08] dark:border-white/[0.12] mb-4", className)} {...props}>
       {children}
     </div>
   );
@@ -54,7 +54,7 @@ export function CardContent({ className, children, ...props }: React.HTMLAttribu
 
 export function CardFooter({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("pt-4 mt-4 border-t border-nexus-outline-variant/30 flex items-center justify-between", className)} {...props}>
+    <div className={cn("pt-4 mt-4 border-t border-black/[0.08] dark:border-white/[0.12] flex items-center justify-between", className)} {...props}>
       {children}
     </div>
   );

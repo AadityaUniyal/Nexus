@@ -54,7 +54,7 @@ export function AppleSegmentedTabs({
       className={cn(
         'relative inline-flex items-center rounded-full',
         'bg-[#1d1d1f]/80 dark:bg-[#1d1d1f]/90 light:bg-black/[0.05]',
-        'backdrop-blur-xl border border-white/[0.08] dark:border-white/[0.08] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)]',
+        'backdrop-blur-3xl border border-black/[0.08] dark:border-white/[0.12] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)]',
         'transition-colors duration-200 select-none',
         sizeStyles[size],
         className
@@ -85,14 +85,13 @@ export function AppleSegmentedTabs({
                 layoutId={layoutId}
                 transition={{
                   type: 'spring',
-                  stiffness: 420,
-                  damping: 32,
-                  mass: 0.6,
+                  stiffness: 260,
+                  damping: 28,
                 }}
                 className={cn(
                   'absolute inset-0 rounded-full',
                   'bg-white/15 dark:bg-white/20 shadow-[0_2px_8px_rgba(0,0,0,0.25)]',
-                  'border border-white/20 backdrop-blur-md',
+                  'border border-black/[0.08] dark:border-white/[0.12] backdrop-blur-3xl',
                   pillClassName
                 )}
               />

@@ -4,6 +4,7 @@ import httpx
 from typing import Any, Dict, List, Optional
 from app.core.config import settings
 from app.core.errors import NexusException
+from app.core.resilience import geo_circuit
 from app.integrations.location.base import LocationProvider
 from app.integrations.location.schemas import (
     Coordinate,
@@ -49,11 +50,16 @@ class GeoapifyLocationProvider(LocationProvider):
 
         url = f"{self.base_url}/geocode/autocomplete"
         try:
-            async with await self._get_client() as client:
-                resp = await client.get(url, params=params)
-                if resp.status_code != 200:
-                    return []
-                data = resp.json()
+            async def _do_autocomplete():
+                async with await self._get_client() as client:
+                    resp = await client.get(url, params=params)
+                    if resp.status_code >= 400:
+                        raise RuntimeError(f"Geoapify autocomplete HTTP {resp.status_code}")
+                    return resp.json()
+
+            data = await geo_circuit.call(_do_autocomplete, fallback_func=lambda: {})
+            if not data:
+                return []
 
             results: List[LocationAutocompleteItem] = []
             features = data.get("results", []) or data.get("features", [])
@@ -108,11 +114,16 @@ class GeoapifyLocationProvider(LocationProvider):
         }
         url = f"{self.base_url}/geocode/search"
         try:
-            async with await self._get_client() as client:
-                resp = await client.get(url, params=params)
-                if resp.status_code != 200:
-                    return []
-                data = resp.json()
+            async def _do_geocode():
+                async with await self._get_client() as client:
+                    resp = await client.get(url, params=params)
+                    if resp.status_code >= 400:
+                        raise RuntimeError(f"Geoapify geocode HTTP {resp.status_code}")
+                    return resp.json()
+
+            data = await geo_circuit.call(_do_geocode, fallback_func=lambda: {})
+            if not data:
+                return []
 
             results: List[ResolvedLocation] = []
             features = data.get("results", []) or data.get("features", [])
@@ -154,6 +165,17 @@ class GeoapifyLocationProvider(LocationProvider):
         latitude: float,
         longitude: float,
     ) -> ResolvedLocation:
+        def _fallback_rev() -> ResolvedLocation:
+            return ResolvedLocation(
+                id=f"rev-{uuid.uuid4().hex[:8]}",
+                display_name=f"{latitude:.4f}, {longitude:.4f}",
+                formatted_address=f"{latitude:.4f}, {longitude:.4f}",
+                latitude=latitude,
+                longitude=longitude,
+                type="coordinate",
+                provider="geoapify",
+            )
+
         params = {
             "lat": latitude,
             "lon": longitude,
@@ -162,23 +184,17 @@ class GeoapifyLocationProvider(LocationProvider):
         }
         url = f"{self.base_url}/geocode/reverse"
         try:
-            async with await self._get_client() as client:
-                resp = await client.get(url, params=params)
-                if resp.status_code != 200:
-                    raise NexusException(code="REVERSE_GEOCODE_FAILED", message="Reverse geocoding failed.")
-                data = resp.json()
+            async def _do_rev():
+                async with await self._get_client() as client:
+                    resp = await client.get(url, params=params)
+                    if resp.status_code >= 400:
+                        raise NexusException(code="REVERSE_GEOCODE_FAILED", message="Reverse geocoding failed.")
+                    return resp.json()
 
+            data = await geo_circuit.call(_do_rev, fallback_func=lambda: {})
             features = data.get("results", []) or data.get("features", [])
             if not features:
-                return ResolvedLocation(
-                    id=f"rev-{uuid.uuid4().hex[:8]}",
-                    display_name=f"{latitude:.4f}, {longitude:.4f}",
-                    formatted_address=f"{latitude:.4f}, {longitude:.4f}",
-                    latitude=latitude,
-                    longitude=longitude,
-                    type="coordinate",
-                    provider="geoapify",
-                )
+                return _fallback_rev()
 
             props = features[0].get("properties", features[0])
             display = props.get("formatted") or f"{latitude:.4f}, {longitude:.4f}"
@@ -202,15 +218,8 @@ class GeoapifyLocationProvider(LocationProvider):
                 metadata=props,
             )
         except Exception:
-            return ResolvedLocation(
-                id=f"rev-{uuid.uuid4().hex[:8]}",
-                display_name=f"{latitude:.4f}, {longitude:.4f}",
-                formatted_address=f"{latitude:.4f}, {longitude:.4f}",
-                latitude=latitude,
-                longitude=longitude,
-                type="coordinate",
-                provider="geoapify",
-            )
+            return _fallback_rev()
+
 
     async def route(
         self,
@@ -234,45 +243,48 @@ class GeoapifyLocationProvider(LocationProvider):
         url = f"{self.base_url}/routing"
         route_hash = hashlib.sha256(f"{route_pts_str}:{mode}".encode("utf-8")).hexdigest()[:16]
 
+        fallback_route = lambda: self._approximate_route(origin, destination, mode, route_hash)
         try:
-            async with await self._get_client() as client:
-                resp = await client.get(url, params=params)
-                if resp.status_code != 200:
-                    # Fallback straight-line road approximation
-                    return self._approximate_route(origin, destination, mode, route_hash)
-                data = resp.json()
+            async def _do_route():
+                async with await self._get_client() as client:
+                    resp = await client.get(url, params=params)
+                    if resp.status_code >= 400 or resp.status_code != 200:
+                        raise RuntimeError(f"Geoapify routing HTTP {resp.status_code}")
+                    data = resp.json()
 
-            features = data.get("features", [])
-            if not features:
-                return self._approximate_route(origin, destination, mode, route_hash)
+                features = data.get("features", [])
+                if not features:
+                    raise RuntimeError("No features returned by routing API")
 
-            feature = features[0]
-            props = feature.get("properties", {})
-            distance_meters = float(props.get("distance", 0.0))
-            duration_seconds = float(props.get("time", 0.0))
-            geometry = feature.get("geometry", {})
+                feature = features[0]
+                props = feature.get("properties", {})
+                distance_meters = float(props.get("distance", 0.0))
+                duration_seconds = float(props.get("time", 0.0))
+                geometry = feature.get("geometry", {})
 
-            legs: List[RouteLeg] = []
-            for leg_data in props.get("legs", []):
-                legs.append(
-                    RouteLeg(
-                        distance_meters=float(leg_data.get("distance", 0.0)),
-                        duration_seconds=float(leg_data.get("time", 0.0)),
-                        steps=leg_data.get("steps", []),
+                legs: List[RouteLeg] = []
+                for leg_data in props.get("legs", []):
+                    legs.append(
+                        RouteLeg(
+                            distance_meters=float(leg_data.get("distance", 0.0)),
+                            duration_seconds=float(leg_data.get("time", 0.0)),
+                            steps=leg_data.get("steps", []),
+                        )
                     )
+
+                return RouteResult(
+                    distance_meters=distance_meters,
+                    duration_seconds=duration_seconds,
+                    geometry=geometry,
+                    legs=legs,
+                    mode=mode,
+                    provider="geoapify",
+                    route_hash=route_hash,
                 )
 
-            return RouteResult(
-                distance_meters=distance_meters,
-                duration_seconds=duration_seconds,
-                geometry=geometry,
-                legs=legs,
-                mode=mode,
-                provider="geoapify",
-                route_hash=route_hash,
-            )
+            return await geo_circuit.call(_do_route, fallback_func=fallback_route)
         except Exception:
-            return self._approximate_route(origin, destination, mode, route_hash)
+            return fallback_route()
 
     def _approximate_route(self, origin: Coordinate, dest: Coordinate, mode: str, route_hash: str) -> RouteResult:
         # Straight-line Euclidean approx with realistic road detour multiplier (1.28)
@@ -318,10 +330,35 @@ class GeoapifyLocationProvider(LocationProvider):
         }
         url = f"{self.base_url}/routematrix?apiKey={self.api_key}"
 
+        def _fallback_matrix() -> RouteMatrixResult:
+            cells = []
+            for s_idx, s in enumerate(sources):
+                s_id = s.id or f"src_{s_idx}"
+                for t_idx, t in enumerate(targets):
+                    t_id = t.id or f"tgt_{t_idx}"
+                    r = self._approximate_route(s, t, mode, "matrix-hash")
+                    cells.append(
+                        MatrixCell(
+                            source_id=s_id,
+                            target_id=t_id,
+                            distance_meters=r.distance_meters,
+                            duration_seconds=r.duration_seconds,
+                            status="OK",
+                        )
+                    )
+            return RouteMatrixResult(
+                cells=cells,
+                sources_count=len(sources),
+                targets_count=len(targets),
+                provider="geoapify-approx",
+            )
+
         try:
-            async with await self._get_client() as client:
-                resp = await client.post(url, json=body)
-                if resp.status_code == 200:
+            async def _do_matrix():
+                async with await self._get_client() as client:
+                    resp = await client.post(url, json=body)
+                    if resp.status_code >= 400 or resp.status_code != 200:
+                        raise RuntimeError(f"Geoapify route_matrix HTTP {resp.status_code}")
                     data = resp.json()
                     matrix_rows = data.get("sources_to_targets", [])
                     cells: List[MatrixCell] = []
@@ -344,32 +381,10 @@ class GeoapifyLocationProvider(LocationProvider):
                         targets_count=len(targets),
                         provider="geoapify",
                     )
+
+            return await geo_circuit.call(_do_matrix, fallback_func=_fallback_matrix)
         except Exception:
-            pass
-
-        # Fallback matrix computation
-        cells = []
-        for s_idx, s in enumerate(sources):
-            s_id = s.id or f"src_{s_idx}"
-            for t_idx, t in enumerate(targets):
-                t_id = t.id or f"tgt_{t_idx}"
-                r = self._approximate_route(s, t, mode, "matrix-hash")
-                cells.append(
-                    MatrixCell(
-                        source_id=s_id,
-                        target_id=t_id,
-                        distance_meters=r.distance_meters,
-                        duration_seconds=r.duration_seconds,
-                        status="OK",
-                    )
-                )
-
-        return RouteMatrixResult(
-            cells=cells,
-            sources_count=len(sources),
-            targets_count=len(targets),
-            provider="geoapify-approx",
-        )
+            return _fallback_matrix()
 
     async def places(
         self,
@@ -388,11 +403,16 @@ class GeoapifyLocationProvider(LocationProvider):
         }
         url = f"{self.base_url}/places"
         try:
-            async with await self._get_client() as client:
-                resp = await client.get(url, params=params)
-                if resp.status_code != 200:
-                    return []
-                data = resp.json()
+            async def _do_places():
+                async with await self._get_client() as client:
+                    resp = await client.get(url, params=params)
+                    if resp.status_code >= 400 or resp.status_code != 200:
+                        raise RuntimeError(f"Geoapify places HTTP {resp.status_code}")
+                    return resp.json()
+
+            data = await geo_circuit.call(_do_places, fallback_func=lambda: {})
+            if not data:
+                return []
 
             places: List[PlaceItem] = []
             for feat in data.get("features", []):
@@ -420,15 +440,19 @@ class GeoapifyLocationProvider(LocationProvider):
         }
         url = f"{self.base_url}/place-details"
         try:
-            async with await self._get_client() as client:
-                resp = await client.get(url, params=params)
-                if resp.status_code == 200:
+            async def _do_place_details():
+                async with await self._get_client() as client:
+                    resp = await client.get(url, params=params)
+                    if resp.status_code >= 400 or resp.status_code != 200:
+                        raise RuntimeError(f"Geoapify place_details HTTP {resp.status_code}")
                     return resp.json()
+
+            return await geo_circuit.call(_do_place_details, fallback_func=lambda: None)
         except Exception:
-            pass
-        return None
+            return None
 
     async def health_check(self) -> Dict[str, Any]:
+        circuit_status = geo_circuit.get_status()
         try:
             res = await self.geocode("Tokyo", limit=1)
             if res:
@@ -438,15 +462,18 @@ class GeoapifyLocationProvider(LocationProvider):
                     "geocoding": "operational",
                     "routing": "operational",
                     "places": "operational",
+                    "circuit": circuit_status,
                 }
             return {
                 "status": "DEGRADED",
                 "provider": "geoapify",
                 "message": "Geocoding returned empty results.",
+                "circuit": circuit_status,
             }
         except Exception as e:
             return {
                 "status": "UNAVAILABLE",
                 "provider": "geoapify",
                 "error": str(e),
+                "circuit": circuit_status,
             }

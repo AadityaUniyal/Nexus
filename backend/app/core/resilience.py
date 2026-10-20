@@ -77,7 +77,7 @@ class CircuitBreaker:
             self.failure_count += 1
             logger.warning(f"CircuitBreaker[{self.name}]: Upstream call failed ({type(e).__name__}: {e}). Failure count: {self.failure_count}")
 
-            if self.failure_count >= self.failure_threshold:
+            if self.state == CircuitState.HALF_OPEN or self.failure_count >= self.failure_threshold:
                 self.state = CircuitState.OPEN
                 self.last_state_change = now
                 logger.error(f"CircuitBreaker[{self.name}]: Tripped to OPEN state! Next {self.recovery_timeout_seconds}s will use fallback.")
@@ -87,6 +87,15 @@ class CircuitBreaker:
                 res = fallback_func()
                 return await res if asyncio.iscoroutine(res) else res
             raise e
+
+    def reset(self) -> None:
+        """Reset the circuit breaker back to initial CLOSED state."""
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.last_state_change = time.time()
+        self.total_calls = 0
+        self.total_fallbacks = 0
+        self.total_successes = 0
 
     def get_status(self) -> Dict[str, Any]:
         return {
@@ -102,4 +111,5 @@ class CircuitBreaker:
 # Global Pre-configured Circuit Breakers
 geo_circuit = CircuitBreaker("geo_routing", failure_threshold=3, request_timeout_seconds=2.5)
 weather_circuit = CircuitBreaker("weather_radar", failure_threshold=3, request_timeout_seconds=2.0)
-ai_circuit = CircuitBreaker("neural_inference", failure_threshold=3, request_timeout_seconds=5.0)
+ai_circuit = CircuitBreaker("neural_inference", failure_threshold=3, request_timeout_seconds=8.0)
+

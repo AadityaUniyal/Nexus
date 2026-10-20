@@ -10,7 +10,7 @@ class EventBroadcaster:
 
     async def subscribe(self, workspace_id: Optional[str] = None) -> AsyncGenerator[str, None]:
         """Subscribe to real-time server-sent events stream scoped to workspace."""
-        queue: asyncio.Queue = asyncio.Queue()
+        queue: asyncio.Queue = asyncio.Queue(maxsize=256)
         if workspace_id not in self._subscribers:
             self._subscribers[workspace_id] = set()
         self._subscribers[workspace_id].add(queue)
@@ -61,7 +61,12 @@ class EventBroadcaster:
 
         for queue in queues_to_notify:
             try:
-                await queue.put(message)
+                if queue.full():
+                    try:
+                        queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        pass
+                queue.put_nowait(message)
             except Exception:
                 pass
 

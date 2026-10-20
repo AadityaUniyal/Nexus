@@ -14,6 +14,7 @@ class TripBase(BaseModel):
     scheduled_departure: str = Field(..., alias="scheduledDeparture")
     actual_departure: Optional[str] = Field(None, alias="actualDeparture")
     scheduled_arrival: str = Field(..., alias="scheduledArrival")
+    actual_arrival: Optional[str] = Field(None, alias="actualArrival")
     estimated_arrival: Optional[str] = Field(None, alias="estimatedArrival")
     delay_minutes: int = Field(0, alias="delayMinutes")
     risk_score: int = Field(0, alias="riskScore")

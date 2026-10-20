@@ -41,14 +41,33 @@ async def main():
 
     # 3. Azure Health Check
     print(f"\n[3] Azure Free Tier Integrations:")
+    FREE_TIER_LIMITS = {
+        "applicationInsights": "5 GB/month free ingestion",
+        "blobStorage": "5 GB LRS storage, 20k get/put",
+        "iotHub": "F1 Free: 8,000 msgs/day",
+        "fabric": "Capacity free trial",
+    }
     az_res = await azure_health()
     for svc, details in az_res.get("services", {}).items():
-        st = details.get("status", "UNKNOWN")
-        limit = details.get("freeTierLimit", "")
-        print(f"  • {svc:20}: {st:12} ({limit})")
+        if isinstance(details, dict):
+            st = details.get("status", "UNKNOWN")
+            limit = details.get("freeTierLimit", FREE_TIER_LIMITS.get(svc, ""))
+        else:
+            st = str(details)
+            limit = FREE_TIER_LIMITS.get(svc, "")
+        limit_str = f" ({limit})" if limit else ""
+        print(f"  • {svc:20}: {st:15}{limit_str}")
     
     overall = az_res.get("status")
     print(f"\nOverall Azure Platform Status: {overall}")
+
+    # 4. External Service Circuit Breakers
+    print(f"\n[4] External Service Circuit Breakers:")
+    from app.core.resilience import geo_circuit, weather_circuit, ai_circuit
+    for cb in [geo_circuit, weather_circuit, ai_circuit]:
+        cb_stat = cb.get_status()
+        print(f"  • {cb.name:20}: {cb_stat['state']:10} (failures: {cb_stat['failure_count']}, calls: {cb_stat['total_calls']})")
+
     print("=" * 60)
 
 if __name__ == "__main__":

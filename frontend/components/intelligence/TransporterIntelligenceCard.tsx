@@ -19,6 +19,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { authFetch } from "@/lib/api/auth-fetch";
+import { eventBus } from "@/lib/event-bus";
+import Link from "next/link";
 
 interface DetentionForecastItem {
   hubId: string;
@@ -78,27 +80,47 @@ export function TransporterIntelligenceCard() {
 
   React.useEffect(() => {
     fetchIntelligence();
+
+    const unsubArrival = eventBus.subscribe("dock_arrival_detected", () => {
+      fetchIntelligence();
+    });
+    const unsubDwell = eventBus.subscribe("dock_dwell_warning", () => {
+      fetchIntelligence();
+    });
+    const unsubDetention = eventBus.subscribe("detention_accruing", () => {
+      fetchIntelligence();
+    });
+    const unsubTrip = eventBus.subscribe("trip_dispatched", () => {
+      fetchIntelligence();
+    });
+
+    return () => {
+      unsubArrival();
+      unsubDwell();
+      unsubDetention();
+      unsubTrip();
+    };
   }, [fetchIntelligence]);
 
   return (
-    <Card className="border-nexus-outline/30 shadow-tactile overflow-hidden bg-nexus-surface/60 backdrop-blur-md">
-      <CardHeader className="py-3 px-4 border-b border-nexus-outline/20 bg-nexus-surface-container-high/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500">
+    <Card className="rounded-[24px] border border-black/[0.08] dark:border-white/[0.12] shadow-tactile overflow-hidden bg-white/70 dark:bg-[#151518]/70 backdrop-blur-3xl">
+      <CardHeader className="py-3.5 px-5 border-b border-black/[0.08] dark:border-white/[0.12] bg-black/[0.02] dark:bg-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-xl bg-indigo-500/10 text-indigo-500">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <CardTitle className="text-xs font-mono font-bold uppercase tracking-wider text-nexus-on-surface">
+            <CardTitle className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
               Ground-Level Transporter Intelligence
             </CardTitle>
-            <CardDescription className="text-[11px] text-nexus-on-surface-variant">
+            <CardDescription className="text-[11px] text-neutral-500 dark:text-neutral-400">
               Predictive dock dwell times, detention demurrage clocks & empty-haul elimination
             </CardDescription>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg p-0.5 bg-black/5 dark:bg-white/5 border border-nexus-outline/20 text-xs font-mono">
+          <div className="flex rounded-xl p-0.5 bg-black/5 dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.12] text-xs font-mono">
             <button
               type="button"
               onClick={() => setActiveTab("detention")}
@@ -219,6 +241,13 @@ export function TransporterIntelligenceCard() {
                       <div className="text-[10px] text-nexus-on-surface-variant font-mono truncate">
                         Window: <span className="text-nexus-on-surface">{hub.optimalDockingWindow}</span>
                       </div>
+                      <Link
+                        href={`/live-world?entityType=WAREHOUSE&id=${encodeURIComponent(hub.hubCode || hub.hubId)}`}
+                        className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-600 dark:text-blue-400 hover:underline mt-2"
+                      >
+                        <span>Inspect Facility Pin</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
                     </div>
                   </motion.div>
                 ))}
@@ -245,9 +274,14 @@ export function TransporterIntelligenceCard() {
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-xs text-nexus-on-surface">
-                            {match.vehicleCode}
-                          </span>
+                          <Link
+                            href={`/live-world?entityType=VEHICLE&id=${encodeURIComponent(match.vehicleCode || match.vehicleId)}`}
+                            className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                            title="Inspect vehicle on live map"
+                          >
+                            <span>{match.vehicleCode}</span>
+                            <ArrowRight className="w-2.5 h-2.5" />
+                          </Link>
                           <span className="text-[10px] text-nexus-on-surface-variant">
                             ({match.driverName})
                           </span>

@@ -14,7 +14,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, AlertCircle, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { SupportTicketModal } from "@/components/ui/SupportTicketModal";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Bell, LayoutDashboard, Map, MoreHorizontal, Package } from "lucide-react";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -106,17 +106,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar className="hidden md:flex shrink-0" />
 
         <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-32 sm:pb-32 md:pb-36 space-y-6 md:space-y-8 max-w-7xl mx-auto w-full focus:outline-none">
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {children}
-          </motion.div>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={pathname}
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { type: "spring", stiffness: 260, damping: 28 }
+              }
+              className="w-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 
-      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.08] bg-[var(--surface)]/95 px-2 pt-2 backdrop-blur-xl dark:border-white/[0.1] md:hidden" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
+      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.08] bg-[var(--surface)]/95 px-2 pt-2 backdrop-blur-3xl dark:border-white/[0.12] md:hidden" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
         <ul className="mx-auto flex max-w-lg items-stretch justify-around">
           {[
             { label: "Overview", href: "/overview", icon: LayoutDashboard },

@@ -40,7 +40,7 @@ export function SkeletonMetricTile({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "p-5 rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 backdrop-blur-xl shadow-xs space-y-3",
+        "p-5 rounded-[24px] border border-black/[0.08] dark:border-white/[0.12] bg-white/70 dark:bg-stone-900/60 backdrop-blur-3xl shadow-xs space-y-3",
         className
       )}
     >
@@ -60,7 +60,7 @@ export function SkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "p-6 rounded-3xl border border-stone-200/80 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 backdrop-blur-xl shadow-xs space-y-4",
+        "p-6 rounded-[28px] border border-black/[0.08] dark:border-white/[0.12] bg-white/70 dark:bg-stone-900/60 backdrop-blur-3xl shadow-xs space-y-4",
         className
       )}
     >
@@ -81,7 +81,7 @@ export function SkeletonCard({ className }: { className?: string }) {
 
 export function SkeletonTable({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-white/60 dark:bg-stone-900/50 backdrop-blur-xl overflow-hidden shadow-xs divide-y divide-stone-200/60 dark:divide-stone-800/60">
+    <div className="rounded-[24px] border border-black/[0.08] dark:border-white/[0.12] bg-white/60 dark:bg-stone-900/50 backdrop-blur-3xl overflow-hidden shadow-xs divide-y divide-black/[0.04] dark:divide-white/[0.06]">
       <div className="p-4 bg-stone-100/50 dark:bg-stone-850/50 flex items-center justify-between gap-4">
         <Skeleton className="h-4 w-28 rounded-md" />
         <Skeleton className="h-4 w-24 rounded-md" />

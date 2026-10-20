@@ -200,7 +200,7 @@ async def process_approval_action(
             "action_type": appr.action_type,
             "approved_by": principal.display_name,
             "workspace_id": principal.workspace_id,
-        })
+        }, workspace_id=principal.workspace_id)
 
     else:
         appr.status = "REJECTED"
@@ -222,6 +222,15 @@ async def process_approval_action(
         db.add(audit)
         await db.commit()
         await db.refresh(appr)
+
+        await broadcaster.broadcast("APPROVAL_REJECTED", {
+            "approval_id": appr.id,
+            "status": "REJECTED",
+            "action_type": appr.action_type,
+            "rejected_by": principal.display_name,
+            "rejection_reason": appr.rejection_reason,
+            "workspace_id": principal.workspace_id,
+        }, workspace_id=principal.workspace_id)
 
     return appr
 

@@ -56,6 +56,7 @@ class Trip(Base, TimestampMixin):
     scheduled_departure: Mapped[str] = mapped_column(String(64), nullable=False)
     actual_departure: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     scheduled_arrival: Mapped[str] = mapped_column(String(64), nullable=False)
+    actual_arrival: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     estimated_arrival: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     delay_minutes: Mapped[int] = mapped_column(Integer, default=0)
     risk_score: Mapped[int] = mapped_column(Integer, default=15)

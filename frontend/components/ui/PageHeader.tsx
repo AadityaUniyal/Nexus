@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
   eyebrow?: string;
+  badge?: React.ReactNode;
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  action?: React.ReactNode;
   className?: string;
 }
 
@@ -18,23 +20,32 @@ interface PageHeaderProps {
  */
 export function PageHeader({
   eyebrow,
+  badge,
   title,
   description,
   actions,
+  action,
   className,
 }: PageHeaderProps) {
+  const renderedActions = actions || action;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 400, damping: 40, mass: 0.8 }}
+      transition={{ type: "spring", stiffness: 260, damping: 28 }}
       className={cn(
         "flex flex-col md:flex-row md:items-start justify-between gap-4 pb-2",
         className
       )}
     >
       <div className="space-y-1">
-        {eyebrow && (
+        {badge && (
+          <div className="mb-2">
+            {badge}
+          </div>
+        )}
+        {eyebrow && !badge && (
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -47,7 +58,7 @@ export function PageHeader({
         <motion.h1
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, type: "spring", stiffness: 500, damping: 40 }}
+          transition={{ delay: 0.08, type: "spring", stiffness: 260, damping: 28 }}
           className="text-2xl md:text-3xl font-semibold text-stone-900 dark:text-stone-50 tracking-[-0.024em] leading-tight"
         >
           {title}
@@ -64,14 +75,14 @@ export function PageHeader({
         )}
       </div>
 
-      {actions && (
+      {renderedActions && (
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15, type: "spring", stiffness: 500, damping: 35 }}
+          transition={{ delay: 0.15, type: "spring", stiffness: 260, damping: 28 }}
           className="flex items-center gap-2 shrink-0"
         >
-          {actions}
+          {renderedActions}
         </motion.div>
       )}
     </motion.div>

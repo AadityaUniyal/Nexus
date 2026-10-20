@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Globe,
   Truck,
+  Clock,
   AlertTriangle,
   BarChart3,
   Bell,
@@ -15,6 +17,7 @@ import {
   ChevronRight,
   ExternalLink,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
@@ -32,7 +35,9 @@ export interface SidebarProps {
 
 const PRIMARY_NAVIGATION: NavItem[] = [
   { name: "Command Overview", href: "/overview", icon: LayoutDashboard },
+  { name: "Live Map & Tracking", href: "/live-world", icon: Globe },
   { name: "Operations & Fleet", href: "/operations", icon: Truck },
+  { name: "Dock Detention Intelligence", href: "/intelligence", icon: Clock },
   { name: "Exceptions Queue", href: "/incidents", icon: AlertTriangle, badge: "2 Active", badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" },
   { name: "Fleet Analytics", href: "/analytics", icon: BarChart3 },
   { name: "System Settings", href: "/settings", icon: Settings },
@@ -44,7 +49,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "w-64 shrink-0 border-r border-black/[0.08] dark:border-white/[0.10] bg-white dark:bg-[#121214] flex flex-col justify-between select-none",
+        "w-64 shrink-0 border-r border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#121214] flex flex-col justify-between select-none",
         className
       )}
     >
@@ -65,19 +70,26 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex items-center justify-between px-3 py-2 rounded-xl text-[13px] font-medium transition-all group",
+                    "relative flex items-center justify-between px-3 py-2 rounded-xl text-[13px] font-medium transition-colors group",
                     isActive
-                      ? "bg-[#0071E3] text-white shadow-sm font-semibold"
+                      ? "text-white font-semibold"
                       : "text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/60"
                   )}
                 >
-                  <div className="flex items-center gap-2.5">
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebarActivePill"
+                      className="absolute inset-0 rounded-xl bg-[#0071E3] shadow-sm z-0"
+                      transition={{ type: "spring", stiffness: 260, damping: 28 }}
+                    />
+                  )}
+                  <div className="relative z-10 flex items-center gap-2.5">
                     <Icon className={cn("w-4 h-4 transition-colors", isActive ? "text-white" : "text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300")} />
                     <span>{item.name}</span>
                   </div>
 
                   {item.badge && (
-                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-mono font-medium", isActive ? "bg-white/20 text-white" : item.badgeColor)}>
+                    <span className={cn("relative z-10 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium", isActive ? "bg-white/20 text-white" : item.badgeColor)}>
                       {item.badge}
                     </span>
                   )}
@@ -88,7 +100,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         </div>
 
         {/* Quick Driver Pass Sandbox Card */}
-        <div className="p-3.5 rounded-2xl border border-black/[0.08] dark:border-white/[0.10] bg-[#F9F9FB] dark:bg-[#1A1A1E]">
+        <div className="p-3.5 rounded-2xl border border-black/[0.08] dark:border-white/[0.12] bg-[#F9F9FB] dark:bg-[#1A1A1E]">
           <div className="flex items-center gap-2 text-[12px] font-semibold text-neutral-900 dark:text-white">
             <Smartphone className="w-4 h-4 text-[#0071E3]" />
             <span>Driver Web Pass</span>

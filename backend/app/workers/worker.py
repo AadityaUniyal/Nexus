@@ -71,9 +71,14 @@ async def run_worker_loop(interval_seconds: float = 2.0):
         try:
             async with async_session_factory() as session:
                 await process_outbox_batch(session)
+        except asyncio.CancelledError:
+            break
         except Exception as e:
             print(f"[!] Worker exception: {e}")
-        await asyncio.sleep(interval_seconds)
+        try:
+            await asyncio.sleep(interval_seconds)
+        except asyncio.CancelledError:
+            break
 
 
 if __name__ == "__main__":

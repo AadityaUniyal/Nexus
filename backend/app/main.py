@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import uuid
@@ -25,7 +26,7 @@ async def lifespan(app: FastAPI):
     try:
         from app.db.session import engine
         from app.db.base import Base
-        import app.models  # ensure models registered
+        from app import models as _app_models  # ensure models registered
         logger.info("Run 'alembic upgrade head' to apply migrations")
         logger.info("PostgreSQL database schemas verified.")
     except Exception as e:
@@ -46,8 +47,25 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Azure IoT consumer startup failed")
 
+    worker_task = None
+    try:
+        from app.workers.worker import run_worker_loop
+        worker_task = asyncio.create_task(run_worker_loop())
+        app.state.outbox_worker_task = worker_task
+        logger.info("Transactional EventOutbox background worker running.")
+    except Exception as e:
+        logger.warning(f"Could not start outbox worker loop: {e}")
+
     logger.info("NEXUS API startup complete.")
     yield
+    if worker_task:
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass
     try:
         from app.integrations.azure_iot_consumer import azure_iot_consumer
         await azure_iot_consumer.stop()

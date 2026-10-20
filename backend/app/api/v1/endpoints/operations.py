@@ -138,7 +138,7 @@ async def create_warehouse(
     db.add(new_wh)
     await db.commit()
     await db.refresh(new_wh)
-    await broadcaster.broadcast("WAREHOUSE_CREATED", {"id": new_wh.id, "code": new_wh.code, "name": new_wh.name})
+    await broadcaster.broadcast("WAREHOUSE_CREATED", {"id": new_wh.id, "code": new_wh.code, "name": new_wh.name, "city": new_wh.city, "lat": new_wh.lat, "lng": new_wh.lng, "workspace_id": ws}, workspace_id=ws)
     return new_wh
 
 @router.put("/warehouses/{warehouse_id}", response_model=WarehouseRead)
@@ -167,7 +167,7 @@ async def update_warehouse(
 
     await db.commit()
     await db.refresh(warehouse)
-    await broadcaster.broadcast("WAREHOUSE_UPDATED", {"id": warehouse.id, "code": warehouse.code, "name": warehouse.name})
+    await broadcaster.broadcast("WAREHOUSE_UPDATED", {"id": warehouse.id, "code": warehouse.code, "name": warehouse.name, "city": warehouse.city, "lat": warehouse.lat, "lng": warehouse.lng, "workspace_id": ws}, workspace_id=ws)
     return warehouse
 
 @router.delete("/warehouses/{warehouse_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -189,7 +189,7 @@ async def delete_warehouse(
 
     await db.delete(warehouse)
     await db.commit()
-    await broadcaster.broadcast("WAREHOUSE_DELETED", {"id": warehouse_id})
+    await broadcaster.broadcast("WAREHOUSE_DELETED", {"id": warehouse_id, "workspace_id": ws}, workspace_id=ws)
     return None
 
 # --- VEHICLES ---
@@ -245,7 +245,7 @@ async def create_vehicle(
     db.add(new_v)
     await db.commit()
     await db.refresh(new_v)
-    await broadcaster.broadcast("VEHICLE_CREATED", {"id": new_v.id, "code": new_v.code, "name": new_v.name})
+    await broadcaster.broadcast("VEHICLE_CREATED", {"id": new_v.id, "code": new_v.code, "name": new_v.name, "status": new_v.status, "current_lat": new_v.current_lat, "current_lng": new_v.current_lng, "workspace_id": ws}, workspace_id=ws)
     return new_v
 
 @router.patch("/vehicles/{vehicle_id}/telemetry", response_model=VehicleRead)
@@ -273,7 +273,7 @@ async def update_vehicle_telemetry(
 
     await db.commit()
     await db.refresh(vehicle)
-    await broadcaster.broadcast("VEHICLE_UPDATED", {"id": vehicle.id, "code": vehicle.code, "status": vehicle.status, "current_lat": vehicle.current_lat, "current_lng": vehicle.current_lng})
+    await broadcaster.broadcast("VEHICLE_UPDATED", {"id": vehicle.id, "code": vehicle.code, "status": vehicle.status, "current_lat": vehicle.current_lat, "current_lng": vehicle.current_lng, "speed_kmh": vehicle.speed_kmh, "battery_pct": vehicle.battery_pct, "workspace_id": ws}, workspace_id=ws)
     return vehicle
 
 @router.put("/vehicles/{vehicle_id}", response_model=VehicleRead)
@@ -302,7 +302,7 @@ async def update_vehicle(
 
     await db.commit()
     await db.refresh(vehicle)
-    await broadcaster.broadcast("VEHICLE_UPDATED", {"id": vehicle.id, "code": vehicle.code, "status": vehicle.status})
+    await broadcaster.broadcast("VEHICLE_UPDATED", {"id": vehicle.id, "code": vehicle.code, "status": vehicle.status, "current_lat": vehicle.current_lat, "current_lng": vehicle.current_lng, "speed_kmh": vehicle.speed_kmh, "battery_pct": vehicle.battery_pct, "workspace_id": ws}, workspace_id=ws)
     return vehicle
 
 @router.delete("/vehicles/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -324,7 +324,7 @@ async def delete_vehicle(
 
     await db.delete(vehicle)
     await db.commit()
-    await broadcaster.broadcast("VEHICLE_DELETED", {"id": vehicle_id})
+    await broadcaster.broadcast("VEHICLE_DELETED", {"id": vehicle_id, "workspace_id": ws}, workspace_id=ws)
     return None
 
 # --- ROUTES ---
@@ -376,7 +376,7 @@ async def create_route(
     db.add(new_r)
     await db.commit()
     await db.refresh(new_r)
-    await broadcaster.broadcast("ROUTE_CREATED", {"id": new_r.id, "code": new_r.code, "name": new_r.name})
+    await broadcaster.broadcast("ROUTE_CREATED", {"id": new_r.id, "code": new_r.code, "name": new_r.name, "origin_warehouse_id": new_r.origin_warehouse_id, "destination_warehouse_id": new_r.destination_warehouse_id, "distance_km": new_r.distance_km, "workspace_id": ws}, workspace_id=ws)
     return new_r
 
 @router.put("/routes/{route_id}", response_model=RouteRead)
@@ -405,7 +405,7 @@ async def update_route(
 
     await db.commit()
     await db.refresh(route)
-    await broadcaster.broadcast("ROUTE_UPDATED", {"id": route.id, "code": route.code, "name": route.name})
+    await broadcaster.broadcast("ROUTE_UPDATED", {"id": route.id, "code": route.code, "name": route.name, "origin_warehouse_id": route.origin_warehouse_id, "destination_warehouse_id": route.destination_warehouse_id, "distance_km": route.distance_km, "workspace_id": ws}, workspace_id=ws)
     return route
 
 @router.delete("/routes/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -427,7 +427,7 @@ async def delete_route(
 
     await db.delete(route)
     await db.commit()
-    await broadcaster.broadcast("ROUTE_DELETED", {"id": route_id})
+    await broadcaster.broadcast("ROUTE_DELETED", {"id": route_id, "workspace_id": ws}, workspace_id=ws)
     return None
 
 # --- ORDERS ---
@@ -486,7 +486,7 @@ async def create_order(
     db.add(new_o)
     await db.commit()
     await db.refresh(new_o)
-    await broadcaster.broadcast("ORDER_CREATED", {"id": new_o.id, "order_number": new_o.order_number})
+    await broadcaster.broadcast("ORDER_CREATED", {"id": new_o.id, "order_number": new_o.order_number, "status": new_o.status, "customer_name": new_o.customer_name, "origin_address": new_o.origin_address, "destination_address": new_o.destination_address, "warehouse_id": new_o.warehouse_id, "vehicle_id": new_o.vehicle_id, "workspace_id": ws}, workspace_id=ws)
     return new_o
 
 @router.put("/orders/{order_id}", response_model=OrderRead)
@@ -515,7 +515,7 @@ async def update_order(
 
     await db.commit()
     await db.refresh(order)
-    await broadcaster.broadcast("ORDER_UPDATED", {"id": order.id, "order_number": order.order_number, "status": order.status})
+    await broadcaster.broadcast("ORDER_UPDATED", {"id": order.id, "order_number": order.order_number, "status": order.status, "customer_name": order.customer_name, "origin_address": order.origin_address, "destination_address": order.destination_address, "warehouse_id": order.warehouse_id, "vehicle_id": order.vehicle_id, "workspace_id": ws}, workspace_id=ws)
     return order
 
 @router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -537,5 +537,5 @@ async def delete_order(
 
     await db.delete(order)
     await db.commit()
-    await broadcaster.broadcast("ORDER_DELETED", {"id": order_id})
+    await broadcaster.broadcast("ORDER_DELETED", {"id": order_id, "workspace_id": ws}, workspace_id=ws)
     return None

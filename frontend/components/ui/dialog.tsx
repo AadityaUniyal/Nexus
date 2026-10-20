@@ -49,7 +49,7 @@ export function Dialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/50 backdrop-blur-3xl transition-opacity"
             aria-hidden="true"
           />
 
@@ -61,13 +61,13 @@ export function Dialog({
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
             className={cn(
-              "relative w-full bg-nexus-surface-lowest rounded-2xl shadow-2xl border border-nexus-outline-variant/40 p-6 z-50 overflow-hidden",
+              "relative w-full bg-nexus-surface-lowest rounded-[28px] shadow-2xl border border-black/[0.08] dark:border-white/[0.12] p-6 z-50 overflow-hidden",
               maxClasses[maxWidth]
             )}
           >
-            <div className="flex items-start justify-between pb-4 border-b border-nexus-outline-variant/30">
+            <div className="flex items-start justify-between pb-4 border-b border-black/[0.08] dark:border-white/[0.12]">
               <div>
                 {title && (
                   <h3 id={titleId} className="text-lg font-semibold text-nexus-on-surface tracking-tight">

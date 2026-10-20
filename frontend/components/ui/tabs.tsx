@@ -110,7 +110,7 @@ export function Tabs({
                 <motion.div
                   layoutId={lineLayoutId}
                   className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 28 }}
                 />
               )}
             </button>
@@ -125,7 +125,7 @@ export function Tabs({
     <div
       role="tablist"
       className={cn(
-        "inline-flex items-center p-1 rounded-2xl bg-stone-200/60 dark:bg-stone-900/80 backdrop-blur-2xl border border-stone-300/40 dark:border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] gap-1 max-w-full overflow-x-auto no-scrollbar",
+        "inline-flex items-center p-1 rounded-2xl bg-stone-200/60 dark:bg-stone-900/80 backdrop-blur-3xl border border-black/[0.08] dark:border-white/[0.12] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] gap-1 max-w-full overflow-x-auto no-scrollbar",
         className
       )}
     >
@@ -152,8 +152,8 @@ export function Tabs({
             {isActive && (
               <motion.div
                 layoutId={pillLayoutId}
-                className="absolute inset-0 rounded-xl bg-white dark:bg-stone-800/95 border border-black/5 dark:border-white/15 shadow-[0_2px_8px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.45)]"
-                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                className="absolute inset-0 rounded-xl bg-white dark:bg-stone-800/95 border border-black/[0.08] dark:border-white/[0.12] shadow-[0_2px_8px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.45)]"
+                transition={{ type: "spring", stiffness: 260, damping: 28 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5">

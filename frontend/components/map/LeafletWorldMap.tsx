@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { ResolvedLocation, RouteResult } from '@/lib/api/endpoints/location';
 import { api } from '@/lib/api/client';
 import { tactileAudio } from '@/lib/sound-effects';
+import { eventBus } from '@/lib/event-bus';
 import { createSafeMapMarkerElement } from './safe-map-dom';
 import { Plus, Minus, Compass, Navigation, Layers, ShieldAlert, Truck, Building2, AlertTriangle, Crosshair } from 'lucide-react';
 
@@ -48,7 +49,13 @@ export interface WeatherHazard {
   coordinates: number[][]; // Polygon ring [[lng, lat], ...]
 }
 
-interface LeafletWorldMapProps {
+export interface SelectedEntityInfo {
+  type: 'VEHICLE' | 'WAREHOUSE' | 'INCIDENT';
+  id: string;
+  data: any;
+}
+
+export interface LeafletWorldMapProps {
   centerLocation?: ResolvedLocation | null;
   vehicles?: MapVehicle[];
   warehouses?: MapWarehouse[];
@@ -59,6 +66,10 @@ interface LeafletWorldMapProps {
   isSimulationMode?: boolean;
   onLocationClick?: (location: ResolvedLocation) => void;
   className?: string;
+  selectedEntity?: SelectedEntityInfo | null;
+  selectedEntityId?: string | null;
+  onEntitySelect?: (entity: SelectedEntityInfo | null) => void;
+  flyToLocation?: { lat: number; lng: number; zoom?: number } | null;
 }
 
 export function LeafletWorldMap({
@@ -72,6 +83,10 @@ export function LeafletWorldMap({
   isSimulationMode = false,
   onLocationClick,
   className = '',
+  selectedEntity: externalSelectedEntity,
+  selectedEntityId,
+  onEntitySelect,
+  flyToLocation,
 }: LeafletWorldMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -82,10 +97,209 @@ export function LeafletWorldMap({
 
   const [mapReady, setMapReady] = useState(false);
   const [clickedLocation, setClickedLocation] = useState<ResolvedLocation | null>(null);
-  const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntityInfo | null>(externalSelectedEntity || null);
+  const [liveVehicles, setLiveVehicles] = useState<MapVehicle[]>(vehicles);
+  const [liveWarehouses, setLiveWarehouses] = useState<MapWarehouse[]>(warehouses);
+  const [liveIncidents, setLiveIncidents] = useState<MapIncident[]>(incidents);
   const [tileLayerType, setTileLayerType] = useState<'CARTO_VOYAGER' | 'OSM' | 'CARTO_DARK'>('CARTO_VOYAGER');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VEHICLES' | 'WAREHOUSES' | 'INCIDENTS'>('ALL');
   const [showGrid, setShowGrid] = useState<boolean>(false);
+
+  useEffect(() => {
+    setLiveVehicles(vehicles);
+  }, [vehicles]);
+
+  useEffect(() => {
+    setLiveWarehouses(warehouses);
+  }, [warehouses]);
+
+  useEffect(() => {
+    setLiveIncidents(incidents);
+  }, [incidents]);
+
+  useEffect(() => {
+    if (externalSelectedEntity !== undefined) {
+      setSelectedEntity(externalSelectedEntity);
+    }
+  }, [externalSelectedEntity]);
+
+  useEffect(() => {
+    if (!selectedEntityId) return;
+    const v = liveVehicles.find((x) => x.id === selectedEntityId || x.code === selectedEntityId);
+    if (v) {
+      const entity: SelectedEntityInfo = { type: 'VEHICLE', id: v.id, data: v };
+      setSelectedEntity(entity);
+      onEntitySelect?.(entity);
+      return;
+    }
+    const w = liveWarehouses.find((x) => x.id === selectedEntityId || x.code === selectedEntityId);
+    if (w) {
+      const entity: SelectedEntityInfo = { type: 'WAREHOUSE', id: w.id, data: w };
+      setSelectedEntity(entity);
+      onEntitySelect?.(entity);
+      return;
+    }
+    const i = liveIncidents.find((x) => x.id === selectedEntityId || x.code === selectedEntityId);
+    if (i) {
+      const entity: SelectedEntityInfo = { type: 'INCIDENT', id: i.id, data: i };
+      setSelectedEntity(entity);
+      onEntitySelect?.(entity);
+      return;
+    }
+  }, [selectedEntityId, liveVehicles, liveWarehouses, liveIncidents, onEntitySelect]);
+
+  // Handle flyToLocation prop
+  useEffect(() => {
+    if (!mapRef.current || !flyToLocation) return;
+    if (!Number.isFinite(flyToLocation.lat) || !Number.isFinite(flyToLocation.lng)) return;
+    mapRef.current.flyTo(
+      [flyToLocation.lat, flyToLocation.lng],
+      flyToLocation.zoom || 13,
+      { duration: 1.5 }
+    );
+  }, [flyToLocation, mapReady]);
+
+  // Reactive eventBus subscriptions for real-time map pin updates without reload
+  useEffect(() => {
+    const unsubTelem = eventBus.subscribe('vehicle_telemetry_updated', (event) => {
+      const data = event.data;
+      if (!data) return;
+      setLiveVehicles((prev) => {
+        const idx = prev.findIndex((v) => v.id === data.vehicle_id || v.id === data.id || v.code === data.code);
+        if (idx !== -1) {
+          const updated = [...prev];
+          updated[idx] = {
+            ...updated[idx],
+            lat: data.lat ?? updated[idx].lat,
+            lng: data.lng ?? updated[idx].lng,
+            speedKmh: data.speed_kmh ?? updated[idx].speedKmh,
+            heading: data.heading ?? updated[idx].heading,
+            batteryPct: data.battery_pct ?? updated[idx].batteryPct,
+            status: data.status ?? updated[idx].status,
+          };
+          return updated;
+        } else if (data.lat && data.lng) {
+          return [
+            ...prev,
+            {
+              id: data.vehicle_id || data.id || `v-${data.code}`,
+              code: data.code || 'NX-ASSET',
+              name: data.name || data.code || 'Fleet Unit',
+              lat: data.lat,
+              lng: data.lng,
+              speedKmh: data.speed_kmh || 0,
+              heading: data.heading || 0,
+              batteryPct: data.battery_pct || 80,
+              status: data.status || 'IN_TRANSIT',
+            },
+          ];
+        }
+        return prev;
+      });
+    });
+
+    const unsubTrip = eventBus.subscribe('trip_dispatched', (event) => {
+      const data = event.data;
+      if (!data) return;
+      setLiveVehicles((prev) =>
+        prev.map((v) => {
+          if (v.id === data.vehicle_id || v.code === data.vehicle_code) {
+            return { ...v, status: 'IN_TRANSIT', driverName: data.driver_name || v.driverName };
+          }
+          return v;
+        })
+      );
+    });
+
+    const unsubVehicleUpdated = eventBus.subscribe('vehicle_updated', (event) => {
+      const data = event.data;
+      if (!data) return;
+      setLiveVehicles((prev) => {
+        const idx = prev.findIndex((v) => v.id === data.id || v.code === data.code);
+        if (idx !== -1) {
+          const updated = [...prev];
+          updated[idx] = {
+            ...updated[idx],
+            status: data.status ?? updated[idx].status,
+            lat: data.current_lat ?? updated[idx].lat,
+            lng: data.current_lng ?? updated[idx].lng,
+            speedKmh: data.speed_kmh ?? updated[idx].speedKmh,
+            batteryPct: data.battery_pct ?? updated[idx].batteryPct,
+          };
+          return updated;
+        }
+        return prev;
+      });
+    });
+
+    const unsubDockArrival = eventBus.subscribe('dock_arrival_detected', (event) => {
+      const data = event.data;
+      if (!data) return;
+      setLiveVehicles((prev) =>
+        prev.map((v) => {
+          if (v.id === data.vehicle_id || v.code === data.vehicle_code) {
+            return { ...v, status: 'ARRIVED' };
+          }
+          return v;
+        })
+      );
+    });
+
+    const unsubDockDwell = eventBus.subscribe('dock_dwell_warning', (event) => {
+      const data = event.data;
+      if (!data) return;
+      setLiveVehicles((prev) =>
+        prev.map((v) => {
+          if (v.id === data.vehicle_id || v.code === data.vehicle_code) {
+            return { ...v, status: 'DWELL_WARNING' };
+          }
+          return v;
+        })
+      );
+    });
+
+    const unsubDetention = eventBus.subscribe('detention_accruing', (event) => {
+      const data = event.data;
+      if (!data) return;
+      setLiveVehicles((prev) =>
+        prev.map((v) => {
+          if (v.id === data.vehicle_id || v.code === data.vehicle_code) {
+            return { ...v, status: 'DETENTION_ACCRUING' };
+          }
+          return v;
+        })
+      );
+    });
+
+    const unsubIncident = eventBus.subscribe('incident_created', (event) => {
+      const data = event.data;
+      if (!data || !data.lat || !data.lng) return;
+      setLiveIncidents((prev) => {
+        if (prev.some((i) => i.id === data.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: data.id,
+            code: data.code || 'INC-LIVE',
+            title: data.title || 'Anomaly Triaged',
+            severity: data.severity || 'WARNING',
+            lat: data.lat,
+            lng: data.lng,
+          },
+        ];
+      });
+    });
+
+    return () => {
+      unsubTelem();
+      unsubTrip();
+      unsubVehicleUpdated();
+      unsubDockArrival();
+      unsubDockDwell();
+      unsubDetention();
+      unsubIncident();
+    };
+  }, []);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -306,7 +520,7 @@ export function LeafletWorldMap({
 
     // 1. Warehouses (Emerald Hexagons)
     if (activeFilter === 'ALL' || activeFilter === 'WAREHOUSES') {
-      warehouses.forEach((wh) => {
+      liveWarehouses.forEach((wh) => {
         const iconElement = createSafeMapMarkerElement(document, 'warehouse', `${wh.name} (${wh.code})`);
         const customIcon = L.divIcon({
           html: iconElement,
@@ -318,8 +532,10 @@ export function LeafletWorldMap({
         const marker = L.marker([wh.lat, wh.lng], { icon: customIcon });
         marker.on('click', () => {
           tactileAudio.playClick();
-          setSelectedEntity({ type: 'WAREHOUSE', data: wh });
+          const entity: SelectedEntityInfo = { type: 'WAREHOUSE', id: wh.id, data: wh };
+          setSelectedEntity(entity);
           setClickedLocation(null);
+          onEntitySelect?.(entity);
         });
         group.addLayer(marker);
       });
@@ -327,7 +543,7 @@ export function LeafletWorldMap({
 
     // 2. Vehicles (Cyan / Blue Navigation Arrows with Directional Heading)
     if (activeFilter === 'ALL' || activeFilter === 'VEHICLES') {
-      vehicles.forEach((v) => {
+      liveVehicles.forEach((v) => {
         const label = `${v.code} · ${v.speedKmh ? `${v.speedKmh} km/h` : 'Active'}`;
         const iconElement = createSafeMapMarkerElement(document, 'vehicle', label, v.heading || 0);
         const customIcon = L.divIcon({
@@ -340,8 +556,10 @@ export function LeafletWorldMap({
         const marker = L.marker([v.lat, v.lng], { icon: customIcon });
         marker.on('click', () => {
           tactileAudio.playClick();
-          setSelectedEntity({ type: 'VEHICLE', data: v });
+          const entity: SelectedEntityInfo = { type: 'VEHICLE', id: v.id, data: v };
+          setSelectedEntity(entity);
           setClickedLocation(null);
+          onEntitySelect?.(entity);
         });
         group.addLayer(marker);
       });
@@ -349,7 +567,7 @@ export function LeafletWorldMap({
 
     // 3. Incidents (Pulsing Red Hazard Beacon)
     if (activeFilter === 'ALL' || activeFilter === 'INCIDENTS') {
-      incidents.forEach((inc) => {
+      liveIncidents.forEach((inc) => {
         const iconElement = createSafeMapMarkerElement(document, 'incident', `[${inc.severity}] ${inc.title}`);
         const customIcon = L.divIcon({
           html: iconElement,
@@ -361,8 +579,10 @@ export function LeafletWorldMap({
         const marker = L.marker([inc.lat, inc.lng], { icon: customIcon });
         marker.on('click', () => {
           tactileAudio.playClick();
-          setSelectedEntity({ type: 'INCIDENT', data: inc });
+          const entity: SelectedEntityInfo = { type: 'INCIDENT', id: inc.id, data: inc };
+          setSelectedEntity(entity);
           setClickedLocation(null);
+          onEntitySelect?.(entity);
         });
         group.addLayer(marker);
       });
@@ -385,7 +605,7 @@ export function LeafletWorldMap({
       const pingMarker = L.marker([centerLocation.latitude, centerLocation.longitude], { icon: pingIcon });
       group.addLayer(pingMarker);
     }
-  }, [warehouses, vehicles, incidents, centerLocation, activeFilter, mapReady]);
+  }, [liveWarehouses, liveVehicles, liveIncidents, centerLocation, activeFilter, mapReady, onEntitySelect]);
 
   // Controls Handlers
   const handleZoomIn = () => {
@@ -618,7 +838,10 @@ export function LeafletWorldMap({
               </p>
             </div>
             <button
-              onClick={() => setSelectedEntity(null)}
+              onClick={() => {
+                setSelectedEntity(null);
+                onEntitySelect?.(null);
+              }}
               className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-1 rounded-lg"
             >
               ✕

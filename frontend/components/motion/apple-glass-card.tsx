@@ -31,8 +31,8 @@ export function AppleGlassCard({
   const mouseY = useMotionValue(0);
 
   // Smooth springs for fluid Apple feel
-  const springX = useSpring(mouseX, { stiffness: 350, damping: 30 });
-  const springY = useSpring(mouseY, { stiffness: 350, damping: 30 });
+  const springX = useSpring(mouseX, { stiffness: 260, damping: 28 });
+  const springY = useSpring(mouseY, { stiffness: 260, damping: 28 });
 
   // 3D tilt transforms
   const rotateX = useTransform(springY, [-0.5, 0.5], [4, -4]);
@@ -41,6 +41,11 @@ export function AppleGlassCard({
   // Spotlight glare radial coordinates
   const glareX = useTransform(springX, [-0.5, 0.5], ['0%', '100%']);
   const glareY = useTransform(springY, [-0.5, 0.5], ['0%', '100%']);
+  const glareBackground = useTransform(
+    [glareX, glareY],
+    ([gx, gy]) =>
+      `radial-gradient(550px circle at ${gx} ${gy}, rgba(255,255,255,0.08), transparent 70%)`
+  );
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
@@ -70,15 +75,14 @@ export function AppleGlassCard({
       }}
       transition={{
         type: 'spring',
-        stiffness: 380,
-        damping: 30,
-        mass: 0.8,
+        stiffness: 260,
+        damping: 28,
       }}
       className={cn(
         'group relative overflow-hidden rounded-[28px]',
         'bg-[#161617]/70 dark:bg-[#161617]/80',
-        'backdrop-blur-2xl',
-        'border border-white/[0.08] dark:border-white/[0.08]',
+        'backdrop-blur-3xl',
+        'border border-black/[0.08] dark:border-white/[0.12]',
         'shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]',
         'transition-colors duration-300',
         'hover:border-white/[0.18]',
@@ -92,11 +96,7 @@ export function AppleGlassCard({
           aria-hidden="true"
           className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-hover:opacity-100 rounded-[28px]"
           style={{
-            background: useTransform(
-              [glareX, glareY],
-              ([gx, gy]) =>
-                `radial-gradient(550px circle at ${gx} ${gy}, rgba(255,255,255,0.08), transparent 70%)`
-            ),
+            background: glareBackground,
           }}
         />
       )}

@@ -64,12 +64,220 @@ export interface NexusDataProvider {
   updateSettings(data: any): Promise<any>;
 }
 
+export interface QueuedMutationItem {
+  id: string;
+  path: string;
+  method: string;
+  body?: string;
+  enqueuedAt: number;
+  attempts: number;
+  lastError?: string;
+  status: "pending" | "processing" | "completed" | "failed";
+}
+
+/**
+ * Non-blocking client-side mutation buffer and rate-limit retry engine.
+ * Buffers mutations in local memory and localStorage to survive network drops.
+ * Retries on HTTP 429 (Azure free tier rate limit) and transient network drops
+ * using exponential backoff with jitter and Retry-After header parsing.
+ * Enforces ZERO mock fallbacks: if retries exhaust, actionable diagnostics bubble up.
+ */
+export class OfflineMutationBuffer {
+  private queue: QueuedMutationItem[] = [];
+  private maxRetries: number = 3;
+  private baseDelayMs: number = 400;
+  private maxDelayMs: number = 4000;
+  private listeners: Set<(items: QueuedMutationItem[]) => void> = new Set();
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  private loadFromStorage(): void {
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const raw = localStorage.getItem("nexus_offline_mutation_buffer");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            this.queue = parsed;
+          }
+        }
+      } catch {
+        // Ignore JSON or storage errors
+      }
+    }
+  }
+
+  private saveToStorage(): void {
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const persistable = this.queue.filter((item) => item.status === "pending" || item.status === "processing");
+        localStorage.setItem("nexus_offline_mutation_buffer", JSON.stringify(persistable));
+      } catch {
+        // Storage quota exceeded or disabled
+      }
+    }
+    this.notify();
+  }
+
+  private notify(): void {
+    for (const listener of this.listeners) {
+      try {
+        listener([...this.queue]);
+      } catch {
+        // Ignore subscriber errors
+      }
+    }
+  }
+
+  public subscribe(listener: (items: QueuedMutationItem[]) => void): () => void {
+    this.listeners.add(listener);
+    listener([...this.queue]);
+    return () => this.listeners.delete(listener);
+  }
+
+  public getPending(): QueuedMutationItem[] {
+    return this.queue.filter((i) => i.status === "pending" || i.status === "processing");
+  }
+
+  public getQueue(): QueuedMutationItem[] {
+    return [...this.queue];
+  }
+
+  public clear(): void {
+    this.queue = [];
+    this.saveToStorage();
+  }
+
+  /**
+   * Executes a mutation through the non-blocking retry queue with exponential backoff and jitter.
+   * On network drops or HTTP 429 rate limits, it buffers and retries up to maxRetries.
+   * If retries are exhausted, errors bubble up with actionable diagnostics. Zero mock fallbacks.
+   */
+  public async executeMutation<T>(
+    path: string,
+    options: RequestInit,
+    fetchFn: (path: string, options: RequestInit) => Promise<Response>
+  ): Promise<T> {
+    const method = (options.method || "POST").toUpperCase();
+    const itemId = `mut-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const bufferItem: QueuedMutationItem = {
+      id: itemId,
+      path,
+      method,
+      body: typeof options.body === "string" ? options.body : undefined,
+      enqueuedAt: Date.now(),
+      attempts: 0,
+      status: "pending",
+    };
+
+    this.queue.push(bufferItem);
+    this.saveToStorage();
+
+    let attempt = 0;
+    while (attempt <= this.maxRetries) {
+      bufferItem.attempts = attempt + 1;
+      bufferItem.status = "processing";
+      this.saveToStorage();
+
+      try {
+        const res = await fetchFn(path, options);
+
+        if (res.ok) {
+          bufferItem.status = "completed";
+          this.queue = this.queue.filter((i) => i.id !== itemId);
+          this.saveToStorage();
+
+          const json = await res.json().catch(() => ({}));
+          if (json && typeof json === "object" && "data" in json && (json.success === true || json.data !== undefined)) {
+            return json.data as T;
+          }
+          return json as T;
+        }
+
+        // Check for 429 Rate Limiting or transient 502/503/504
+        if (res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) {
+          const retryAfterHeader = res.headers.get("Retry-After");
+          let delayMs = 0;
+          if (retryAfterHeader) {
+            const parsed = parseInt(retryAfterHeader, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+              delayMs = parsed * 1000;
+            }
+          }
+          if (delayMs <= 0) {
+            const backoff = Math.min(this.maxDelayMs, this.baseDelayMs * Math.pow(2, attempt));
+            const jitter = Math.random() * 200;
+            delayMs = backoff + jitter;
+          }
+
+          const errBody = await res.json().catch(() => ({}));
+          const errMsg = errBody?.error?.message || errBody?.detail || `HTTP_${res.status}`;
+          bufferItem.lastError = `HTTP ${res.status}: ${errMsg}`;
+
+          if (attempt < this.maxRetries) {
+            console.warn(`[MutationBuffer] HTTP ${res.status} on ${method} ${path}. Retrying in ${Math.round(delayMs)}ms (attempt ${attempt + 1}/${this.maxRetries})...`);
+            await new Promise((r) => setTimeout(r, delayMs));
+            attempt++;
+            continue;
+          }
+
+          bufferItem.status = "failed";
+          this.saveToStorage();
+          throw new Error(`[Mutation Failed after ${this.maxRetries + 1} attempts]: HTTP ${res.status} (${errMsg}). Operational changes require an active cloud connection.`);
+        }
+
+        // Non-retriable client errors (400, 401, 403, 404, 409, 422)
+        bufferItem.status = "failed";
+        this.queue = this.queue.filter((i) => i.id !== itemId);
+        this.saveToStorage();
+        const clientErr = await res.json().catch(() => ({}));
+        throw new Error(clientErr?.error?.message || clientErr?.detail || `HTTP_${res.status}`);
+
+      } catch (err: any) {
+        // If it's already a failed status or non-network rethrown error, bubble up immediately
+        if (bufferItem.status === "failed") {
+          throw err;
+        }
+
+        // Network connection error / offline
+        bufferItem.lastError = err?.message || "Network request failed";
+        if (attempt < this.maxRetries) {
+          const backoff = Math.min(this.maxDelayMs, this.baseDelayMs * Math.pow(2, attempt));
+          const jitter = Math.random() * 200;
+          const delayMs = backoff + jitter;
+          console.warn(`[MutationBuffer] Network error on ${method} ${path}: ${err?.message}. Retrying in ${Math.round(delayMs)}ms (attempt ${attempt + 1}/${this.maxRetries})...`);
+          await new Promise((r) => setTimeout(r, delayMs));
+          attempt++;
+          continue;
+        }
+
+        bufferItem.status = "failed";
+        this.saveToStorage();
+        throw new Error(`[Mutation Failed after ${this.maxRetries + 1} attempts]: Network unreachable (${err?.message || "Offline"}). Mutation could not be persisted.`);
+      }
+    }
+
+    throw new Error("Mutation could not be executed");
+  }
+}
+
+export const mutationBuffer = new OfflineMutationBuffer();
+
 /**
  * Authoritative API Data Provider connected directly to FastAPI & PostgreSQL.
  * Errors propagate without silent mock fallbacks so callers handle genuine operational states.
  */
 export class ApiNexusDataProvider implements NexusDataProvider {
   private async fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const method = (options.method || "GET").toUpperCase();
+    const isMutation = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+
+    if (isMutation) {
+      return mutationBuffer.executeMutation<T>(path, options, (p, o) => apiFetch(p, o));
+    }
+
     const res = await apiFetch(path, options);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

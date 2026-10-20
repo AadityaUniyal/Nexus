@@ -19,6 +19,8 @@ import {
 import { motion } from "motion/react";
 import { dataProvider } from "@/lib/data-provider";
 import { realtimeClient } from "@/lib/realtime-client";
+import { eventBus } from "@/lib/event-bus";
+import { useRouter } from "next/navigation";
 import { SkeletonMetricTile, SkeletonCard } from "@/components/ui/skeleton";
 import { useAuth, usePermissions } from "@/components/providers/AuthProvider";
 
@@ -33,6 +35,7 @@ import { CreateIncidentModal } from "@/components/forms/CreateIncidentModal";
 import { ResolvedLocation } from "@/lib/api/endpoints/location";
 
 export default function OverviewPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const { canRunSimulations } = usePermissions();
   const canEditOperations = ["ADMINISTRATOR", "OPERATIONS_MANAGER", "DISPATCHER"].includes(user?.role || "");
@@ -77,8 +80,81 @@ export default function OverviewPage() {
     loadLiveTelemetry();
 
     // Subscribe to authoritative real-time SSE feed from FastAPI backend
-    const unsubscribe = realtimeClient.subscribePulse((pulse) => {
-      // Refresh telemetry when any vehicle moves, order dispatches, or incident transitions
+    const unsubscribePulse = realtimeClient.subscribePulse((pulse) => {
+      // Ignore high-frequency GPS telemetry updates to eliminate 4-table REST API re-fetch storm
+      if (pulse?.eventType === "VEHICLE_TELEMETRY_UPDATED") return;
+      loadLiveTelemetry();
+    });
+
+    // Reactive eventBus subscriptions to mutate local state immediately without full page reload
+    const unsubTelemetry = eventBus.subscribe("vehicle_telemetry_updated", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setVehicles((prev) =>
+        prev.map((v) => {
+          if (v.id === data.vehicle_id || v.code === data.vehicle_code) {
+            return {
+              ...v,
+              lat: data.lat ?? v.lat,
+              lng: data.lng ?? v.lng,
+              speedKmh: data.speed_kmh ?? v.speedKmh,
+              heading: data.heading ?? v.heading,
+              batteryPct: data.battery_pct ?? v.batteryPct,
+              status: data.status ?? v.status,
+            };
+          }
+          return v;
+        })
+      );
+    });
+
+    const unsubDockArrival = eventBus.subscribe("dock_arrival_detected", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setVehicles((prev) =>
+        prev.map((v) =>
+          v.id === data.vehicle_id || v.code === data.vehicle_code
+            ? { ...v, status: "IDLE" as const }
+            : v
+        )
+      );
+      loadLiveTelemetry();
+    });
+
+    const unsubDockDwell = eventBus.subscribe("dock_dwell_warning", () => {
+      loadLiveTelemetry();
+    });
+
+    const unsubDetention = eventBus.subscribe("detention_accruing", () => {
+      loadLiveTelemetry();
+    });
+
+    const unsubTripDispatched = eventBus.subscribe("trip_dispatched", (event) => {
+      const data = event.data as any;
+      if (!data) return;
+      setVehicles((prev) =>
+        prev.map((v) =>
+          v.id === data.vehicle_id || v.code === data.vehicle_code
+            ? { ...v, status: "IN_TRANSIT" as const }
+            : v
+        )
+      );
+      loadLiveTelemetry();
+    });
+
+    const unsubOrderUpdated = eventBus.subscribe("order_updated", () => {
+      loadLiveTelemetry();
+    });
+
+    const unsubIncidentCreated = eventBus.subscribe("incident_created", () => {
+      loadLiveTelemetry();
+    });
+
+    const unsubIncidentUpdated = eventBus.subscribe("incident_updated", () => {
+      loadLiveTelemetry();
+    });
+
+    const unsubDecisionApplied = eventBus.subscribe("decision_applied", () => {
       loadLiveTelemetry();
     });
 
@@ -90,7 +166,16 @@ export default function OverviewPage() {
     }, 15000);
 
     return () => {
-      unsubscribe();
+      unsubscribePulse();
+      unsubTelemetry();
+      unsubDockArrival();
+      unsubDockDwell();
+      unsubDetention();
+      unsubTripDispatched();
+      unsubOrderUpdated();
+      unsubIncidentCreated();
+      unsubIncidentUpdated();
+      unsubDecisionApplied();
       clearInterval(interval);
     };
   }, [loadLiveTelemetry]);
@@ -314,6 +399,11 @@ export default function OverviewPage() {
                 incidents={mapIncidents}
                 centerLocation={centerLocation}
                 onLocationClick={handleMapClick}
+                onEntitySelect={(entity) => {
+                  if (entity) {
+                    router.push(`/live-world?entityType=${entity.type}&id=${encodeURIComponent(entity.id)}`);
+                  }
+                }}
                 className="w-full h-full"
               />
             </div>

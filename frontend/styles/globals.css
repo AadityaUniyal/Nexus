@@ -10,7 +10,7 @@
   }
 
   html {
-    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", var(--font-sans), sans-serif;
     background-color: var(--surface);
     color: var(--on-surface);
     text-rendering: optimizeLegibility;
@@ -24,7 +24,8 @@
     color: var(--on-surface);
     overflow-x: hidden;
     min-height: 100vh;
-    font-feature-settings: "cv11", "ss01";
+    font-feature-settings: "cv11", "ss01", "tnum";
+    font-variant-numeric: tabular-nums;
   }
 
   code, pre, kbd, samp {
@@ -66,8 +67,23 @@
     background-color: var(--surface-container-lowest);
     border: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-soft);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-squircle);
     transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s ease;
+  }
+
+  .apple-squircle {
+    border-radius: var(--radius-squircle);
+  }
+
+  .apple-squircle-lg {
+    border-radius: var(--radius-squircle-lg);
+  }
+
+  .apple-hairline {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  .dark .apple-hairline {
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .tactile-card-interactive:hover {
@@ -111,10 +127,10 @@
   }
 
   .glass-luxury {
-    background: rgba(15, 15, 18, 0.8);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 15, 18, 0.75);
+    backdrop-filter: blur(48px);
+    -webkit-backdrop-filter: blur(48px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .specular-border {
@@ -132,7 +148,7 @@
     background-size: 48px 48px;
   }
 
-  /* Quiet, low-contrast loading surface */
+  /* Authentic Apple specular sweep loading surface */
   @keyframes skeletonShimmer {
     0% {
       transform: translateX(-100%);
@@ -156,13 +172,13 @@
     transform: translateX(-100%);
     background-image: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0) 0,
-      rgba(255, 255, 255, 0.08) 20%,
-      rgba(255, 255, 255, 0.22) 50%,
-      rgba(255, 255, 255, 0.08) 80%,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 20%,
+      rgba(255, 255, 255, 0.28) 50%,
+      rgba(255, 255, 255, 0.05) 80%,
       rgba(255, 255, 255, 0) 100%
     );
-    animation: skeletonShimmer 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    animation: skeletonShimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     pointer-events: none;
   }
 

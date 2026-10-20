@@ -12,6 +12,7 @@ import { apiFetch } from "@/lib/api/http";
 import { track } from "@/lib/analytics/tracker";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AIInsightsPanel } from "@/components/analytics/AIInsightsPanel";
+import { motion, AnimatePresence } from "motion/react";
 import {
   BarChart3,
   TrendingUp,
@@ -71,10 +72,28 @@ export default function AnalyticsPage() {
         setOverviewData(await resOverview.json());
       }
 
-      // Record-based operational review
+      // 2. ML Forecast
+      const resForecast = await apiFetch(`/api/v1/analytics/forecast?metric=${forecastMetric}&horizon=${forecastHorizon}`);
+      if (resForecast.ok) {
+        setForecastData(await resForecast.json());
+      }
+
+      // 3. Telemetry Anomalies
+      const resAnomalies = await apiFetch(`/api/v1/analytics/anomalies`);
+      if (resAnomalies.ok) {
+        setAnomalyData(await resAnomalies.json());
+      }
+
+      // 4. Record-based operational review (Risk Scores)
       const resRisk = await apiFetch(`/api/v1/analytics/risk-scores`);
       if (resRisk.ok) {
         setRiskData(await resRisk.json());
+      }
+
+      // 5. Medallion Lakehouse Summary
+      const resMedallion = await apiFetch(`/api/v1/analytics/medallion-summary`);
+      if (resMedallion.ok) {
+        setMedallionData(await resMedallion.json());
       }
 
     } catch (e) {
@@ -178,8 +197,10 @@ export default function AnalyticsPage() {
           <Tabs
             tabs={[
               { id: "overview", label: "Operations Overview", icon: <Activity className="h-3.5 w-3.5" /> },
-              { id: "overview", label: "Overview", icon: <Activity className="h-3.5 w-3.5" /> },
-              { id: "risk", label: "Order review", icon: <ShieldAlert className="h-3.5 w-3.5" /> },
+              { id: "forecast", label: "Predictive Forecast", icon: <BrainCircuit className="h-3.5 w-3.5" /> },
+              { id: "anomalies", label: "Telemetry Anomalies", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
+              { id: "risk", label: "Order Risk Matrix", icon: <ShieldAlert className="h-3.5 w-3.5" /> },
+              { id: "medallion", label: "OneLake Medallion", icon: <Database className="h-3.5 w-3.5" /> },
             ]}
             activeTab={activeTab}
             onChange={(id) => setActiveTab(id as TabType)}
@@ -200,8 +221,16 @@ export default function AnalyticsPage() {
         )}
 
         {/* TAB 1: OVERVIEW */}
+        <AnimatePresence mode="wait">
         {!loading && activeTab === "overview" && (
-          <div className="space-y-6">
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
+            className="space-y-6"
+          >
             {/* Top Analytics Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <MetricTile
@@ -313,12 +342,19 @@ export default function AnalyticsPage() {
                 </CardContent>
               </Card>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* TAB 2: PREDICTIVE ML FORECASTING */}
-        {activeTab === "forecast" && (
-          <div className="space-y-6">
+        {!loading && activeTab === "forecast" && (
+          <motion.div
+            key="forecast"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
+            className="space-y-6"
+          >
             {/* Forecast Controls Bar */}
             <div className="p-4 rounded-xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -457,12 +493,19 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
         )}
 
         {/* TAB 3: TELEMETRY ANOMALY DETECTION */}
-        {activeTab === "anomalies" && (
-          <div className="space-y-6">
+        {!loading && activeTab === "anomalies" && (
+          <motion.div
+            key="anomalies"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
+            className="space-y-6"
+          >
             <div className="p-4 rounded-xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-nexus-on-surface">
@@ -540,12 +583,19 @@ export default function AnalyticsPage() {
                 );
               })}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* TAB 4: RISK SCORING */}
-        {activeTab === "risk" && (
-          <div className="space-y-6">
+        {!loading && activeTab === "risk" && (
+          <motion.div
+            key="risk"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
+            className="space-y-6"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40">
                 <p className="text-xs font-mono text-nexus-on-surface-variant uppercase">Financial exposure</p>
@@ -622,12 +672,19 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
         )}
 
         {/* TAB 5: MEDALLION LAKEHOUSE */}
-        {activeTab === "medallion" && (
-          <div className="space-y-6">
+        {!loading && activeTab === "medallion" && (
+          <motion.div
+            key="medallion"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ type: "spring", stiffness: 260, damping: 28 }}
+            className="space-y-6"
+          >
             <div className="p-4 rounded-xl bg-nexus-surface-container-lowest border border-nexus-outline-variant/40 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-nexus-on-surface">
@@ -700,8 +757,9 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
     </AppShell>
   );

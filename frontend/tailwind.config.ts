@@ -84,8 +84,23 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        sans: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          '"SF Pro Display"',
+          '"SF Pro Text"',
+          '"SF Pro"',
+          "var(--font-sans)",
+          "Inter",
+          "system-ui",
+          "sans-serif",
+        ],
+        mono: [
+          '"SF Mono"',
+          "var(--font-mono)",
+          "ui-monospace",
+          "monospace",
+        ],
       },
       boxShadow: {
         tactile: "0 1px 2px rgba(15, 26, 31, 0.05)",
@@ -97,6 +112,9 @@ const config: Config = {
       borderRadius: {
         xl: "0.875rem",
         "2xl": "1.25rem",
+        "3xl": "1.5rem",
+        squircle: "24px",
+        "squircle-lg": "28px",
       },
       animation: {
         "fade-up": "fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
