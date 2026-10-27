@@ -87,3 +87,33 @@ class Stop(Base, TimestampMixin):
     workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
 
     trip: Mapped["Trip"] = relationship("Trip", back_populates="stops")
+
+
+class DetentionInvoice(Base, TimestampMixin):
+    __tablename__ = "detention_invoices"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: f"inv-det-{uuid.uuid4().hex[:10]}")
+    invoice_number: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    workspace_id: Mapped[str] = mapped_column(String(64), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    trip_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    vehicle_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    vehicle_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    driver_name: Mapped[str] = mapped_column(String(128), default="Fleet Driver")
+    facility_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    facility_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    facility_city: Mapped[str] = mapped_column(String(128), nullable=False)
+    arrival_time_iso: Mapped[str] = mapped_column(String(64), nullable=False)
+    departure_time_iso: Mapped[str] = mapped_column(String(64), nullable=False)
+    dwell_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    free_window_minutes: Mapped[int] = mapped_column(Integer, default=120)
+    excess_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    billable_hours: Mapped[float] = mapped_column(Float, nullable=False)
+    hourly_rate_usd: Mapped[float] = mapped_column(Float, default=75.0)
+    subtotal_usd: Mapped[float] = mapped_column(Float, nullable=False)
+    tax_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    total_amount_usd: Mapped[float] = mapped_column(Float, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD")
+    status: Mapped[str] = mapped_column(String(32), default="ISSUED")  # ISSUED, DISPUTED, SETTLED
+    sha256_audit_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    gps_coordinates: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+

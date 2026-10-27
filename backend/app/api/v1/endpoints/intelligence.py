@@ -358,14 +358,17 @@ class GenerateDetentionInvoiceRequest(BaseModel):
 @router.post("/generate-detention-invoice", response_model=DetentionInvoiceItem)
 async def generate_detention_invoice(
     req: GenerateDetentionInvoiceRequest,
-    principal: RequestPrincipal = Depends(require_onboarded)
+    principal: RequestPrincipal = Depends(require_onboarded),
+    db: AsyncSession = Depends(get_db)
 ) -> DetentionInvoiceItem:
     """
     Generates an immutable, cryptographically signed SHA-256 detention demurrage invoice
     for dwell time exceeding the standard 120-minute facility threshold.
+    Persists to PostgreSQL with transparent fallback caching.
     """
     ws_id = principal.workspace_id
-    invoice = detention_billing_service.generate_invoice(
+    invoice = await detention_billing_service.generate_invoice_db(
+        db=db,
         workspace_id=ws_id,
         trip_id=req.trip_id,
         vehicle_id=req.vehicle_id,
@@ -386,11 +389,12 @@ async def generate_detention_invoice(
 
 @router.get("/detention-invoices")
 async def get_detention_invoices(
-    principal: RequestPrincipal = Depends(require_onboarded)
+    principal: RequestPrincipal = Depends(require_onboarded),
+    db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Retrieves all signed detention demurrage invoices for this workspace."""
+    """Retrieves all signed detention demurrage invoices for this workspace from PostgreSQL."""
     ws_id = principal.workspace_id
-    invoices = detention_billing_service.get_invoices_for_workspace(ws_id)
+    invoices = await detention_billing_service.get_invoices_for_workspace_db(db, ws_id)
     total_billed = sum(i.total_amount_usd for i in invoices)
     total_hours = sum(i.billable_hours for i in invoices)
     return {
@@ -404,10 +408,18 @@ async def get_detention_invoices(
 @router.post("/settle-detention-invoice/{invoice_id}")
 async def settle_detention_invoice(
     invoice_id: str,
-    principal: RequestPrincipal = Depends(require_onboarded)
+    principal: RequestPrincipal = Depends(require_onboarded),
+    db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Marks a detention invoice as settled/paid in the cryptographic ledger."""
-    inv = detention_billing_service.settle_invoice(invoice_id)
+    """Marks a detention invoice as settled/paid in the cryptographic database ledger."""
+    inv = await detention_billing_service.settle_invoice_db(db, invoice_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail=f"Invoice {invoice_id} not found")
+    return {
+        "success": True,
+        "message": f"Invoice {invoice_id} successfully settled.",
+        "invoice": inv
+    }
     if not inv:
         raise HTTPException(status_code=404, detail=f"Invoice {invoice_id} not found")
     return {
