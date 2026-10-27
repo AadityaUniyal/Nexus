@@ -62,16 +62,16 @@ export function AnalystDashboard() {
           tactileAudio.playSuccess();
           toast({
             title: "Combinatorial Simulation Solved",
-            description: `Clarke-Wright Savings completed in ${solveRes.execution_time_ms}ms with ${solveRes.metrics.deadhead_reduction_pct}% empty haul reduction.`,
-            variant: "default"
+            message: `Clarke-Wright Savings completed in ${solveRes.execution_time_ms}ms with ${solveRes.metrics.deadhead_reduction_pct}% empty haul reduction.`,
+            type: "success"
           });
         }
       }
     } catch (err: any) {
       toast({
         title: "Simulation Failed",
-        description: err?.message || "Could not complete VRPTW solve.",
-        variant: "destructive"
+        message: err?.message || "Could not complete VRPTW solve.",
+        type: "critical"
       });
     } finally {
       setIsSolving(false);
@@ -96,36 +96,36 @@ export function AnalystDashboard() {
       {/* Top Metric Tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricTile
-          label="Empty Haul (Deadhead) Index"
+          title="Empty Haul (Deadhead) Index"
           value={vrptwResult ? `${vrptwResult.metrics.deadhead_reduction_pct}% Reduced` : "11.3% Net"}
-          subtext="Target: < 12.0% fleetwide"
+          subtitle="Target: < 12.0% fleetwide"
           trend="down"
-          trendValue="-38.6% vs baseline"
-          icon={<Route className="w-4 h-4 text-sky-500" />}
+          change="-38.6% vs baseline"
+          icon={Route}
         />
         <MetricTile
-          label="TreeSHAP Calibrated SLA Risk"
+          title="TreeSHAP Calibrated SLA Risk"
           value="4.2% Breach Prob"
-          subtext="Game-theoretic exact bounds"
+          subtitle="Game-theoretic exact bounds"
           trend="up"
-          trendValue="95% Conformal Confidence"
-          icon={<Sparkles className="w-4 h-4 text-emerald-500" />}
+          change="95% Conformal Confidence"
+          icon={Sparkles}
         />
         <MetricTile
-          label="Fleet Scope 1 CO₂ Avoided"
+          title="Fleet Scope 1 CO₂ Avoided"
           value={vrptwResult ? `${vrptwResult.metrics.carbon_avoided_kg} kg` : "42.8 Tons"}
-          subtext="2.68 kg CO₂ per saved liter"
+          subtitle="2.68 kg CO₂ per saved liter"
           trend="down"
-          trendValue="Net Zero Target"
-          icon={<Leaf className="w-4 h-4 text-teal-500" />}
+          change="Net Zero Target"
+          icon={Leaf}
         />
         <MetricTile
-          label="Predictive Demurrage Recovery"
+          title="Predictive Demurrage Recovery"
           value="$14,250"
-          subtext="Accrued from 120m+ dock dwells"
+          subtitle="Accrued from 120m+ dock dwells"
           trend="up"
-          trendValue="SHA-256 Verified"
-          icon={<Clock className="w-4 h-4 text-amber-500" />}
+          change="SHA-256 Verified"
+          icon={Clock}
         />
       </div>
 

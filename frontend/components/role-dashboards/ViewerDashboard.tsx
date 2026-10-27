@@ -37,8 +37,8 @@ export function ViewerDashboard() {
       tactileAudio.playSuccess();
       toast({
         title: "Executive Briefing Generated",
-        description: "Boardroom PDF summary formatted with Scope 1 ESG audit and financial demurrage recovery metrics.",
-        variant: "default"
+        message: "Boardroom PDF summary formatted with Scope 1 ESG audit and financial demurrage recovery metrics.",
+        type: "success"
       });
       // Trigger browser print/pdf dialog
       window.print();
@@ -50,36 +50,36 @@ export function ViewerDashboard() {
       {/* Top Boardroom KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricTile
-          label="Global On-Time Delivery (OTD)"
+          title="Global On-Time Delivery (OTD)"
           value="98.4%"
-          subtext="Benchmark: 95.0% SLA Target"
+          subtitle="Benchmark: 95.0% SLA Target"
           trend="up"
-          trendValue="+2.1% MoM"
-          icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+          change="+2.1% MoM"
+          icon={CheckCircle2}
         />
         <MetricTile
-          label="Net Margin Preservation"
+          title="Net Margin Preservation"
           value="$1.42M"
-          subtext="From route optimization & demurrage"
+          subtitle="From route optimization & demurrage"
           trend="up"
-          trendValue="+$340k Q4"
-          icon={<DollarSign className="w-4 h-4 text-blue-500" />}
+          change="+$340k Q4"
+          icon={DollarSign}
         />
         <MetricTile
-          label="Scope 1 & 3 Carbon Avoided"
+          title="Scope 1 & 3 Carbon Avoided"
           value="42.8 Tons"
-          subtext="Verified emission offsets"
+          subtitle="Verified emission offsets"
           trend="down"
-          trendValue="-38.6% Deadhead"
-          icon={<Leaf className="w-4 h-4 text-teal-500" />}
+          change="-38.6% Deadhead"
+          icon={Leaf}
         />
         <MetricTile
-          label="Cryptographic Audit Integrity"
+          title="Cryptographic Audit Integrity"
           value="100% Sealed"
-          subtext="SHA-256 Ledger Verified"
+          subtitle="SHA-256 Ledger Verified"
           trend="up"
-          trendValue="Zero Tamper Events"
-          icon={<ShieldCheck className="w-4 h-4 text-purple-500" />}
+          change="Zero Tamper Events"
+          icon={ShieldCheck}
         />
       </div>
 
