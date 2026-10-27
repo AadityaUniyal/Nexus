@@ -1,5 +1,6 @@
 import logging
 from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
@@ -9,6 +10,7 @@ from app.auth.principal import RequestPrincipal
 from app.models.system import OperationalEvent
 from app.models.incidents import Incident
 from app.models.operations import Route, Vehicle, Warehouse, Order
+from app.services.detention_billing_service import detention_billing_service, DetentionInvoiceItem
 
 logger = logging.getLogger("nexus.intelligence")
 
@@ -335,3 +337,82 @@ async def get_return_load_opportunities(
         "candidateMatchesCount": len(matches),
         "matches": matches
     }
+
+
+class GenerateDetentionInvoiceRequest(BaseModel):
+    trip_id: str = Field(default="TRIP-8491")
+    vehicle_id: str = Field(default="TRK-101")
+    vehicle_code: str = Field(default="NEXUS-01")
+    driver_name: str = Field(default="Rajesh Sharma")
+    facility_id: str = Field(default="hub-chi-01")
+    facility_name: str = Field(default="Continental Chicago Intermodal Depot")
+    facility_city: str = Field(default="Chicago, IL")
+    arrival_time_iso: str = Field(default="2026-10-26T09:15:00Z")
+    departure_time_iso: str = Field(default="2026-10-26T13:45:00Z")
+    dwell_duration_minutes: int = Field(default=270, ge=0)
+    free_window_minutes: int = Field(default=120, ge=0)
+    hourly_rate_usd: float = Field(default=75.0, ge=0.0)
+    lat: float = Field(default=41.8781)
+    lng: float = Field(default=-87.6298)
+
+@router.post("/generate-detention-invoice", response_model=DetentionInvoiceItem)
+async def generate_detention_invoice(
+    req: GenerateDetentionInvoiceRequest,
+    principal: RequestPrincipal = Depends(require_onboarded)
+) -> DetentionInvoiceItem:
+    """
+    Generates an immutable, cryptographically signed SHA-256 detention demurrage invoice
+    for dwell time exceeding the standard 120-minute facility threshold.
+    """
+    ws_id = principal.workspace_id
+    invoice = detention_billing_service.generate_invoice(
+        workspace_id=ws_id,
+        trip_id=req.trip_id,
+        vehicle_id=req.vehicle_id,
+        vehicle_code=req.vehicle_code,
+        driver_name=req.driver_name,
+        facility_id=req.facility_id,
+        facility_name=req.facility_name,
+        facility_city=req.facility_city,
+        arrival_time_iso=req.arrival_time_iso,
+        departure_time_iso=req.departure_time_iso,
+        dwell_duration_minutes=req.dwell_duration_minutes,
+        free_window_minutes=req.free_window_minutes,
+        hourly_rate_usd=req.hourly_rate_usd,
+        lat=req.lat,
+        lng=req.lng
+    )
+    return invoice
+
+@router.get("/detention-invoices")
+async def get_detention_invoices(
+    principal: RequestPrincipal = Depends(require_onboarded)
+) -> Dict[str, Any]:
+    """Retrieves all signed detention demurrage invoices for this workspace."""
+    ws_id = principal.workspace_id
+    invoices = detention_billing_service.get_invoices_for_workspace(ws_id)
+    total_billed = sum(i.total_amount_usd for i in invoices)
+    total_hours = sum(i.billable_hours for i in invoices)
+    return {
+        "success": True,
+        "totalInvoices": len(invoices),
+        "totalBilledUsd": round(total_billed, 2),
+        "totalBillableHours": round(total_hours, 2),
+        "invoices": invoices
+    }
+
+@router.post("/settle-detention-invoice/{invoice_id}")
+async def settle_detention_invoice(
+    invoice_id: str,
+    principal: RequestPrincipal = Depends(require_onboarded)
+) -> Dict[str, Any]:
+    """Marks a detention invoice as settled/paid in the cryptographic ledger."""
+    inv = detention_billing_service.settle_invoice(invoice_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail=f"Invoice {invoice_id} not found")
+    return {
+        "success": True,
+        "message": f"Invoice {invoice_id} successfully settled.",
+        "invoice": inv
+    }
+

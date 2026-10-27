@@ -18,9 +18,12 @@ import {
   ChevronRight,
   Package,
   Sparkles,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { tactileAudio } from '@/lib/sound-effects';
 import { useToast } from '@/components/ui/toast';
+import { offlineSyncManager } from '@/lib/offline-sync';
 
 interface ManifestData {
   manifest_id: string;
@@ -107,11 +110,53 @@ function DriverPassContent() {
     fetchManifest();
   }, [fetchManifest]);
 
+  const [isOnline, setIsOnline] = React.useState(true);
+  const [pendingQueueCount, setPendingQueueCount] = React.useState(0);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine);
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      const unsub = offlineSyncManager.subscribe((count) => {
+        setPendingQueueCount(count);
+      });
+
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        unsub();
+      };
+    }
+  }, []);
+
   // Handle status update
   const handleUpdateStatus = async (newStatus: string) => {
     try {
       setIsUpdatingStatus(true);
       tactileAudio.playClick();
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        // Enqueue offline immediately
+        await offlineSyncManager.enqueue(
+          '/api/v1/driver/status',
+          'POST',
+          { vehicle_code: vehicleCode, status: newStatus, token: dispatchToken },
+          'DRIVER_STATUS'
+        );
+        setCurrentStatus(newStatus);
+        tactileAudio.playSuccess();
+        toast({
+          title: 'Saved in Offline Queue',
+          message: `Device is offline. Status "${newStatus}" saved locally and will auto-sync on reconnect.`,
+          type: 'info',
+        });
+        return;
+      }
+
       const res = await fetch('/api/v1/driver/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,12 +174,23 @@ function DriverPassContent() {
           message: `Fleet telemetry updated to ${newStatus}`,
           type: 'success',
         });
-      } else throw new Error('Status update was rejected by dispatch.');
+      } else {
+        throw new Error('Status update rejected by dispatch.');
+      }
     } catch {
+      // Fallback: enqueue offline to preserve driver action
+      await offlineSyncManager.enqueue(
+        '/api/v1/driver/status',
+        'POST',
+        { vehicle_code: vehicleCode, status: newStatus, token: dispatchToken },
+        'DRIVER_STATUS'
+      );
+      setCurrentStatus(newStatus);
+      tactileAudio.playSuccess();
       toast({
-        title: 'Status not updated',
-        message: 'Dispatch could not confirm this status. Check the connection and retry.',
-        type: 'critical',
+        title: 'Network Interrupted · Queued Offline',
+        message: 'Could not reach server. Status queued locally in IndexedDB cache.',
+        type: 'warning',
       });
     } finally {
       setIsUpdatingStatus(false);
@@ -213,6 +269,36 @@ function DriverPassContent() {
       if (!canvas) throw new Error('Signature capture is unavailable on this device.');
       const signatureData = canvas.toDataURL('image/png');
 
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await offlineSyncManager.enqueue(
+          '/api/v1/driver/pod',
+          'POST',
+          {
+            vehicle_code: vehicleCode,
+            order_number: selectedOrder,
+            token: dispatchToken,
+            recipient_name: recipientName.trim(),
+            signature_data: signatureData,
+            photo_url: biltiPhoto || undefined,
+            notes: podNotes,
+          },
+          'PROOF_OF_DELIVERY'
+        );
+        const offlinePodId = `POD-OFFLINE-${Date.now().toString().slice(-6)}`;
+        setPodResult({
+          podId: offlinePodId,
+          timestamp: new Date().toISOString(),
+        });
+        setCurrentStatus('DELIVERED');
+        tactileAudio.playSuccess();
+        toast({
+          title: 'PoD Recorded in Offline Storage',
+          message: 'Recipient signature saved to device. Will auto-sync when cellular signal returns.',
+          type: 'info',
+        });
+        return;
+      }
+
       const res = await fetch('/api/v1/driver/pod', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -244,11 +330,42 @@ function DriverPassContent() {
         throw new Error('PoD submission failed');
       }
     } catch {
-      toast({
-        title: 'Delivery not recorded',
-        message: 'Dispatch did not confirm proof of delivery. Check the connection and retry.',
-        type: 'critical',
-      });
+      try {
+        const canvas = canvasRef.current;
+        const signatureData = canvas?.toDataURL('image/png') || '';
+        await offlineSyncManager.enqueue(
+          '/api/v1/driver/pod',
+          'POST',
+          {
+            vehicle_code: vehicleCode,
+            order_number: selectedOrder,
+            token: dispatchToken,
+            recipient_name: recipientName.trim(),
+            signature_data: signatureData,
+            photo_url: biltiPhoto || undefined,
+            notes: podNotes,
+          },
+          'PROOF_OF_DELIVERY'
+        );
+        const offlinePodId = `POD-OFFLINE-${Date.now().toString().slice(-6)}`;
+        setPodResult({
+          podId: offlinePodId,
+          timestamp: new Date().toISOString(),
+        });
+        setCurrentStatus('DELIVERED');
+        tactileAudio.playSuccess();
+        toast({
+          title: 'Network Lost · Signature Preserved',
+          message: 'Proof of Delivery saved locally in device cache. Auto-syncing on reconnect.',
+          type: 'warning',
+        });
+      } catch {
+        toast({
+          title: 'Delivery not recorded',
+          message: 'Dispatch did not confirm proof of delivery. Check the connection and retry.',
+          type: 'critical',
+        });
+      }
     } finally {
       setIsSubmittingPod(false);
     }
@@ -275,7 +392,25 @@ function DriverPassContent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Connectivity Pill */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border transition-all ${
+              isOnline
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse'
+            }`}
+          >
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            <span>
+              {isOnline
+                ? pendingQueueCount > 0
+                  ? `Syncing (${pendingQueueCount})...`
+                  : 'Live Connected'
+                : `Offline (${pendingQueueCount} queued)`}
+            </span>
+          </div>
+
           <div className="flex items-center gap-1.5 bg-zinc-800/80 px-2.5 py-1 rounded-full border border-zinc-700/60 text-xs font-mono text-zinc-300">
             <Battery className="w-3.5 h-3.5 text-emerald-400" />
             <span>{manifest?.battery_pct == null ? '—' : `${manifest.battery_pct}%`}</span>

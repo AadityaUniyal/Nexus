@@ -26,6 +26,11 @@ import { useAuth, usePermissions } from "@/components/providers/AuthProvider";
 
 // Innovations & Role Cockpits
 import { ManagerDashboard } from "@/components/role-dashboards/ManagerDashboard";
+import { OperatorDashboard } from "@/components/role-dashboards/OperatorDashboard";
+import { AnalystDashboard } from "@/components/role-dashboards/AnalystDashboard";
+import { AdminDashboard } from "@/components/role-dashboards/AdminDashboard";
+import { ViewerDashboard } from "@/components/role-dashboards/ViewerDashboard";
+import { RoleCockpitSwitcher, RoleType, normalizeRole } from "@/components/role-dashboards/RoleCockpitSwitcher";
 
 // Real Role-Driven Input Modals
 import { CreateWarehouseModal } from "@/components/forms/CreateWarehouseModal";
@@ -39,6 +44,14 @@ export default function OverviewPage() {
   const { user } = useAuth();
   const { canRunSimulations } = usePermissions();
   const canEditOperations = ["ADMINISTRATOR", "OPERATIONS_MANAGER", "DISPATCHER"].includes(user?.role || "");
+  const [activeRole, setActiveRole] = React.useState<RoleType>("OPERATIONS_MANAGER");
+
+  React.useEffect(() => {
+    if (user?.role) {
+      setActiveRole(normalizeRole(user.role));
+    }
+  }, [user?.role]);
+
   const [warehouses, setWarehouses] = React.useState<WarehouseItem[]>([]);
   const [vehicles, setVehicles] = React.useState<VehicleItem[]>([]);
   const [incidents, setIncidents] = React.useState<IncidentItem[]>([]);
@@ -341,7 +354,17 @@ export default function OverviewPage() {
         )}
 
         {/* Workspace operations summary */}
-        <>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <RoleCockpitSwitcher
+              activeRole={activeRole}
+              onRoleChange={(role) => {
+                tactileAudio.playClick();
+                setActiveRole(role);
+              }}
+            />
+          </div>
+
           {isLoading ? (
             <motion.div
               key="overview-loading"
@@ -360,19 +383,36 @@ export default function OverviewPage() {
             </motion.div>
           ) : (
             <motion.div
-              key="workspace-operations"
+              key={`workspace-${activeRole}`}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
-              <ManagerDashboard incidents={incidents} simulations={simulations} warehouses={warehouses}
-                onOpenCreateIncident={canEditOperations ? () => setIsIncidentModalOpen(true) : undefined}
-                onOpenCreateWarehouse={canEditOperations ? () => setIsWarehouseModalOpen(true) : undefined}
-                canRunSimulations={canRunSimulations} />
+              {activeRole === "OPERATIONS_MANAGER" && (
+                <ManagerDashboard
+                  incidents={incidents}
+                  simulations={simulations}
+                  warehouses={warehouses}
+                  onOpenCreateIncident={canEditOperations ? () => setIsIncidentModalOpen(true) : undefined}
+                  onOpenCreateWarehouse={canEditOperations ? () => setIsWarehouseModalOpen(true) : undefined}
+                  canRunSimulations={canRunSimulations}
+                />
+              )}
+              {activeRole === "OPERATOR" && (
+                <OperatorDashboard
+                  vehicles={vehicles}
+                  warehouses={warehouses}
+                  onOpenCreateVehicle={canEditOperations ? () => setIsVehicleModalOpen(true) : undefined}
+                  onOpenCreateOrder={canEditOperations ? () => setIsOrderModalOpen(true) : undefined}
+                />
+              )}
+              {activeRole === "ANALYST" && <AnalystDashboard />}
+              {activeRole === "ADMINISTRATOR" && <AdminDashboard />}
+              {activeRole === "VIEWER" && <ViewerDashboard />}
             </motion.div>
           )}
-        </>
+        </div>
 
         {/* 2D Google Maps-Style GIS Network Map & Spatial Timeline Section */}
         <div className="space-y-4 pt-2">

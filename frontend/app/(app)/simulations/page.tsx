@@ -58,6 +58,12 @@ export default function SimulationsPage() {
                 <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                 Refresh
               </Button>
+              <Link href="/simulations/vrptw">
+                <Button variant="outline" size="sm" className="font-mono-data text-xs border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                  Dynamic VRPTW Solver
+                </Button>
+              </Link>
               <Link href="/simulations/new">
                 <Button variant="simulation" size="sm" className="font-mono-data text-xs shadow-tactile">
                   <Plus className="h-3.5 w-3.5 mr-1.5" />

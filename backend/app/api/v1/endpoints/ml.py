@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from app.ml.engine import nexus_master_ml
+from app.ml.features.sensor_fusion_anomalies import sensor_fusion_engine, SensorFusionInput, SensorFusionResult
 from app.auth.dependencies import require_onboarded, require_permission
 from app.auth.principal import PermissionEnum, RequestPrincipal
 
@@ -235,3 +236,14 @@ def legacy_forecast_depot(
 @router.post("/optimize-routes")
 def legacy_optimize_routes(req: LegacyOptimizeRequest) -> Dict[str, Any]:
     return ml_engine.optimize_pareto_routes(req.candidates)
+
+@router.post("/sensor-fusion-anomalies", response_model=SensorFusionResult)
+def evaluate_sensor_fusion_anomalies(
+    req: SensorFusionInput,
+    principal: RequestPrincipal = Depends(require_onboarded)
+) -> SensorFusionResult:
+    """
+    Evaluates real-time sensor streams using Extended Kalman Filter (EKF) smoothing
+    to detect diesel fuel siphoning / theft and cold-chain thermal thaw risk.
+    """
+    return sensor_fusion_engine.analyze(req)

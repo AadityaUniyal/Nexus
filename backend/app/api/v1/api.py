@@ -28,6 +28,7 @@ from app.api.v1.endpoints import (
     profile,
     realtime,
     reports,
+    routing,
     search,
     settings,
     simulations,
@@ -69,6 +70,7 @@ api_router.include_router(driver.router)
 api_router.include_router(incidents.router)
 api_router.include_router(simulations.router)
 api_router.include_router(decisions.router)
+api_router.include_router(routing.router)
 api_router.include_router(world.router, prefix="/world", tags=["world"])
 
 # AI Copilot, ML Intelligence & Human-in-the-Loop Governance

@@ -18,6 +18,12 @@ from app.services.telemetry_service import (
 from app.integrations.telemetry_adapters import TelemetryAdapter
 from app.models.integrations import WebhookEndpoint, IntegrationEvent
 from app.services.quota_guard import quota_guard
+from app.services.telemetry_stream_buffer import (
+    telemetry_stream_buffer,
+    TelemetryBatchRequest as StreamBatchRequest,
+    StreamIngestionStats,
+    TelemetryPing
+)
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetry & Telematics Ingestion"])
 
@@ -152,3 +158,29 @@ async def receive_provider_webhook(
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"status": "WEBHOOK_PROCESSED", "provider": prov_upper, "result": res}
+
+
+@router.post("/stream-buffer-ingest", response_model=StreamIngestionStats)
+def ingest_high_throughput_stream(
+    batch: StreamBatchRequest,
+    principal: RequestPrincipal = Depends(require_workspace)
+) -> StreamIngestionStats:
+    """
+    Sub-second non-blocking stream ingestion buffer.
+    Handles high-velocity sensor pings (15,000+ events/sec) in an in-memory ring-buffer
+    with batch micro-commit worker to eliminate database row locking.
+    """
+    return telemetry_stream_buffer.ingest_batch(batch)
+
+@router.get("/stream-buffer-stats")
+def get_stream_buffer_stats(
+    principal: RequestPrincipal = Depends(require_workspace)
+) -> Dict[str, Any]:
+    """Returns real-time telemetry buffer throughput, latency, and depth."""
+    return {
+        "buffer_capacity": telemetry_stream_buffer.capacity,
+        "buffer_depth": len(telemetry_stream_buffer.buffer),
+        "total_processed_count": telemetry_stream_buffer.total_processed_count,
+        "active_monitored_vehicles": len(telemetry_stream_buffer.latest_pings)
+    }
+
