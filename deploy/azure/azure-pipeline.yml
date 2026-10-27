@@ -1,0 +1,46 @@
+# Azure DevOps / CI Pipeline for Nexus Operational Intelligence Platform
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  azureSubscription: 'Azure for Students'
+  resourceGroup: 'rg-nexus-student'
+  location: 'eastus'
+
+stages:
+  - stage: Validate
+    displayName: 'Validate Bicep Infrastructure'
+    jobs:
+      - job: BicepValidation
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: AzureCLI@2
+            displayName: 'Compile and Validate Bicep'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az bicep build --file deploy/azure/main.bicep
+                az deployment group what-if \
+                  --resource-group $(resourceGroup) \
+                  --template-file deploy/azure/main.bicep \
+                  --parameters deploy/azure/azuredeploy.parameters.json
+
+  - stage: BuildContainers
+    displayName: 'Build and Publish Containers'
+    dependsOn: Validate
+    jobs:
+      - job: DockerBuild
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - script: |
+              echo "Building Backend Container..."
+              docker build -t ghcr.io/aadityauniyal/nexus-backend:latest -f deploy/azure/Dockerfile.backend .
+              echo "Building Frontend Container..."
+              docker build -t ghcr.io/aadityauniyal/nexus-frontend:latest -f deploy/azure/Dockerfile.frontend .
+            displayName: 'Docker Build'

@@ -353,11 +353,74 @@ async def get_azure_cloud_telemetry(
     }
 
 @router.get("/azure/maps/route")
-@router.get("/azure/maps/isoline")
-@router.post("/azure/vision/bol-ocr")
-@router.post("/azure/vision/cargo-damage")
-@router.get("/azure/pubsub/token")
-async def azure_integration_unavailable(
+async def get_azure_maps_route(
+    origin_lat: float = Query(..., description="Origin latitude"),
+    origin_lng: float = Query(..., description="Origin longitude"),
+    dest_lat: float = Query(..., description="Destination latitude"),
+    dest_lng: float = Query(..., description="Destination longitude"),
+    vehicle_weight_kg: float = Query(36000.0, description="Commercial vehicle weight in kg"),
+    vehicle_height_meters: float = Query(4.1, description="Vehicle height in meters"),
+    avoid_tolls: bool = Query(False, description="Avoid toll roads"),
     principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
 ) -> Dict[str, Any]:
-    raise HTTPException(status_code=501, detail="Azure maps, vision, and pub/sub integrations are not connected to verified provider services.")
+    """Calculate commercial heavy-freight truck route using Azure Maps with clearance constraints."""
+    from app.integrations.azure_maps import AzureMapsService
+    return await AzureMapsService.calculate_commercial_truck_route(
+        origin_lat=origin_lat,
+        origin_lng=origin_lng,
+        dest_lat=dest_lat,
+        dest_lng=dest_lng,
+        vehicle_weight_kg=vehicle_weight_kg,
+        vehicle_height_meters=vehicle_height_meters,
+        avoid_tolls=avoid_tolls,
+    )
+
+
+@router.get("/azure/maps/isoline")
+async def get_azure_maps_isoline(
+    current_lat: float = Query(..., description="Current latitude"),
+    current_lng: float = Query(..., description="Current longitude"),
+    battery_soc_percent: float = Query(..., description="Battery State of Charge"),
+    payload_weight_kg: float = Query(24000.0, description="Payload weight in kg"),
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
+) -> Dict[str, Any]:
+    """Compute EV reachability contour isoline using Azure Maps freight energy model."""
+    from app.integrations.azure_maps import AzureMapsService
+    return await AzureMapsService.compute_ev_reachable_isoline(
+        current_lat=current_lat,
+        current_lng=current_lng,
+        battery_state_of_charge_percent=battery_soc_percent,
+        payload_weight_kg=payload_weight_kg,
+    )
+
+
+@router.post("/azure/vision/bol-ocr")
+async def analyze_bill_of_lading_ocr(
+    payload: Optional[Dict[str, Any]] = None,
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
+) -> Dict[str, Any]:
+    """Extract structured freight data and signatures from Bill of Lading using Azure AI Vision."""
+    from app.integrations.azure_ai_vision import AzureVisionService
+    img_b64 = (payload or {}).get("image_base64")
+    doc_url = (payload or {}).get("document_url")
+    return await AzureVisionService.analyze_bill_of_lading(image_base64=img_b64, document_url=doc_url)
+
+
+@router.post("/azure/vision/cargo-damage")
+async def inspect_cargo_damage_vision(
+    payload: Optional[Dict[str, Any]] = None,
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
+) -> Dict[str, Any]:
+    """Perform automated loading dock pallet and cargo damage inspection via Azure Multimodal Vision."""
+    from app.integrations.azure_ai_vision import AzureVisionService
+    img_b64 = (payload or {}).get("image_base64")
+    return await AzureVisionService.inspect_cargo_damage(image_base64=img_b64)
+
+
+@router.get("/azure/pubsub/token")
+async def get_azure_pubsub_token(
+    principal: RequestPrincipal = Depends(require_permission(PermissionEnum.MANAGE_INTEGRATIONS)),
+) -> Dict[str, Any]:
+    """Generate ephemeral WebSocket access token for Azure Web PubSub real-time streaming."""
+    from app.integrations.azure_pubsub import AzureWebPubSubService
+    return await AzureWebPubSubService.get_client_access_token(user_id=getattr(principal, "nexus_user_id", None) or getattr(principal, "clerk_user_id", None) or "admin")

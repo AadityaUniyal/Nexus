@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "appPrefix": {
+      "value": "nexus"
+    },
+    "environmentType": {
+      "value": "student-dev"
+    },
+    "dbAdminUsername": {
+      "value": "nexus_admin"
+    },
+    "dbAdminPassword": {
+      "value": "NexusDevSecure_2026!"
+    },
+    "clerkIssuer": {
+      "value": "https://clerk.nexus-freight.com"
+    },
+    "clerkJwksUrl": {
+      "value": "https://clerk.nexus-freight.com/.well-known/jwks.json"
+    },
+    "backendImage": {
+      "value": "ghcr.io/aadityauniyal/nexus-backend:latest"
+    },
+    "frontendImage": {
+      "value": "ghcr.io/aadityauniyal/nexus-frontend:latest"
+    }
+  }
+}
